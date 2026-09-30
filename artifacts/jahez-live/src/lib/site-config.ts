@@ -24,10 +24,11 @@ export const siteConfig = {
 
   /** Social profiles — leave empty until they exist. */
   social: {
-    instagram: '',
-    tiktok: '',
+    instagram: 'https://www.instagram.com/gahez.space/',
+    tiktok: 'https://www.tiktok.com/@gahez.space',
     x: '',
-    youtube: '',
+    youtube: 'https://www.youtube.com/@GahezSpace',
+    facebook: 'https://www.facebook.com/gahez.space',
   },
 
   /** Legal/registration details for the legal pages — fill in once available. */

@@ -1,4 +1,4 @@
-import { siteConfig } from '@/lib/site-config';
+import { isConfigured, siteConfig } from '@/lib/site-config';
 import type { Crumb } from '@/components/marketing/breadcrumbs';
 import type { FaqCategory } from '@/components/marketing/faq-accordion';
 
@@ -8,11 +8,13 @@ import type { FaqCategory } from '@/components/marketing/faq-accordion';
  */
 
 export function organizationJsonLd() {
+  const sameAs = Object.values(siteConfig.social).filter(isConfigured);
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: siteConfig.brandName,
     url: siteConfig.siteUrl,
+    ...(sameAs.length ? { sameAs } : {}),
   };
 }
 

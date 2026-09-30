@@ -49,7 +49,19 @@ function escapeHtml(s) {
 const JSON_LD = {
   '@context': 'https://schema.org',
   '@graph': [
-    { '@type': 'Organization', '@id': 'https://gahez.space/#organization', name: 'Gahez', alternateName: 'جاهز', url: 'https://gahez.space/' },
+    {
+      '@type': 'Organization',
+      '@id': 'https://gahez.space/#organization',
+      name: 'Gahez',
+      alternateName: 'جاهز',
+      url: 'https://gahez.space/',
+      sameAs: [
+        'https://www.instagram.com/gahez.space/',
+        'https://www.tiktok.com/@gahez.space',
+        'https://www.youtube.com/@GahezSpace',
+        'https://www.facebook.com/gahez.space',
+      ],
+    },
     {
       '@type': 'Service',
       name: BRAND,

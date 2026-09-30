@@ -1,14 +1,16 @@
 import { Link } from 'wouter';
-import { Instagram, Music2, Twitter, Youtube } from 'lucide-react';
+import { Twitter } from 'lucide-react';
 import { Logo } from '@/components/marketing/signal-mark';
 import { footerGroup } from '@/lib/routes';
 import { isConfigured, siteConfig } from '@/lib/site-config';
+import { FacebookIcon, InstagramIcon, TikTokIcon, YouTubeIcon } from '@/components/marketing/social-icons';
 
 const socialLinks = [
-  { key: 'instagram', href: siteConfig.social.instagram, icon: Instagram, label: 'انستجرام' },
-  { key: 'tiktok', href: siteConfig.social.tiktok, icon: Music2, label: 'تيك توك' },
+  { key: 'instagram', href: siteConfig.social.instagram, icon: InstagramIcon, label: 'انستجرام' },
+  { key: 'tiktok', href: siteConfig.social.tiktok, icon: TikTokIcon, label: 'تيك توك' },
   { key: 'x', href: siteConfig.social.x, icon: Twitter, label: 'إكس' },
-  { key: 'youtube', href: siteConfig.social.youtube, icon: Youtube, label: 'يوتيوب' },
+  { key: 'youtube', href: siteConfig.social.youtube, icon: YouTubeIcon, label: 'يوتيوب' },
+  { key: 'facebook', href: siteConfig.social.facebook, icon: FacebookIcon, label: 'فيسبوك' },
 ].filter((s) => isConfigured(s.href));
 
 // The other Gahez products. Every product's footer lists the rest, so a
