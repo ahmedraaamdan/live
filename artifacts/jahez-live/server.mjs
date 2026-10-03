@@ -76,19 +76,42 @@ function cacheFor(path) {
   return 'public, max-age=3600';
 }
 
+const NOT_FOUND_PAGE = join(ROOT, '404', 'index.html');
+
 async function serveStatic(req, res, urlPath) {
   const found = await resolveStatic(urlPath);
-  // An unknown path gets the app shell with a 404 status: the router shows
-  // its not-found page, and crawlers learn the page does not exist.
-  const path = found ?? join(ROOT, 'index.html');
+  // An unknown path gets the generated 404 page (noindex, no canonical) with
+  // a 404 status: the app still boots on it and the router shows its
+  // not-found page, and crawlers learn the page does not exist.
+  const missing = !found || found === NOT_FOUND_PAGE;
+  const path = missing ? ((await fileAt(NOT_FOUND_PAGE)) ?? join(ROOT, 'index.html')) : found;
   const body = await readFile(path);
-  res.writeHead(found ? 200 : 404, {
+  res.writeHead(missing ? 404 : 200, {
     'Content-Type': TYPES[extname(path)] ?? 'application/octet-stream',
     'Content-Length': body.length,
-    'Cache-Control': found ? cacheFor(path) : 'no-cache',
+    'Cache-Control': missing ? 'no-cache' : cacheFor(path),
     'X-Content-Type-Options': 'nosniff',
   });
   res.end(req.method === 'HEAD' ? undefined : body);
+}
+
+// --------------------------------------------------------------- redirects
+
+/** Old paths that moved. Exact match, after trailing-slash removal. */
+const MOVED = { '/browse': '/classes', '/index.html': '/' };
+
+/**
+ * One canonical URL per page, answered with a single 301: no trailing slash
+ * (except the root), and moved paths sent to their new home. The query
+ * string is kept.
+ */
+function redirectFor(url) {
+  let path = url.pathname;
+  if (path.length > 1 && path.endsWith('/')) path = path.replace(/\/+$/, '') || '/';
+  path = MOVED[path] ?? path;
+  if (path === url.pathname) return null;
+  // Never emit "//host": a browser reads that as another site.
+  return path.replace(/^\/{2,}/, '/') + url.search;
 }
 
 // ---------------------------------------------------------------- waitlist
@@ -224,6 +247,11 @@ createServer(async (req, res) => {
       return await waitlist(req, res);
     }
     if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, 405, { error: 'method' });
+    const location = redirectFor(url);
+    if (location) {
+      res.writeHead(301, { Location: location, 'Cache-Control': 'public, max-age=3600' });
+      return res.end();
+    }
     return await serveStatic(req, res, url.pathname);
   } catch (error) {
     console.error('request failed', error);

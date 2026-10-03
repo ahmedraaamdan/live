@@ -5,7 +5,7 @@
  *  - Header / Footer (nav links)
  *  - useSeo (per-route <title>/meta/canonical/OG)
  *  - scripts/generate-seo-html.mjs (prerendered per-route index.html)
- *  - public/sitemap.xml (kept in sync by hand — routes rarely change)
+ *  - dist/public/sitemap.xml (written by the same build script)
  *
  * Add a page by adding one entry here plus the page component — nothing
  * else needs to know a new route exists.

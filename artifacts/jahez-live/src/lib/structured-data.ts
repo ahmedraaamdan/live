@@ -7,13 +7,19 @@ import type { FaqCategory } from '@/components/marketing/faq-accordion';
  * or org details. See DESIGN_SYSTEM.md marketing brief section 20.
  */
 
+/** Gahez (gahez.space) is the organisation; Live is one of its products. */
+export const ORGANIZATION_ID = 'https://gahez.space/#organization';
+
 export function organizationJsonLd() {
   const sameAs = Object.values(siteConfig.social).filter(isConfigured);
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: siteConfig.brandName,
-    url: siteConfig.siteUrl,
+    '@id': ORGANIZATION_ID,
+    name: 'Gahez',
+    alternateName: 'جاهز',
+    url: 'https://gahez.space/',
+    logo: 'https://gahez.space/Assets/icon-512.png',
     ...(sameAs.length ? { sameAs } : {}),
   };
 }
@@ -23,7 +29,9 @@ export function websiteJsonLd() {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: siteConfig.brandName,
-    url: siteConfig.siteUrl,
+    url: `${siteConfig.siteUrl}/`,
+    inLanguage: 'ar',
+    publisher: { '@id': ORGANIZATION_ID },
   };
 }
 

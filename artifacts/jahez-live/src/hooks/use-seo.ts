@@ -6,7 +6,7 @@ export interface SeoInput {
   description: string;
   /** App-relative path, e.g. "/classes" or "/" — combined with siteConfig.siteUrl for canonical/OG URLs. */
   path: string;
-  /** Defaults to a generic OG image once one exists; omit until it does. */
+  /** Absolute URL of the share image; defaults to the site-wide /og.png (1200x630). */
   image?: string;
   /** Raw JSON-LD object(s) to embed as <script type="application/ld+json">. */
   jsonLd?: object | object[];
@@ -34,6 +34,10 @@ function upsertLink(rel: string, href: string) {
 
 const JSON_LD_ID = 'route-jsonld';
 
+/** Site-wide share card, public/og.png. Keep in step with scripts/generate-seo-html.mjs. */
+export const DEFAULT_OG_IMAGE = `${siteConfig.siteUrl}/og.png`;
+const DEFAULT_OG_IMAGE_ALT = 'جاهز Live — حصص أونلاين مباشرة مع مدرسين حقيقيين';
+
 /**
  * Sets document.title, meta description, canonical, and Open Graph/Twitter
  * tags for the current route. Runs client-side (this is a Vite SPA), and is
@@ -41,7 +45,7 @@ const JSON_LD_ID = 'route-jsonld';
  * scripts/generate-seo-html.mjs so crawlers that don't execute JS — and
  * social-share unfurls — see the same metadata without waiting on React.
  */
-export function useSeo({ title, description, path, image, jsonLd }: SeoInput) {
+export function useSeo({ title, description, path, image = DEFAULT_OG_IMAGE, jsonLd }: SeoInput) {
   useEffect(() => {
     const url = `${siteConfig.siteUrl}${path === '/' ? '/' : path}`;
 
@@ -54,12 +58,18 @@ export function useSeo({ title, description, path, image, jsonLd }: SeoInput) {
     upsertMeta('property', 'og:url', url);
     upsertMeta('property', 'og:type', 'website');
     upsertMeta('property', 'og:site_name', siteConfig.brandName);
-    if (image) upsertMeta('property', 'og:image', image);
+    upsertMeta('property', 'og:locale', 'ar_EG');
+    upsertMeta('property', 'og:image', image);
+    if (image === DEFAULT_OG_IMAGE) {
+      upsertMeta('property', 'og:image:width', '1200');
+      upsertMeta('property', 'og:image:height', '630');
+      upsertMeta('property', 'og:image:alt', DEFAULT_OG_IMAGE_ALT);
+    }
 
-    upsertMeta('name', 'twitter:card', image ? 'summary_large_image' : 'summary');
+    upsertMeta('name', 'twitter:card', 'summary_large_image');
     upsertMeta('name', 'twitter:title', title);
     upsertMeta('name', 'twitter:description', description);
-    if (image) upsertMeta('name', 'twitter:image', image);
+    upsertMeta('name', 'twitter:image', image);
 
     document.getElementById(JSON_LD_ID)?.remove();
     if (jsonLd) {

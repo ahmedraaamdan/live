@@ -40,12 +40,11 @@ it. It updates automatically whenever the token files change.
    shadcn body) for text-first pages, or hand-build with `Header`/`Footer`
    directly for an expressive marketing page — see the checklist below for
    how to style it either way.
-4. Add the route's `path`/`title`/`description` to the `routes` array in
-   `scripts/generate-seo-html.mjs` and a `<url>` entry in
-   `public/sitemap.xml`, so crawlers get a real prerendered page and the
-   sitemap stays complete. (These intentionally duplicate `routes.ts` in
-   plain JS/XML rather than importing it, so the post-build script has no
-   TypeScript/bundler dependency.)
+4. Add the route's `path`/`title`/`description`/`h1`/`crumb` (and
+   `jsonLd` if the page passes more than a breadcrumb to `useSeo`) to the
+   `routes` array in `scripts/generate-seo-html.mjs`. The build writes the
+   route's prerendered HTML (meta, JSON-LD, a static heading and links) and
+   its `sitemap.xml` entry from that list.
 5. Never invent a business detail (email, phone, price, store link, stat).
    If it isn't real yet, read it from `site-config.ts` and hide the UI when
    it's unset — don't hardcode a placeholder into the page.
