@@ -167,6 +167,19 @@ main, .topbar, .footer, .toast { position: relative; z-index: 2; }
 .landing-mascot { position: absolute; z-index: 3; left: -90px; bottom: -34px; width: 190px; height: 228px; }
 .landing-mascot > [data-gahez-mascot] { width: 100%; height: 100%; }
 .empty-state-mascot { width: 170px; height: 204px; margin: -18px auto 4px; }
+/* Every host fills its wrapper; wrappers set the size and placement. */
+.steps-mascot > [data-gahez-mascot], .premiere-mascot > [data-gahez-mascot], .teacher-cta-mascot > [data-gahez-mascot],
+.landing-cta-mascot > [data-gahez-mascot], .contact-mascot > [data-gahez-mascot] { width: 100%; height: 100%; }
+.steps-mascot { width: 230px; height: 210px; margin-top: 18px; }
+/* Perched on the premiere card's top edge, on the corner the badge leaves free. */
+.premiere-mascot { position: absolute; z-index: 2; left: 22px; bottom: calc(100% - 46px); width: 150px; height: 170px; }
+.premiere-section .premiere-grid { padding-top: 70px; row-gap: 110px; }
+.teacher-cta-mascot { width: 190px; height: 210px; margin-top: 18px; }
+/* Full-width strip under the closing CTA's buttons, never over its text. */
+.landing-cta { flex-wrap: wrap; }
+.landing-cta-mascot { flex: 0 0 100%; height: 240px; margin-bottom: -39px; }
+.mp-contact-side { display: grid; gap: 18px; }
+.contact-mascot { width: 220px; height: 250px; margin-inline: auto; }
 .friction-section { padding: 103px 0 115px; background: hsl(var(--secondary) / .35); border-bottom: 1px solid hsl(var(--border) / .7); }
 .landing-section-intro { align-items: flex-start; margin-bottom: 22px; }
 .landing-section-intro .section-title { font-size: clamp(2rem, 3.8vw, 3.2rem); line-height: 1.2; }
@@ -270,8 +283,12 @@ main, .topbar, .footer, .toast { position: relative; z-index: 2; }
   .mini-equation { margin-top: 21px; font-size: .8rem; gap: 8px; }
   .lesson-window-foot { padding: 0 15px 12px; font-size: .59rem; }
   .visual-sticker-one { right: -6px; top: 67px; }
-  .visual-sticker-two { left: -6px; bottom: 150px; }
-  .landing-mascot { left: -10px; bottom: -40px; width: 140px; height: 168px; }
+  .visual-sticker-two { left: -6px; bottom: 200px; }
+  .landing-mascot { position: relative; left: auto; bottom: auto; margin: 4px auto 0; width: 140px; height: 168px; }
+  .steps-mascot, .teacher-cta-mascot { width: 170px; height: 160px; margin-inline: auto; }
+  .premiere-mascot { left: 14px; width: 120px; height: 136px; bottom: calc(100% - 36px); }
+  .landing-cta-mascot { flex: none; width: 100%; height: 200px; margin-bottom: -29px; }
+  .contact-mascot { width: 170px; height: 196px; }
   .scroll-cue { bottom: 17px; }
   .friction-section, .steps-section, .teacher-proof-section { padding: 68px 0 75px; }
   .landing-section-intro { display: block; }

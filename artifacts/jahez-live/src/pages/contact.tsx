@@ -72,6 +72,8 @@ export default function Contact() {
             </form>
           )}
         </div>
+        <div className="mp-contact-side">
+        <div className="contact-mascot" aria-hidden="true"><div data-gahez-mascot="phone" data-face="talk" data-dir="rtl" /></div>
         {directChannels.length > 0 && (
           <div className="mp-contact-channels">
             <h2>قنوات تانية</h2>
@@ -82,6 +84,7 @@ export default function Contact() {
             ))}
           </div>
         )}
+        </div>
       </div>
     </ContentPage>
   );
