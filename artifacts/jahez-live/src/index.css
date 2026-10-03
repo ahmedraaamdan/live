@@ -157,9 +157,16 @@ main, .topbar, .footer, .toast { position: relative; z-index: 2; }
 .visual-sticker-one { right: -22px; top: 86px; padding: 12px 13px; border-radius: 4px 13px 13px 13px; transform: rotate(4deg); font-size: .64rem; }
 .visual-sticker-one svg { color: hsl(var(--accent)); }
 .visual-sticker-one b, .visual-sticker-two span, .visual-sticker-two small { display: block; }
-.visual-sticker-two { left: -23px; bottom: 39px; flex-direction: column; align-items: flex-start; padding: 12px 15px; border-radius: 13px 4px 13px 13px; transform: rotate(-4deg); }
+.visual-sticker-two { left: -23px; bottom: 210px; flex-direction: column; align-items: flex-start; padding: 12px 15px; border-radius: 13px 4px 13px 13px; transform: rotate(-4deg); }
 .visual-sticker-two span { color: hsl(var(--accent)); font: 800 1rem var(--app-font-display); }
 .visual-sticker-two small { color: hsl(var(--muted-foreground)); font-size: .61rem; }
+/* GAHEZ Agent mascot (embed from gahez.space/mascot). Decorative, fixed-size
+   box standing on the lesson window's outer corner; the embed draws a
+   transparent 3D canvas inside it. The embed sets position: relative on the
+   [data-gahez-mascot] host, so the absolute positioning lives on a wrapper. */
+.landing-mascot { position: absolute; z-index: 3; left: -90px; bottom: -34px; width: 190px; height: 228px; }
+.landing-mascot > [data-gahez-mascot] { width: 100%; height: 100%; }
+.empty-state-mascot { width: 170px; height: 204px; margin: -18px auto 4px; }
 .friction-section { padding: 103px 0 115px; background: hsl(var(--secondary) / .35); border-bottom: 1px solid hsl(var(--border) / .7); }
 .landing-section-intro { align-items: flex-start; margin-bottom: 22px; }
 .landing-section-intro .section-title { font-size: clamp(2rem, 3.8vw, 3.2rem); line-height: 1.2; }
@@ -263,7 +270,8 @@ main, .topbar, .footer, .toast { position: relative; z-index: 2; }
   .mini-equation { margin-top: 21px; font-size: .8rem; gap: 8px; }
   .lesson-window-foot { padding: 0 15px 12px; font-size: .59rem; }
   .visual-sticker-one { right: -6px; top: 67px; }
-  .visual-sticker-two { left: -6px; bottom: 24px; }
+  .visual-sticker-two { left: -6px; bottom: 150px; }
+  .landing-mascot { left: -10px; bottom: -40px; width: 140px; height: 168px; }
   .scroll-cue { bottom: 17px; }
   .friction-section, .steps-section, .teacher-proof-section { padding: 68px 0 75px; }
   .landing-section-intro { display: block; }

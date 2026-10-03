@@ -30,6 +30,7 @@ function LandingSignalVisual() {
         <div className="lesson-window-foot"><span><MessageCircle size={14} /> اسأل المدرس مباشرة</span><span className="focus-chip">من بيتك، بتركيزك</span></div>
       </div>
       <div className="visual-sticker visual-sticker-one"><Radio size={16} /><span>حصص مباشرة<br /><b>كل يوم</b></span></div>
+      <div className="landing-mascot" aria-hidden="true"><div data-gahez-mascot="hero" data-face="star" data-dir="rtl" /></div>
       <div className="visual-sticker visual-sticker-two"><span>+ ٦</span><small>مواد دراسية متاحة</small></div>
     </div>
   );

@@ -139,6 +139,7 @@ export default function Classes() {
 
             {filtered.length === 0 ? (
               <EmptyState
+                mascot
                 title="مفيش حصص مطابقة دلوقتي."
                 copy="جرّب تغيّر البحث أو الفلاتر."
                 action={<button className="button-secondary" onClick={() => { setQuery(''); setSubject('الكل'); setGrade('كل المراحل'); }} data-testid="button-clear-filters">إظهار كل الحصص</button>}
