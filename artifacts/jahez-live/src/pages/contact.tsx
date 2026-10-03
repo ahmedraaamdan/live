@@ -1,4 +1,5 @@
 import { type FormEvent, useState } from 'react';
+import { ClientOnly } from '@/components/client-only';
 import { Mail, MessageCircle, Send } from 'lucide-react';
 import { ContentPage } from '@/components/marketing/content-page';
 import { useSeo } from '@/hooks/use-seo';
@@ -73,7 +74,7 @@ export default function Contact() {
           )}
         </div>
         <div className="mp-contact-side">
-        <div className="contact-mascot" aria-hidden="true"><div data-gahez-mascot="phone" data-face="talk" data-dir="rtl" /></div>
+        <div className="contact-mascot" aria-hidden="true"><ClientOnly><div data-gahez-mascot="phone" data-face="talk" data-dir="rtl" /></ClientOnly></div>
         {directChannels.length > 0 && (
           <div className="mp-contact-channels">
             <h2>قنوات تانية</h2>

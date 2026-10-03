@@ -64,11 +64,12 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
   return <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>;
 }
 
-function App() {
+/** ssrPath: the route to render during the build-time prerender (entry-server.tsx). */
+function App({ ssrPath }: { ssrPath?: string } = {}) {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')} ssrPath={ssrPath}>
           <Router />
         </WouterRouter>
         <WaitlistDialog />

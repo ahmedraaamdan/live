@@ -74,7 +74,8 @@ export function Footer() {
         </div>
       </div>
       <div className="container-wide site-footer-bottom">
-        <span className="footer-copy">© {year} جاهز Live</span>
+        {/* The year is baked in at build time; the client may be in a newer one. */}
+        <span className="footer-copy" suppressHydrationWarning>© {year} جاهز Live</span>
       </div>
     </footer>
   );

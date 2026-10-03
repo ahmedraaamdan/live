@@ -400,6 +400,9 @@ main, .topbar, .footer, .toast { position: relative; z-index: 2; }
 
 /* FAQ */
 .faq-categories { display: flex; flex-direction: column; gap: 40px; }
+/* FaqAccordion force-mounts every answer so the prerendered HTML has them;
+   Radix doesn't hide a force-mounted closed panel, so this does. */
+.faq-categories [role="region"][data-state="closed"] { display: none; }
 .faq-category-title { font-size: 1.05rem; font-weight: 800; letter-spacing: 0; margin: 0 0 6px; color: hsl(var(--primary)); }
 
 /* Why-live benefits grid (home + for-students) */

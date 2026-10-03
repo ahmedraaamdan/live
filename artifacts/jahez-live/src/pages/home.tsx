@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ClientOnly } from '@/components/client-only';
 import { Link } from 'wouter';
 import {
   ArrowDown, ArrowLeft, CalendarClock, CalendarDays, CarFront,
@@ -30,7 +31,7 @@ function LandingSignalVisual() {
         <div className="lesson-window-foot"><span><MessageCircle size={14} /> اسأل المدرس مباشرة</span><span className="focus-chip">من بيتك، بتركيزك</span></div>
       </div>
       <div className="visual-sticker visual-sticker-one"><Radio size={16} /><span>حصص مباشرة<br /><b>كل يوم</b></span></div>
-      <div className="landing-mascot" aria-hidden="true"><div data-gahez-mascot="hero" data-face="star" data-dir="rtl" /></div>
+      <div className="landing-mascot" aria-hidden="true"><ClientOnly><div data-gahez-mascot="hero" data-face="star" data-dir="rtl" /></ClientOnly></div>
       <div className="visual-sticker visual-sticker-two"><span>+ ٦</span><small>مواد دراسية متاحة</small></div>
     </div>
   );
@@ -135,7 +136,7 @@ export default function Home() {
               <h2 className="section-title">الحكاية<br /><span className="title-accent">بسيطة.</span></h2>
               <p>مفيش تعقيد ومفيش خطوات زيادة — من أول ما تكتشف الحصة لحد ما تدخلها.</p>
               <Link href={routes.howItWorks.path} className="text-link" data-testid="link-steps-more">التفاصيل كاملة <ArrowLeft size={15} /></Link>
-              <div className="steps-mascot" aria-hidden="true"><div data-gahez-mascot="desk" data-face="happy" data-dir="rtl" /></div>
+              <div className="steps-mascot" aria-hidden="true"><ClientOnly><div data-gahez-mascot="desk" data-face="happy" data-dir="rtl" /></ClientOnly></div>
             </div>
             <div className="steps-list">
               <StepCard number="١" title="اكتشف" copy="شوف الحصص والمدرسين اللي يناسبوك." icon={<Eye size={24} />} />
@@ -157,7 +158,7 @@ export default function Home() {
                 <Link href={routes.classes.path} className="button-secondary" data-testid="link-premiere-browse">شوف كل الحصص القادمة <ArrowLeft size={16} /></Link>
               </div>
               <div className="premiere-card fade-up delay-1" data-testid="card-premiere-featured">
-                <div className="premiere-mascot" aria-hidden="true"><div data-gahez-mascot="perch" data-face="happy" data-dir="rtl" /></div>
+                <div className="premiere-mascot" aria-hidden="true"><ClientOnly><div data-gahez-mascot="perch" data-face="happy" data-dir="rtl" /></ClientOnly></div>
                 <span className="status-badge premiere-card-badge"><span className="premiere-dot" /> PREMIERE</span>
                 <span className="premiere-card-date"><CalendarClock size={14} /> {premiereClass.date} — {premiereClass.time}</span>
                 <h3>{premiereClass.title}</h3>
@@ -211,7 +212,7 @@ export default function Home() {
               <h2 className="section-title teacher-cta-title">اعمل مركزك<br />أونلاين.</h2>
               <p className="teacher-cta-copy">مش محتاج تبدأ من الصفر. افتح حصتك، حدد ميعادها وسعرها، وخلي الطلاب يكتشفوك ويحجزوا معاك.</p>
               <Link href={routes.forTeachers.path} className="button-primary" data-testid="link-teacher-cta-more"><UserPlus size={17} /> ابدأ كمدرس</Link>
-              <div className="teacher-cta-mascot" aria-hidden="true"><div data-gahez-mascot="phone" data-face="talk" data-dir="rtl" /></div>
+              <div className="teacher-cta-mascot" aria-hidden="true"><ClientOnly><div data-gahez-mascot="phone" data-face="talk" data-dir="rtl" /></ClientOnly></div>
             </div>
             <ul className="teacher-cta-list">
               <li><Video size={17} /> افتح حصتك</li>
@@ -270,7 +271,7 @@ export default function Home() {
             <Link href={routes.classes.path} className="button-secondary" data-testid="link-final-browse">تصفح الحصص</Link>
             <button className="button-secondary" onClick={() => openWaitlist()} data-testid="button-final-waitlist"><UserPlus size={16} /> احجز مكانك</button>
           </div>
-          <div className="landing-cta-mascot" aria-hidden="true"><div data-gahez-mascot="dance" data-face="surprised" data-dir="rtl" /></div>
+          <div className="landing-cta-mascot" aria-hidden="true"><ClientOnly><div data-gahez-mascot="dance" data-face="surprised" data-dir="rtl" /></ClientOnly></div>
         </CTASection>
       </main>
       <Footer />

@@ -4,16 +4,19 @@
  * public route (dist/public/<route>/index.html), so crawlers and social
  * previews that don't execute JavaScript (Facebook/WhatsApp/X unfurls,
  * some search bots) see the correct <title>/description/OG tags, the
- * route's JSON-LD, and a minimal body (heading, summary, links) — not just
- * the homepage's metadata and an empty <div id="root">.
+ * route's JSON-LD, and the page's real markup — not just the homepage's
+ * metadata and an empty <div id="root">.
  *
  * How it works: the build's dist/public/index.html already has the correct
  * hashed asset URLs baked in by Vite. This script clones that file for each
  * route, swaps the block between the <!--seo:start--> / <!--seo:end-->
  * markers (see index.html) for that route's metadata, and fills
- * <div id="root"> with a static fallback. main.tsx mounts with createRoot
- * (not hydrateRoot), so React simply replaces that fallback on mount — no
- * hydration to mismatch.
+ * <div id="root" data-ssr> with the page rendered by the SSR bundle
+ * (src/entry-server.tsx, built to dist/server/entry-server.js just before
+ * this runs). main.tsx sees data-ssr and hydrates that markup. If the SSR
+ * bundle is missing or a route fails to render, that route falls back to a
+ * minimal static body (heading, summary, links) that main.tsx replaces with
+ * createRoot instead.
  *
  * It also writes dist/public/404/index.html (served by server.mjs with a 404
  * status for unknown paths) and dist/public/sitemap.xml from the same list.
@@ -25,7 +28,7 @@
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createServer } from 'vite';
 
 const SITE_URL = 'https://live.gahez.space';
@@ -136,6 +139,18 @@ function fallbackBody({ path, h1, description }) {
     + '</main></div>';
 }
 
+/** The SSR bundle's render(path), or null when it wasn't built. */
+async function loadSsrRenderer(root) {
+  const entry = join(root, 'dist', 'server', 'entry-server.js');
+  try {
+    const mod = await import(pathToFileURL(entry).href);
+    return mod.render;
+  } catch (error) {
+    console.warn(`generate-seo-html: no SSR bundle at ${entry} (${error.message}); using the static fallback body.`);
+    return null;
+  }
+}
+
 function sitemap(lastmod) {
   const urls = routes.map((r) => `  <url><loc>${urlFor(r.path)}</loc><lastmod>${lastmod}</lastmod></url>`).join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -180,6 +195,8 @@ async function main() {
   }
 
   const { sd, data } = await loadAppModules(root);
+  const renderPage = await loadSsrRenderer(root);
+  const prerendered = [];
   const { '@context': _context, ...organization } = sd.organizationJsonLd();
   // Site-wide: who runs this (Gahez) and what this site is (one of its services).
   const siteJsonLd = {
@@ -197,10 +214,26 @@ async function main() {
     ],
   };
 
+  const body = (route) => {
+    if (renderPage) {
+      try {
+        const markup = renderPage(route.path);
+        if (markup.includes('<h1')) {
+          prerendered.push(route.path);
+          return `<div id="root" data-ssr>${markup}</div>`;
+        }
+        console.warn(`generate-seo-html: ${route.path} rendered without an <h1>; using the static fallback body.`);
+      } catch (error) {
+        console.warn(`generate-seo-html: ${route.path} failed to prerender (${error.message}); using the static fallback body.`);
+      }
+    }
+    return fallbackBody(route);
+  };
+
   const write = (route) => {
     const html = template
       .replace(markerRe, () => seoBlock(route, siteJsonLd))
-      .replace(rootDiv, () => fallbackBody(route));
+      .replace(rootDiv, () => body(route));
     const outDir = route.path === '/' ? distDir : join(distDir, route.path.slice(1));
     mkdirSync(outDir, { recursive: true });
     writeFileSync(join(outDir, 'index.html'), html);
@@ -217,7 +250,7 @@ async function main() {
   const lastmod = new Date().toISOString().slice(0, 10);
   writeFileSync(join(distDir, 'sitemap.xml'), sitemap(lastmod));
 
-  console.log(`generate-seo-html: wrote ${routes.length} route pages, 404/index.html and sitemap.xml (lastmod ${lastmod}).`);
+  console.log(`generate-seo-html: wrote ${routes.length} route pages, 404/index.html and sitemap.xml (lastmod ${lastmod}); prerendered ${prerendered.length}: ${prerendered.join(' ')}.`);
 }
 
 main().catch((error) => {

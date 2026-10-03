@@ -16,7 +16,9 @@ export function FaqAccordion({ categories }: { categories: FaqCategory[] }) {
             {cat.items.map((item, i) => (
               <AccordionItem key={i} value={`${cat.id}-${i}`} data-testid={`faq-item-${cat.id}-${i}`}>
                 <AccordionTrigger className="text-base font-bold">{item.q}</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground leading-8">{item.a}</AccordionContent>
+                {/* forceMount keeps closed answers in the DOM (hidden), so the
+                    prerendered HTML carries every answer, not just the questions. */}
+                <AccordionContent forceMount className="text-muted-foreground leading-8">{item.a}</AccordionContent>
               </AccordionItem>
             ))}
           </Accordion>
