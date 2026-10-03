@@ -33,7 +33,7 @@ export const PRODUCTS = {
 };
 
 const SOCIAL = [
-  ['whatsapp',  'https://wa.me/201111385543',              'WhatsApp'],
+  ['whatsapp',  'https://wa.me/201557947788',              'WhatsApp'],
   ['instagram', 'https://www.instagram.com/gahez.space/',  'Instagram'],
   ['tiktok',    'https://www.tiktok.com/@gahez.space',     'TikTok'],
   ['youtube',   'https://www.youtube.com/@GahezSpace',     'YouTube'],
@@ -150,7 +150,7 @@ export function renderEmail(opts) {
 
     <!-- help strip -->
     <tr><td class="pad" style="padding:16px 36px;background:#F1F6FF;border-top:1px solid ${LINE};font-family:${FONT};font-size:14px;color:${SOFT};text-align:center">
-      ${t.help} <a href="https://wa.me/201111385543" target="_blank" style="color:#16A34A;font-weight:700;text-decoration:none">WhatsApp</a>
+      ${t.help} <a href="https://wa.me/201557947788" target="_blank" style="color:#16A34A;font-weight:700;text-decoration:none">WhatsApp</a>
     </td></tr>
 
     <!-- footer -->
@@ -186,7 +186,7 @@ export function renderEmail(opts) {
     strip(opts.body),
     opts.cta ? `\n${opts.cta.label}: ${opts.cta.url}` : '',
     '',
-    t.help.replace(/\s*$/, '') + ' https://wa.me/201111385543',
+    t.help.replace(/\s*$/, '') + ' https://wa.me/201557947788',
     '—',
     `${t.tagline} https://gahez.space/`,
   ].filter((x) => x !== undefined).join('\n').replace(/\n{3,}/g, '\n\n');

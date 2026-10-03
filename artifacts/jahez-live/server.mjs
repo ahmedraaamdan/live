@@ -355,7 +355,7 @@ async function contact(req, res) {
     title: 'وصلتنا رسالتك',
     intro: `أهلاً ${esc(name)}، وصلتنا رسالتك بخصوص «${esc(subject)}»، وهنراجعها ونرد عليك في أقرب وقت.`,
     body: '<p style="margin:14px 0 0">لو حابب تضيف حاجة، ردّ على الإيميل ده على طول. ولو مستعجل، كلّمنا على واتساب.</p>',
-    cta: { label: 'كلّمنا على واتساب', url: 'https://wa.me/201111385543' },
+    cta: { label: 'كلّمنا على واتساب', url: 'https://wa.me/201557947788' },
     secondary: { label: 'ارجع لـ live.gahez.space', url: LIVE_URL },
     note: 'وصلك الإيميل ده لأنك بعتلنا رسالة من صفحة التواصل على Gahez Live.',
   });

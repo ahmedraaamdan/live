@@ -8,7 +8,7 @@ import { breadcrumbJsonLd } from '@/lib/structured-data';
 import { isConfigured, siteConfig } from '@/lib/site-config';
 
 /** Where to reach us when the form itself cannot send. */
-const FALLBACK_WHATSAPP = 'https://wa.me/201111385543';
+const FALLBACK_WHATSAPP = 'https://wa.me/201557947788';
 const FALLBACK_EMAIL = 'support@gahez.space';
 
 const ERRORS = {
