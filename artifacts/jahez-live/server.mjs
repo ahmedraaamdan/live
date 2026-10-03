@@ -1,27 +1,37 @@
 /**
- * live.gahez.space: the built marketing site plus one endpoint.
+ * live.gahez.space: the built marketing site plus two form endpoints.
  *
  * Static files come from dist/public, where generate-seo-html.mjs has
  * already written an index.html per route, so a crawler gets each page's own
  * title and description without running JavaScript.
  *
- * POST /api/waitlist takes the pre-launch form. Like gahez.space's
- * /api/submit it emails the team the details and sends the person an
- * acknowledgement, both through Resend from noreply@gahez.space, so every
+ * POST /api/waitlist takes the pre-launch form and POST /api/contact the
+ * contact page's form. Each emails the team the details (reply-to the
+ * visitor) and sends the visitor an acknowledgement, both over Zoho SMTP
+ * from support@gahez.space (the only From address Zoho accepts), so every
  * Gahez product's leads land in the same inbox.
  *
- * No dependencies: Node's own http server and fetch.
+ * One dependency, nodemailer (itself dependency-free), for SMTP; the rest is
+ * Node's own http server.
  */
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import nodemailer from 'nodemailer';
 
 const ROOT = fileURLToPath(new URL('./dist/public/', import.meta.url));
 const PORT = Number(process.env.PORT || 3000);
-const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
-const MAIL_FROM = process.env.MAIL_FROM || 'Gahez جاهز <noreply@gahez.space>';
-const LEAD_TO = (process.env.LEAD_TO || 'sales@gahez.space,info@gahez.space').split(',').map((s) => s.trim()).filter(Boolean);
+// SMTP_* come from /srv/live/.env (never committed). Zoho: smtp.zoho.com,
+// 465 with implicit TLS, and From must be the authenticated mailbox.
+const SMTP_HOST = process.env.SMTP_HOST || '';
+const SMTP_PORT = Number(process.env.SMTP_PORT || 465);
+const SMTP_USER = process.env.SMTP_USER || '';
+const SMTP_PASS = process.env.SMTP_PASS || '';
+const SUPPORT_EMAIL = 'support@gahez.space';
+const MAIL_FROM = process.env.MAIL_FROM || `Gahez جاهز <${SUPPORT_EMAIL}>`;
+const LEAD_TO = (process.env.LEAD_TO || SUPPORT_EMAIL).split(',').map((s) => s.trim()).filter(Boolean);
+const MAIL_READY = Boolean(SMTP_HOST && SMTP_USER && SMTP_PASS);
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -114,11 +124,12 @@ function redirectFor(url) {
   return path.replace(/^\/{2,}/, '/') + url.search;
 }
 
-// ---------------------------------------------------------------- waitlist
+// ------------------------------------------------------------------- forms
 
 // The acknowledgement goes to whatever address is typed, so without a limit
-// the form would let anyone mail anyone from our domain. Five a device per
-// ten minutes is plenty for a person and useless for a spammer.
+// the forms would let anyone mail anyone from our domain. Five a device per
+// ten minutes, shared by both forms, is plenty for a person and useless for
+// a spammer.
 const WINDOW_MS = 10 * 60 * 1000;
 const LIMIT = 5;
 const attempts = new Map();
@@ -162,14 +173,31 @@ function readBody(req, limit = 8 * 1024) {
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-async function sendEmail(payload) {
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+const oneLine = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+let transport = null;
+function mailer() {
+  transport ??= nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: SMTP_PORT === 465,
+    auth: { user: SMTP_USER, pass: SMTP_PASS },
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 20000,
   });
-  if (!response.ok) throw new Error(`Resend ${response.status}: ${await response.text().catch(() => '')}`);
+  return transport;
 }
+
+async function sendEmail({ to, replyTo, subject, html }) {
+  await mailer().sendMail({ from: MAIL_FROM, to, replyTo, subject, html });
+}
+
+const row = (label, value, shaded) =>
+  `<tr${shaded ? ' style="background:#f8fafc"' : ''}><td style="padding:12px 22px;color:#64748b;width:130px;vertical-align:top">${label}</td><td style="padding:12px 22px;font-weight:700">${value}</td></tr>`;
+const table = (rows) => `<table style="width:100%;border-collapse:collapse;font-size:15px;color:#0f172a">${rows}</table>`;
+const REPLY_HINT = '<div style="padding:14px 22px;color:#94a3b8;font-size:12px;border-top:1px solid #eef2f7">ردّ على الإيميل ده عشان تكلّمه مباشرة.</div>';
 
 function shell(title, rows) {
   return `<div style="font-family:Arial,Helvetica,sans-serif;background:#f3f7ff;padding:24px" dir="rtl">
@@ -180,40 +208,80 @@ function shell(title, rows) {
 </div>`;
 }
 
-async function waitlist(req, res) {
-  const ip = String(req.headers['x-forwarded-for'] ?? req.socket.remoteAddress ?? '').split(',')[0].trim();
-  if (!allowed(ip)) return json(res, 429, { success: false, error: 'rate_limited' });
+function clientIp(req) {
+  return String(req.headers['x-forwarded-for'] ?? req.socket.remoteAddress ?? '').split(',')[0].trim();
+}
 
+/**
+ * The checks both forms share: rate limit, JSON body, honeypot, a name and a
+ * valid email, and mail being configured. Returns the cleaned input, or null
+ * once it has answered the request itself.
+ */
+async function intake(req, res, label, bodyLimit) {
+  if (!allowed(clientIp(req))) {
+    json(res, 429, { success: false, error: 'rate_limited' });
+    return null;
+  }
   let data;
   try {
-    data = JSON.parse(await readBody(req));
+    data = JSON.parse(await readBody(req, bodyLimit));
   } catch {
-    return json(res, 400, { success: false, error: 'bad_request' });
+    json(res, 400, { success: false, error: 'bad_request' });
+    return null;
   }
-  if (data._gotcha) return json(res, 200, { success: true });
-
-  const name = String(data.name ?? '').trim().slice(0, 120);
+  if (!data || typeof data !== 'object') {
+    json(res, 400, { success: false, error: 'bad_request' });
+    return null;
+  }
+  // A bot filled the hidden field: pretend it worked, send nothing.
+  if (data._gotcha) {
+    json(res, 200, { success: true });
+    return null;
+  }
+  const name = oneLine(data.name).slice(0, 120);
   const email = String(data.email ?? '').trim().slice(0, 200);
-  const phone = String(data.phone ?? '').trim().slice(0, 40);
-  const role = ROLE_LABELS[data.role] ? data.role : 'student';
-  if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return json(res, 422, { success: false, error: 'validation' });
-  if (!RESEND_API_KEY) {
-    console.error('waitlist: RESEND_API_KEY is not set');
-    return json(res, 503, { success: false, error: 'not_configured' });
+  const phone = oneLine(data.phone).slice(0, 40);
+  if (!name || !EMAIL_RE.test(email)) {
+    json(res, 422, { success: false, error: 'validation' });
+    return null;
   }
+  if (!MAIL_READY) {
+    console.error(`${label}: SMTP_HOST / SMTP_USER / SMTP_PASS are not set`);
+    json(res, 503, { success: false, error: 'not_configured' });
+    return null;
+  }
+  return { data, name, email, phone };
+}
 
-  const row = (label, value, shaded) =>
-    `<tr${shaded ? ' style="background:#f8fafc"' : ''}><td style="padding:12px 22px;color:#64748b;width:130px">${label}</td><td style="padding:12px 22px;font-weight:700">${value}</td></tr>`;
+/** The lead to the team, then the acknowledgement to the visitor. */
+async function deliver(res, label, lead, ack) {
+  try {
+    await sendEmail(lead);
+    await sendEmail(ack);
+  } catch (error) {
+    console.error(`${label}: send failed`, error instanceof Error ? error.message : error);
+    json(res, 502, { success: false, error: 'send_failed' });
+    return false;
+  }
+  json(res, 200, { success: true });
+  return true;
+}
+
+async function waitlist(req, res) {
+  const input = await intake(req, res, 'waitlist');
+  if (!input) return;
+  const { data, name, email, phone } = input;
+  const role = ROLE_LABELS[data.role] ? data.role : 'student';
+
   const notify = shell(
     'طلب انتظار جديد — Gahez Live',
-    `<table style="width:100%;border-collapse:collapse;font-size:15px;color:#0f172a">
+    `${table(`
       ${row('الاسم', esc(name))}
       ${row('الإيميل', `<a href="mailto:${esc(email)}">${esc(email)}</a>`, true)}
       ${row('الموبايل', `<span dir="ltr">${esc(phone) || '—'}</span>`)}
       ${row('نوع الحساب', ROLE_LABELS[role], true)}
-      ${row('المنتج', 'Gahez Live')}
-    </table>
-    <div style="padding:14px 22px;color:#94a3b8;font-size:12px;border-top:1px solid #eef2f7">ردّ على الإيميل ده عشان تكلّمه مباشرة.</div>`,
+      ${row('المنتج', 'Gahez Live')}`)}
+    ${REPLY_HINT}`,
   );
   const ack = shell(
     'Gahez Live',
@@ -225,26 +293,66 @@ async function waitlist(req, res) {
     </div>`,
   );
 
-  try {
-    await sendEmail({ from: MAIL_FROM, to: LEAD_TO, reply_to: email, subject: `انتظار Gahez Live — ${name}`, html: notify });
-    await sendEmail({ from: MAIL_FROM, to: [email], reply_to: 'info@gahez.space', subject: 'مكانك محجوز — جاهز Live', html: ack });
-  } catch (error) {
-    console.error('waitlist: send failed', error instanceof Error ? error.message : error);
-    return json(res, 502, { success: false, error: 'send_failed' });
-  }
-  console.log(`waitlist: ${role} joined`);
-  return json(res, 200, { success: true });
+  const sent = await deliver(
+    res,
+    'waitlist',
+    { to: LEAD_TO, replyTo: email, subject: `انتظار Gahez Live — ${name}`, html: notify },
+    { to: [email], replyTo: SUPPORT_EMAIL, subject: 'مكانك محجوز — جاهز Live', html: ack },
+  );
+  if (sent) console.log(`waitlist: ${role} joined`);
+}
+
+async function contact(req, res) {
+  // A message can run to a few thousand Arabic characters (2 bytes each).
+  const input = await intake(req, res, 'contact', 32 * 1024);
+  if (!input) return;
+  const { data, name, email, phone } = input;
+  const subject = oneLine(data.subject).slice(0, 200);
+  const message = String(data.message ?? '').trim().slice(0, 5000);
+  if (!subject || !message) return json(res, 422, { success: false, error: 'validation' });
+
+  const notify = shell(
+    'رسالة جديدة من صفحة التواصل — Gahez Live',
+    `${table(`
+      ${row('الاسم', esc(name))}
+      ${row('الإيميل', `<a href="mailto:${esc(email)}">${esc(email)}</a>`, true)}
+      ${row('الموبايل', `<span dir="ltr">${esc(phone) || '—'}</span>`)}
+      ${row('الموضوع', esc(subject), true)}
+      ${row('الرسالة', `<div style="font-weight:400;white-space:pre-wrap;line-height:1.8">${esc(message)}</div>`)}
+      ${row('المنتج', 'Gahez Live', true)}`)}
+    ${REPLY_HINT}`,
+  );
+  const ack = shell(
+    'Gahez Live',
+    `<div style="padding:24px;color:#0f172a;font-size:15px;line-height:1.9">
+      <p>أهلاً ${esc(name)}،</p>
+      <p>وصلتنا رسالتك بخصوص «${esc(subject)}»، وهنراجعها ونرد عليك في أقرب وقت.</p>
+      <p style="color:#64748b">لو حابب تضيف حاجة، ردّ على الإيميل ده على طول.</p>
+      <p style="margin-top:24px">— فريق جاهز<br><a href="https://live.gahez.space" style="color:#2563EB">live.gahez.space</a></p>
+    </div>`,
+  );
+
+  const sent = await deliver(
+    res,
+    'contact',
+    { to: LEAD_TO, replyTo: email, subject: `تواصل Gahez Live — ${name}: ${subject}`, html: notify },
+    { to: [email], replyTo: SUPPORT_EMAIL, subject: 'وصلتنا رسالتك — جاهز Live', html: ack },
+  );
+  if (sent) console.log('contact: message received');
 }
 
 // ------------------------------------------------------------------ server
+
+const FORMS = { '/api/waitlist': waitlist, '/api/contact': contact };
 
 createServer(async (req, res) => {
   try {
     const url = new URL(req.url ?? '/', 'http://localhost');
     if (url.pathname === '/healthz') return json(res, 200, { ok: true });
-    if (url.pathname === '/api/waitlist') {
+    const form = FORMS[url.pathname];
+    if (form) {
       if (req.method !== 'POST') return json(res, 405, { success: false, error: 'method' });
-      return await waitlist(req, res);
+      return await form(req, res);
     }
     if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, 405, { error: 'method' });
     const location = redirectFor(url);

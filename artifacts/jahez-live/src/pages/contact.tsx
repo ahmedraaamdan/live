@@ -7,6 +7,38 @@ import { routes } from '@/lib/routes';
 import { breadcrumbJsonLd } from '@/lib/structured-data';
 import { isConfigured, siteConfig } from '@/lib/site-config';
 
+/** Where to reach us when the form itself cannot send. */
+const FALLBACK_WHATSAPP = 'https://wa.me/201111385543';
+const FALLBACK_EMAIL = 'support@gahez.space';
+
+const ERRORS = {
+  invalid: 'اكتب اسمك وإيميل صحيح، والموضوع والرسالة.',
+  busy: 'وصلنا رسايل كتير من نفس الجهاز. جرّب تاني بعد شوية.',
+  failed: 'مقدرناش نبعت رسالتك دلوقتي. جرّب تاني بعد شوية.',
+} as const;
+
+type ContactState = 'idle' | 'sending' | 'sent' | keyof typeof ERRORS;
+
+/** POSTs to the server's /api/contact, which mails the team and the visitor. */
+async function sendContact(fields: Record<string, string>): Promise<'sent' | keyof typeof ERRORS> {
+  try {
+    const response = await fetch('/api/contact', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(fields),
+    });
+    if (response.ok) {
+      const body = (await response.json().catch(() => null)) as { success?: boolean } | null;
+      return body?.success ? 'sent' : 'failed';
+    }
+    if (response.status === 422) return 'invalid';
+    if (response.status === 429) return 'busy';
+    return 'failed';
+  } catch {
+    return 'failed';
+  }
+}
+
 export default function Contact() {
   useSeo({
     title: routes.contact.title,
@@ -15,14 +47,23 @@ export default function Contact() {
     jsonLd: breadcrumbJsonLd([{ label: 'الرئيسية', path: '/' }, { label: 'تواصل معنا' }]),
   });
 
-  const [sent, setSent] = useState(false);
+  const [state, setState] = useState<ContactState>('idle');
 
-  const submit = (e: FormEvent<HTMLFormElement>) => {
+  const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // TODO: wire to a real backend/email endpoint (e.g. artifacts/api-server)
-    // before launch. The form is fully built and validated client-side —
-    // only the submission target needs connecting.
-    setSent(true);
+    const form = new FormData(e.currentTarget);
+    const field = (name: string) => String(form.get(name) ?? '');
+    setState('sending');
+    setState(
+      await sendContact({
+        name: field('name'),
+        email: field('email'),
+        phone: field('phone'),
+        subject: field('subject'),
+        message: field('message'),
+        _gotcha: field('company'),
+      }),
+    );
   };
 
   const directChannels = [
@@ -39,7 +80,7 @@ export default function Contact() {
     >
       <div className="mp-contact-grid">
         <div>
-          {sent ? (
+          {state === 'sent' ? (
             <div className="mp-contact-success fade-up" data-testid="text-contact-success">
               <Send size={22} />
               <h2>وصلتنا رسالتك.</h2>
@@ -49,26 +90,37 @@ export default function Contact() {
             <form className="auth-form mp-contact-form" onSubmit={submit} data-testid="form-contact">
               <label>
                 الاسم
-                <input required placeholder="اسمك بالكامل" data-testid="input-contact-name" />
+                <input required name="name" maxLength={120} placeholder="اسمك بالكامل" data-testid="input-contact-name" />
               </label>
               <label>
                 البريد الإلكتروني
-                <input required type="email" placeholder="you@example.com" data-testid="input-contact-email" />
+                <input required name="email" type="email" dir="ltr" maxLength={200} placeholder="you@example.com" data-testid="input-contact-email" />
               </label>
               <label>
                 رقم الهاتف <span className="mp-optional">(اختياري)</span>
-                <input type="tel" placeholder="01xxxxxxxxx" data-testid="input-contact-phone" />
+                <input name="phone" type="tel" dir="ltr" maxLength={40} placeholder="01xxxxxxxxx" data-testid="input-contact-phone" />
               </label>
               <label>
                 الموضوع
-                <input required placeholder="عايز تتكلم عن إيه؟" data-testid="input-contact-subject" />
+                <input required name="subject" maxLength={200} placeholder="عايز تتكلم عن إيه؟" data-testid="input-contact-subject" />
               </label>
               <label>
                 الرسالة
-                <textarea required rows={5} placeholder="اكتب رسالتك هنا..." data-testid="input-contact-message" />
+                <textarea required name="message" maxLength={5000} rows={5} placeholder="اكتب رسالتك هنا..." data-testid="input-contact-message" />
               </label>
-              <button className="button-primary auth-submit" type="submit" data-testid="button-contact-submit">
-                <Send size={16} /> إرسال الرسالة
+              {/* Hidden from people; a bot that fills every field fills this one too. */}
+              <input className="waitlist-trap" name="company" tabIndex={-1} autoComplete="off" aria-hidden="true" />
+              {state in ERRORS ? (
+                <p className="waitlist-error" role="alert" data-testid="text-contact-error">
+                  {ERRORS[state as keyof typeof ERRORS]}
+                  <br />
+                  تقدر كمان تكلّمنا مباشرة على{' '}
+                  <a href={FALLBACK_WHATSAPP} target="_blank" rel="noreferrer noopener">واتساب</a> أو{' '}
+                  <a href={`mailto:${FALLBACK_EMAIL}`} dir="ltr">{FALLBACK_EMAIL}</a>.
+                </p>
+              ) : null}
+              <button className="button-primary auth-submit" type="submit" disabled={state === 'sending'} data-testid="button-contact-submit">
+                <Send size={16} /> {state === 'sending' ? 'جارٍ الإرسال…' : 'إرسال الرسالة'}
               </button>
             </form>
           )}

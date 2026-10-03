@@ -3,8 +3,10 @@
 #
 #   cd /srv/live && docker compose up -d --build
 #
-# .env holds RESEND_API_KEY for the waiting-list emails. It lives only on the
-# server; without it the form answers "not configured" instead of failing.
+# .env holds the Zoho SMTP settings (SMTP_HOST, SMTP_PORT, SMTP_USER,
+# SMTP_PASS, MAIL_FROM, LEAD_TO) for the waiting-list and contact emails. It
+# lives only on the server; without them the forms answer "not configured"
+# instead of failing.
 services:
   web:
     build: .
