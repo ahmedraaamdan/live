@@ -24,6 +24,7 @@ ENV NODE_ENV=production PORT=3000
 COPY --from=build /app/artifacts/jahez-live/dist/public ./dist/public
 COPY --from=build /server/node_modules ./node_modules
 COPY artifacts/jahez-live/server.mjs ./server.mjs
+COPY artifacts/jahez-live/email-template.mjs ./email-template.mjs
 USER node
 EXPOSE 3000
 CMD ["node", "server.mjs"]

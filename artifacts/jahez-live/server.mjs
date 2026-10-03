@@ -9,7 +9,9 @@
  * contact page's form. Each emails the team the details (reply-to the
  * visitor) and sends the visitor an acknowledgement, both over Zoho SMTP
  * from support@gahez.space (the only From address Zoho accepts), so every
- * Gahez product's leads land in the same inbox.
+ * Gahez product's leads land in the same inbox. Every email is rendered
+ * with the shared GAHEZ template (email-template.mjs, a copy of the one in
+ * Gahez systems), as HTML plus a plain-text twin.
  *
  * One dependency, nodemailer (itself dependency-free), for SMTP; the rest is
  * Node's own http server.
@@ -19,6 +21,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import nodemailer from 'nodemailer';
+import { esc, renderEmail } from './email-template.mjs';
 
 const ROOT = fileURLToPath(new URL('./dist/public/', import.meta.url));
 const PORT = Number(process.env.PORT || 3000);
@@ -171,8 +174,6 @@ function readBody(req, limit = 8 * 1024) {
   });
 }
 
-const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-
 const oneLine = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -190,23 +191,42 @@ function mailer() {
   return transport;
 }
 
-async function sendEmail({ to, replyTo, subject, html }) {
-  await mailer().sendMail({ from: MAIL_FROM, to, replyTo, subject, html });
+async function sendEmail({ to, replyTo, subject, html, text }) {
+  await mailer().sendMail({ from: MAIL_FROM, to, replyTo, subject, html, text });
 }
 
-const row = (label, value, shaded) =>
-  `<tr${shaded ? ' style="background:#f8fafc"' : ''}><td style="padding:12px 22px;color:#64748b;width:130px;vertical-align:top">${label}</td><td style="padding:12px 22px;font-weight:700">${value}</td></tr>`;
-const table = (rows) => `<table style="width:100%;border-collapse:collapse;font-size:15px;color:#0f172a">${rows}</table>`;
-const REPLY_HINT = '<div style="padding:14px 22px;color:#94a3b8;font-size:12px;border-top:1px solid #eef2f7">ردّ على الإيميل ده عشان تكلّمه مباشرة.</div>';
+const LIVE_URL = 'https://live.gahez.space/';
+const INSTAGRAM_URL = 'https://www.instagram.com/gahez.space/';
 
-function shell(title, rows) {
-  return `<div style="font-family:Arial,Helvetica,sans-serif;background:#f3f7ff;padding:24px" dir="rtl">
-  <div style="max-width:560px;margin:auto;background:#fff;border:1px solid #e5eaf2;border-radius:14px;overflow:hidden">
-    <div style="background:linear-gradient(135deg,#2563EB,#22D3EE);padding:18px 22px;color:#fff;font-size:18px;font-weight:800">${title}</div>
-    ${rows}
-  </div>
-</div>`;
+/**
+ * wa.me wants the full international number in digits only. Egyptian
+ * numbers are usually typed locally (01xxxxxxxxx), so those get the 20
+ * country code; anything else is taken as already international.
+ */
+function whatsappLink(phone) {
+  let digits = String(phone ?? '').replace(/\D/g, '');
+  if (digits.startsWith('00')) digits = digits.slice(2);
+  else if (/^01\d{9}$/.test(digits)) digits = `2${digits}`;
+  return digits.length >= 8 ? `https://wa.me/${digits}` : null;
 }
+
+/**
+ * The team's reply button: WhatsApp when the visitor left a usable number,
+ * otherwise an email back to them.
+ */
+function replyCta(email, phone, subject) {
+  const wa = whatsappLink(phone);
+  if (wa) return { cta: { label: 'ردّ على واتساب', url: wa }, secondary: { label: `أو ابعت إيميل لـ ${email}`, url: `mailto:${email}` } };
+  const mailto = `mailto:${email}?subject=${encodeURIComponent(subject)}`;
+  return { cta: { label: 'ردّ بالإيميل', url: mailto } };
+}
+
+const contactRows = (name, email, phone) => [
+  ['الاسم', esc(name)],
+  ['الإيميل', `<a href="mailto:${esc(email)}" style="color:#E11D48;text-decoration:none">${esc(email)}</a>`],
+  ['الموبايل', phone ? `<span dir="ltr">${esc(phone)}</span>` : '—'],
+];
+const TEAM_NOTE = 'وصلك الإيميل ده لأن حد ملا فورم على live.gahez.space. ردّك على الإيميل هيروح للزائر مباشرة.';
 
 function clientIp(req) {
   return String(req.headers['x-forwarded-for'] ?? req.socket.remoteAddress ?? '').split(',')[0].trim();
@@ -273,31 +293,33 @@ async function waitlist(req, res) {
   const { data, name, email, phone } = input;
   const role = ROLE_LABELS[data.role] ? data.role : 'student';
 
-  const notify = shell(
-    'طلب انتظار جديد — Gahez Live',
-    `${table(`
-      ${row('الاسم', esc(name))}
-      ${row('الإيميل', `<a href="mailto:${esc(email)}">${esc(email)}</a>`, true)}
-      ${row('الموبايل', `<span dir="ltr">${esc(phone) || '—'}</span>`)}
-      ${row('نوع الحساب', ROLE_LABELS[role], true)}
-      ${row('المنتج', 'Gahez Live')}`)}
-    ${REPLY_HINT}`,
-  );
-  const ack = shell(
-    'Gahez Live',
-    `<div style="padding:24px;color:#0f172a;font-size:15px;line-height:1.9">
-      <p>أهلاً ${esc(name)}،</p>
-      <p>مكانك في <strong>جاهز Live</strong> محجوز 🎉 التسجيل بيفتح يوم الإطلاق، <strong>1 يناير 2027</strong>، وهنبعتلك على الإيميل ده أول ما يفتح.</p>
-      <p style="color:#64748b">عندك سؤال؟ ردّ على الإيميل ده على طول.</p>
-      <p style="margin-top:24px">— فريق جاهز<br><a href="https://live.gahez.space" style="color:#2563EB">live.gahez.space</a></p>
-    </div>`,
-  );
+  const notify = renderEmail({
+    product: 'live',
+    robot: 'desk',
+    preheader: `${name} (${ROLE_LABELS[role]}) حجز مكانه في قايمة انتظار Gahez Live.`,
+    title: 'طلب انتظار جديد على Gahez Live',
+    intro: `<strong>${esc(name)}</strong> لسه حاجز مكانه في قايمة الانتظار. دي بياناته:`,
+    rows: [...contactRows(name, email, phone), ['نوع الحساب', ROLE_LABELS[role]], ['المنتج', 'Gahez Live']],
+    ...replyCta(email, phone, 'مكانك في Gahez Live محجوز'),
+    note: TEAM_NOTE,
+  });
+  const ack = renderEmail({
+    product: 'live',
+    robot: 'dance',
+    preheader: 'مكانك في Gahez Live محجوز، وهنبعتلك أول ما التسجيل يفتح يوم 1 يناير 2027.',
+    title: 'مكانك محجوز! 🎉',
+    intro: `أهلاً ${esc(name)}، مكانك في <strong>Gahez Live</strong> اتحجز خلاص. التسجيل بيفتح يوم الإطلاق، <strong>1 يناير 2027</strong>، وهنبعتلك على الإيميل ده أول ما يفتح.`,
+    body: '<p style="margin:14px 0 0">لحد ما نفتح، تابعنا على إنستجرام عشان تشوف الجديد أول بأول. وعندك أي سؤال؟ ردّ على الإيميل ده على طول.</p>',
+    cta: { label: 'تابعنا على إنستجرام', url: INSTAGRAM_URL },
+    secondary: { label: 'live.gahez.space', url: LIVE_URL },
+    note: 'وصلك الإيميل ده لأنك سجّلت في قايمة انتظار Gahez Live.',
+  });
 
   const sent = await deliver(
     res,
     'waitlist',
-    { to: LEAD_TO, replyTo: email, subject: `انتظار Gahez Live — ${name}`, html: notify },
-    { to: [email], replyTo: SUPPORT_EMAIL, subject: 'مكانك محجوز — جاهز Live', html: ack },
+    { to: LEAD_TO, replyTo: email, subject: `انتظار Gahez Live — ${name}`, ...notify },
+    { to: [email], replyTo: SUPPORT_EMAIL, subject: 'مكانك محجوز — جاهز Live', ...ack },
   );
   if (sent) console.log(`waitlist: ${role} joined`);
 }
@@ -311,32 +333,38 @@ async function contact(req, res) {
   const message = String(data.message ?? '').trim().slice(0, 5000);
   if (!subject || !message) return json(res, 422, { success: false, error: 'validation' });
 
-  const notify = shell(
-    'رسالة جديدة من صفحة التواصل — Gahez Live',
-    `${table(`
-      ${row('الاسم', esc(name))}
-      ${row('الإيميل', `<a href="mailto:${esc(email)}">${esc(email)}</a>`, true)}
-      ${row('الموبايل', `<span dir="ltr">${esc(phone) || '—'}</span>`)}
-      ${row('الموضوع', esc(subject), true)}
-      ${row('الرسالة', `<div style="font-weight:400;white-space:pre-wrap;line-height:1.8">${esc(message)}</div>`)}
-      ${row('المنتج', 'Gahez Live', true)}`)}
-    ${REPLY_HINT}`,
-  );
-  const ack = shell(
-    'Gahez Live',
-    `<div style="padding:24px;color:#0f172a;font-size:15px;line-height:1.9">
-      <p>أهلاً ${esc(name)}،</p>
-      <p>وصلتنا رسالتك بخصوص «${esc(subject)}»، وهنراجعها ونرد عليك في أقرب وقت.</p>
-      <p style="color:#64748b">لو حابب تضيف حاجة، ردّ على الإيميل ده على طول.</p>
-      <p style="margin-top:24px">— فريق جاهز<br><a href="https://live.gahez.space" style="color:#2563EB">live.gahez.space</a></p>
-    </div>`,
-  );
+  const notify = renderEmail({
+    product: 'live',
+    robot: 'desk',
+    preheader: `${name}: ${subject}`,
+    title: 'رسالة جديدة من صفحة التواصل',
+    intro: `<strong>${esc(name)}</strong> بعت رسالة من صفحة التواصل على Gahez Live:`,
+    rows: [
+      ...contactRows(name, email, phone),
+      ['الموضوع', esc(subject)],
+      ['الرسالة', `<div style="font-weight:400;white-space:pre-wrap;line-height:1.8">${esc(message)}</div>`],
+      ['المنتج', 'Gahez Live'],
+    ],
+    ...replyCta(email, phone, `Re: ${subject}`),
+    note: TEAM_NOTE,
+  });
+  const ack = renderEmail({
+    product: 'live',
+    robot: 'phone',
+    preheader: `وصلتنا رسالتك بخصوص «${subject}»، وهنرد عليك في أقرب وقت.`,
+    title: 'وصلتنا رسالتك',
+    intro: `أهلاً ${esc(name)}، وصلتنا رسالتك بخصوص «${esc(subject)}»، وهنراجعها ونرد عليك في أقرب وقت.`,
+    body: '<p style="margin:14px 0 0">لو حابب تضيف حاجة، ردّ على الإيميل ده على طول. ولو مستعجل، كلّمنا على واتساب.</p>',
+    cta: { label: 'كلّمنا على واتساب', url: 'https://wa.me/201111385543' },
+    secondary: { label: 'ارجع لـ live.gahez.space', url: LIVE_URL },
+    note: 'وصلك الإيميل ده لأنك بعتلنا رسالة من صفحة التواصل على Gahez Live.',
+  });
 
   const sent = await deliver(
     res,
     'contact',
-    { to: LEAD_TO, replyTo: email, subject: `تواصل Gahez Live — ${name}: ${subject}`, html: notify },
-    { to: [email], replyTo: SUPPORT_EMAIL, subject: 'وصلتنا رسالتك — جاهز Live', html: ack },
+    { to: LEAD_TO, replyTo: email, subject: `تواصل Gahez Live — ${name}: ${subject}`, ...notify },
+    { to: [email], replyTo: SUPPORT_EMAIL, subject: 'وصلتنا رسالتك — جاهز Live', ...ack },
   );
   if (sent) console.log('contact: message received');
 }
