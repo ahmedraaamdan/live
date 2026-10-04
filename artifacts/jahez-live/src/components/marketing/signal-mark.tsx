@@ -20,10 +20,10 @@ export function GahezMark() {
 /** The lockup as gahez.space draws it, with the product name as a badge. */
 export function Logo() {
   return (
-    <span className="brand-lockup" aria-label="gahez Live">
+    <span className="brand-lockup" aria-label="Gahez Live — جاهز">
       <GahezMark />
       <span className="brand-word" dir="ltr">
-        gahez
+        Gahez
       </span>
       <span className="brand-badge" dir="ltr">
         Live

@@ -126,7 +126,7 @@ export function renderEmail(opts) {
     <tr><td bgcolor="#1D4ED8" style="background:#1D4ED8;background-image:linear-gradient(135deg,#1A3A9C 0%,#2563EB 55%,#22D3EE 100%);padding:22px 28px" class="pad">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
-          <td style="text-align:${start}"><a href="${p.url}" target="_blank"><img src="${ASSETS}/logo-white.png" width="130" height="32" alt="gahez" style="display:inline-block;border:0;height:32px;width:auto"></a></td>
+          <td style="text-align:${start}"><a href="${p.url}" target="_blank"><img src="${ASSETS}/logo-white.png" width="133" height="32" alt="Gahez" style="display:inline-block;border:0;height:32px;width:auto"></a></td>
           <td style="text-align:${end}"><span style="display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.35);font-family:${FONT};font-size:13px;font-weight:700;color:#ffffff;white-space:nowrap">${esc(productName)}</span></td>
         </tr>
       </table>
@@ -155,7 +155,7 @@ export function renderEmail(opts) {
 
     <!-- footer -->
     <tr><td class="pad" style="padding:24px 28px 26px;background:#0F172A;text-align:center">
-      <a href="https://gahez.space/" target="_blank"><img src="${ASSETS}/logo-white.png" width="106" height="26" alt="gahez" style="display:inline-block;border:0;height:26px;width:auto"></a>
+      <a href="https://gahez.space/" target="_blank"><img src="${ASSETS}/logo-white.png" width="108" height="26" alt="Gahez" style="display:inline-block;border:0;height:26px;width:auto"></a>
       <p style="margin:6px 0 14px;font-family:${FONT};font-size:13px;color:#94A3B8">${t.tagline}</p>
       <div style="margin:0 0 16px">${socials}</div>
       <p style="margin:0 0 6px;font-family:${FONT};font-size:11px;font-weight:700;letter-spacing:.3px;color:#64748B">${t.products}</p>
