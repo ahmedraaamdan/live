@@ -19,6 +19,7 @@ export function organizationJsonLd() {
     name: 'Gahez',
     alternateName: 'جاهز',
     url: 'https://gahez.space/',
+    foundingDate: '2026-07',
     logo: 'https://gahez.space/Assets/icon-512.png',
     ...(sameAs.length ? { sameAs } : {}),
   };

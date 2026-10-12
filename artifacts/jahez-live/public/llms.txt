@@ -1,25 +1,134 @@
-# Gahez Live (جاهز Live)
+# Gahez Live (جاهز لايف)
 
-> Gahez Live is a marketplace for live online classes in Egypt: students discover teachers, compare them, and book a class in seconds; teachers open their own live classes, set a schedule and a price, and get discovered. It is one of five independent products built by Gahez (جاهز); see https://gahez.space/llms.txt for the company-wide overview.
-
-## What it does
-
-- Students browse live and upcoming classes across subjects and grade levels, filter by subject, grade, price and rating, and book in seconds.
-- Students compare teachers directly rather than being locked to one center or one teacher.
-- Teachers open their own classes, set their own schedule and price, and are discoverable by students who haven't found them yet.
-- Payment works on Android, iPhone and web.
-
-## Who it's for
-
-Students and parents in Egypt looking for a live-taught class outside a single fixed center, and teachers who want to teach online without building their own booking/payment system.
+> Gahez Live is Egypt's first online centre (أول سنتر أونلاين في مصر). Instead of the student going to a tutoring centre (سنتر), the teacher comes to the student: live, on screen, at home. Its focus is Thanaweya Amma (الثانوية العامة, Egypt's general secondary certificate) and the preparatory stage (المرحلة الإعدادية). Students find a live class, book a seat and join at the scheduled time, asking the teacher questions as the lesson happens; teachers open their own classes and set their own schedule and price. Gahez Live launches officially on 1 January 2027, and its waiting list is open now. It is one of five independent products made by Gahez (جاهز), a technology company founded in July 2026; see https://gahez.space/llms.txt for the company overview.
 
 ## Key facts
 
+- **Product:** Gahez Live (جاهز لايف, also written جاهز Live)
+- **What it is:** Egypt's first online centre: live online classes with real teachers, taught to students at home
 - **Website:** https://live.gahez.space
-- **Category:** Live online tutoring / EdTech marketplace
+- **Made by:** Gahez (جاهز), https://gahez.space, founded July 2026
+- **Focus:** Thanaweya Amma (الثانوية العامة) and the preparatory stage (الإعدادية)
 - **Market:** Egypt
 - **Language:** Arabic
-- **Social:** Instagram https://www.instagram.com/gahez.space/ · TikTok https://www.tiktok.com/@gahez.space · YouTube https://www.youtube.com/@GahezSpace · Facebook https://www.facebook.com/gahez.space
+- **Status:** pre-launch. Official launch 1 January 2027. The waiting list is open for students, parents and teachers.
+- **Devices:** Android, iPhone and the web
+- **Contact:** info@gahez.space · WhatsApp +20 155 794 7788 (https://wa.me/201557947788) · https://live.gahez.space/contact
+
+## The idea: the centre comes to you
+
+In Egypt, secondary and preparatory students spend hours every week travelling to tutoring centres (سناتر), sitting in crowded halls, and fitting their whole day around one centre's timetable. Gahez Live moves the centre online:
+- **No commute, no crowd.** The student opens the screen at home and sits in the front row.
+- **A real, live teacher.** Not a recorded video: the student asks, the teacher answers in the same moment, which is what makes an idea land.
+- **More choice than one centre.** The student is not tied to one centre or one teacher, and can compare teachers before booking.
+- **A clear appointment.** Every class has a set day and time; the student books a seat and joins on time.
+
+## How it works
+
+### For students and parents
+1. Browse live and upcoming classes and filter by subject, grade, price and rating, or start from a teacher's page.
+2. Compare teachers: their details, students' ratings, number of classes and followers.
+3. Book a seat and pay. The class appears in the student's schedule.
+4. Join live at the scheduled time and ask questions during the lesson.
+- Follow a teacher to be notified of new classes and when they go live. A "live now" marker shows on every class that has started.
+- Some classes are available as a replay afterwards, if the teacher chooses; the class page says so.
+- If the internet drops, the student can rejoin as long as the class is still running.
+
+### For teachers
+1. Open a teacher account.
+2. Create a class: title, subject, grade, price and time, and publish it so students can find and book it.
+3. Announce a class days in advance as a "Premiere" so students can reserve seats before it starts.
+4. Teach live, and track students, attendance and earnings for every class.
+- Teachers set their own price and schedule, and decide whether a class is open or has a maximum number of students.
+- Teachers whose details Gahez Live has confirmed carry a verified badge.
+- A teacher reaches students beyond one neighbourhood without building a booking and payment system from scratch.
+
+## Payments
+
+- Students pay per class, at the price the teacher set.
+- On Android and iPhone, payment goes through the store's own system (Google Play or the App Store). On the web, the available payment methods are shown at booking.
+- Gahez Live does not store card details.
+- Refunds depend on the booking's status and when the request is made: https://live.gahez.space/refund-policy
+
+## Trust
+
+- Ratings come only from students who attended the class.
+- Verified badge on teachers whose details were confirmed.
+- Payments through official store systems or the payment gateway.
+
+## Frequently asked questions
+
+**What is Gahez Live?**
+Egypt's first online centre: live online classes where the teacher comes to the student at home, instead of the student going to a centre. Its focus is Thanaweya Amma and the preparatory stage.
+
+**Who is it for?**
+Thanaweya Amma and preparatory students and their parents, and teachers who want to teach these students online.
+
+**Are the classes live or recorded?**
+Live. The student joins the teacher at the same time and can ask questions. Some classes are also available as a replay afterwards if the teacher chooses.
+
+**Is there any in-person attendance?**
+No. Every class on Gahez Live is online and live; the student studies from home.
+
+**How is it different from a normal centre?**
+No travel, no crowded hall, and no being tied to one centre's teachers and timetable. The student compares teachers, picks one, books a seat and studies from home.
+
+**How is it different from video course platforms?**
+Gahez Live is live teaching at a set time with a teacher who answers questions, not a library of pre-recorded videos.
+
+**How much does a class cost?**
+Each teacher sets the price of their own class, and it is shown before booking.
+
+**When does it launch?**
+The official launch is 1 January 2027. Students, parents and teachers can join the waiting list now on https://live.gahez.space.
+
+**Can I teach on Gahez Live?**
+Yes. Teachers open an account, create classes, set their schedule and price, and appear to students. Teachers can join the waiting list now.
+
+**Do I need Zoom?**
+It depends on how the class is run; joining details appear with the booking.
+
+**Who makes Gahez Live?**
+Gahez (جاهز), an Arabic-first technology company founded in July 2026 by Ahmed Ramadan (https://gahez.space). It is not related to Jahez, the Saudi food-delivery app.
+
+## أسئلة شائعة بالعربي
+
+**جاهز لايف إيه؟**
+أول سنتر أونلاين في مصر. بدل ما تروح السنتر، المدرس بييجي لك لايف وانت في بيتك. حصص مباشرة مع مدرسين حقيقيين، تسأل والمدرس يرد عليك في نفس اللحظة.
+
+**مناسب لمين؟**
+تركيزنا على طلاب الثانوية العامة والمرحلة الإعدادية وأولياء أمورهم، وعلى المدرسين اللي عايزين يدرّسوا لهم أونلاين.
+
+**الحصص لايف ولا مسجلة؟**
+لايف. بتدخل مع المدرس في نفس الوقت وتسأل. وبعض الحصص بتتاح كـ Replay بعد ما تخلص لو المدرس اختار كده.
+
+**إيه الفرق بينه وبين السنتر العادي؟**
+مفيش مواصلات ولا زحمة، ومش مربوط بسنتر واحد ولا مدرس واحد. بتقارن بين المدرسين، تختار، تحجز مكانك، وتذاكر من البيت.
+
+**إزاي ألاقي حصة تناسبني؟**
+من صفحة الحصص تقدر تفلتر بالمادة والصف والسعر والتقييم، أو تبدأ من صفحة المدرس.
+
+**الحصة بكام؟**
+كل مدرس بيحدد سعر حصته، والسعر بيظهر قبل الحجز.
+
+**أدفع إزاي؟**
+على الموبايل الدفع بيتم من خلال Google Play أو App Store، وعلى الويب بتظهر لك طرق الدفع المتاحة وقت الحجز. إحنا مش بنخزن بيانات كارتك.
+
+**أقدر أشتغل كمدرس؟**
+أيوه. بتفتح حساب، تعمل حصصك، تحدد المواعيد والأسعار، وتظهر للطلاب. وتقدر تعلن عن الحصة بدري (Premiere) عشان الطلاب يحجزوا قبلها.
+
+**الإطلاق إمتى؟**
+الإطلاق الرسمي 1 يناير 2027، وقائمة الانتظار مفتوحة دلوقتي للطلاب وأولياء الأمور والمدرسين.
+
+**مين ورا جاهز لايف؟**
+شركة جاهز (Gahez)، شركة تكنولوجيا أسسها أحمد رمضان في يوليو 2026. الموقع الرسمي https://gahez.space
+
+## What Gahez Live is not
+
+- Not a library of recorded videos: classes are live, at a set time.
+- Not a physical centre: there is no in-person attendance.
+- Not yet open for bookings: registration opens with the launch on 1 January 2027. Classes and teachers shown on the site before launch illustrate how the platform will look; they are not a record of real sessions, ratings or viewer numbers.
+- Not an academy-management system (that is Gahez Academy, https://academy.gahez.space).
 
 ## Key pages
 
@@ -30,10 +139,25 @@ Students and parents in Egypt looking for a live-taught class outside a single f
 - For teachers: https://live.gahez.space/for-teachers
 - How it works: https://live.gahez.space/how-it-works
 - Payments: https://live.gahez.space/payments
+- Refund policy: https://live.gahez.space/refund-policy
 - About: https://live.gahez.space/about
 - FAQ: https://live.gahez.space/faq
 - Contact: https://live.gahez.space/contact
 
+## Other products by Gahez
+
+- **Gahez Agent:** an AI agent that answers a business's customers on WhatsApp, Messenger and Instagram. https://agent.gahez.space
+- **Gahez Academy:** a complete system for running an academy or learning centre. https://academy.gahez.space
+- **Gahez Tools:** 1,700+ free Arabic web tools. https://tools.gahez.space
+- **Gahez Sticky:** a free Windows app that pops a note onto a friend's screen. https://sticky.gahez.space
+- Company overview: https://gahez.space/llms.txt
+
+## Social
+
+Instagram https://www.instagram.com/gahez.space/ · TikTok https://www.tiktok.com/@gahez.space · YouTube https://www.youtube.com/@GahezSpace · Facebook https://www.facebook.com/gahez.space
+
 ## How to cite Gahez Live
 
-"Gahez Live is a marketplace for live online classes in Egypt, where students discover and book teachers directly and teachers open their own live classes. It is one of five products built by Gahez (جاهز)."
+"Gahez Live is Egypt's first online centre: instead of going to a tutoring centre, Thanaweya Amma and preparatory students study live with a real teacher from home. It launches on 1 January 2027 and is made by Gahez (جاهز), a technology company founded in July 2026."
+
+بالعربي: "جاهز لايف أول سنتر أونلاين في مصر: بدل ما الطالب يروح السنتر، المدرس بييجي له لايف في البيت، وتركيزه على الثانوية العامة والإعدادية. الإطلاق 1 يناير 2027، وهو من منتجات شركة جاهز اللي تأسست في يوليو 2026."
