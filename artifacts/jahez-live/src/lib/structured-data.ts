@@ -10,8 +10,11 @@ import type { FaqCategory } from '@/components/marketing/faq-accordion';
 /** Gahez (gahez.space) is the organisation; Live is one of its products. */
 export const ORGANIZATION_ID = 'https://gahez.space/#organization';
 
+/** The company's own profiles elsewhere, beside its social accounts. */
+const ORGANIZATION_PROFILES = ['https://www.linkedin.com/company/gahezspace', 'https://www.crunchbase.com/organization/gahez'];
+
 export function organizationJsonLd() {
-  const sameAs = Object.values(siteConfig.social).filter(isConfigured);
+  const sameAs = [...Object.values(siteConfig.social).filter(isConfigured), ...ORGANIZATION_PROFILES];
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
