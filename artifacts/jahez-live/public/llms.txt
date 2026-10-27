@@ -11,7 +11,7 @@
 - **Focus:** Thanaweya Amma (الثانوية العامة) and the preparatory stage (الإعدادية)
 - **Market:** Egypt
 - **Language:** Arabic
-- **Status:** pre-launch. Official launch 1 January 2027. The waiting list is open for students, parents and teachers.
+- **Status:** registration is open at https://app.live.gahez.space for students, parents and teachers. Official launch 1 January 2027.
 - **Devices:** Android, iPhone and the web
 - **Contact:** info@gahez.space · WhatsApp +20 155 794 7788 (https://wa.me/201557947788) · https://live.gahez.space/contact
 
@@ -80,7 +80,7 @@ Gahez Live is live teaching at a set time with a teacher who answers questions, 
 Each teacher sets the price of their own class, and it is shown before booking.
 
 **When does it launch?**
-The official launch is 1 January 2027. Students, parents and teachers can join the waiting list now on https://live.gahez.space.
+The official launch is 1 January 2027. Students, parents and teachers can already sign up at https://app.live.gahez.space.
 
 **Can I teach on Gahez Live?**
 Yes. Teachers open an account, create classes, set their schedule and price, and appear to students. Teachers can join the waiting list now.
@@ -118,7 +118,7 @@ Gahez (جاهز), an Arabic-first technology company founded in July 2026 by Ahm
 أيوه. بتفتح حساب، تعمل حصصك، تحدد المواعيد والأسعار، وتظهر للطلاب. وتقدر تعلن عن الحصة بدري (Premiere) عشان الطلاب يحجزوا قبلها.
 
 **الإطلاق إمتى؟**
-الإطلاق الرسمي 1 يناير 2027، وقائمة الانتظار مفتوحة دلوقتي للطلاب وأولياء الأمور والمدرسين.
+الإطلاق الرسمي 1 يناير 2027، والتسجيل مفتوح دلوقتي للطلاب وأولياء الأمور والمدرسين على https://app.live.gahez.space.
 
 **مين ورا جاهز لايف؟**
 شركة جاهز (Gahez)، شركة تكنولوجيا أسسها أحمد رمضان في يوليو 2026. الموقع الرسمي https://gahez.space
@@ -127,7 +127,7 @@ Gahez (جاهز), an Arabic-first technology company founded in July 2026 by Ahm
 
 - Not a library of recorded videos: classes are live, at a set time.
 - Not a physical centre: there is no in-person attendance.
-- Not yet open for bookings: registration opens with the launch on 1 January 2027. Classes and teachers shown on the site before launch illustrate how the platform will look; they are not a record of real sessions, ratings or viewer numbers.
+- Not a record of real classes on this site: the classes and teachers shown on live.gahez.space illustrate how the platform will look; they are not a record of real sessions, ratings or viewer numbers.
 - Not an academy-management system (that is Gahez Academy, https://academy.gahez.space).
 
 ## Key pages

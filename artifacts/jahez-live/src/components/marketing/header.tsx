@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { CalendarClock, Menu, X } from 'lucide-react';
+import { LogIn, Menu, UserPlus, X } from 'lucide-react';
 import { Logo } from '@/components/marketing/signal-mark';
 import { primaryNav } from '@/lib/routes';
-import { LAUNCH_DATE, openWaitlist } from '@/lib/waitlist';
+import { siteConfig } from '@/lib/site-config';
 
 export function Header() {
   const [location] = useLocation();
@@ -13,13 +13,6 @@ export function Header() {
 
   return (
     <>
-      {/* Registration opens with the launch; until then every way in leads to the waiting list. */}
-      <button className="launch-bar" onClick={() => openWaitlist()} data-testid="button-launch-bar">
-        <CalendarClock size={15} aria-hidden="true" />
-        <span>
-          جاهز Live بينطلق يوم <strong>{LAUNCH_DATE}</strong>. سيب بياناتك ونبلّغك أول ما التسجيل يفتح.
-        </span>
-      </button>
       <header className="topbar">
         <div className="container-wide topbar-inner">
           <Link href="/" className="brand-link" data-testid="link-brand-home">
@@ -38,9 +31,12 @@ export function Header() {
             ))}
           </nav>
           <div className="topbar-actions">
-            <button className="header-signup" onClick={() => openWaitlist()} data-testid="button-header-waitlist">
-              <CalendarClock size={15} /> احجز مكانك
-            </button>
+            <a className="header-login desktop-only" href={`${siteConfig.appUrl}/login`} data-testid="link-header-login">
+              <LogIn size={15} /> دخول
+            </a>
+            <a className="header-signup" href={`${siteConfig.appUrl}/welcome`} data-testid="link-header-signup">
+              <UserPlus size={15} /> اعمل حساب
+            </a>
             <button
               className="icon-button mobile-menu"
               aria-label={menuOpen ? 'إغلاق القائمة' : 'فتح القائمة'}
@@ -64,15 +60,14 @@ export function Header() {
                 {item.navLabel}
               </Link>
             ))}
-            <button
-              onClick={() => {
-                setMenuOpen(false);
-                openWaitlist();
-              }}
-              data-testid="mobile-button-waitlist"
-            >
-              احجز مكانك قبل الإطلاق
-            </button>
+            <div className="mobile-auth">
+              <a className="header-login" href={`${siteConfig.appUrl}/login`} data-testid="mobile-link-login">
+                دخول
+              </a>
+              <a className="header-signup" href={`${siteConfig.appUrl}/welcome`} data-testid="mobile-link-signup">
+                اعمل حساب
+              </a>
+            </div>
           </div>
         )}
       </header>

@@ -11,8 +11,8 @@ export const siteConfig = {
   siteUrl: 'https://live.gahez.space',
   brandName: 'جاهز Live',
 
-  /** The authenticated web/mobile app users land in after a marketing CTA. Same origin until a real app domain exists. */
-  appUrl: '/',
+  /** The app (sign in, sign up, classes): the "دخول" and "اعمل حساب" links go here. */
+  appUrl: 'https://app.live.gahez.space',
 
   /** Support channels — leave empty until real ones exist; UI hides the ones that are empty. */
   supportEmail: '',

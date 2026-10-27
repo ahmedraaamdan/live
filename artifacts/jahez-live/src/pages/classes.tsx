@@ -11,7 +11,7 @@ import { routes } from '@/lib/routes';
 import { breadcrumbJsonLd } from '@/lib/structured-data';
 import { classes, subjects } from '@/data/classes';
 import type { ClassItem } from '@/data/classes';
-import { openWaitlist } from '@/lib/waitlist';
+import { openSignup } from '@/lib/signup';
 
 const grades = ['كل المراحل', ...Array.from(new Set(classes.map((c) => c.grade)))];
 
@@ -97,7 +97,7 @@ export default function Classes() {
     });
 
   // Until registration opens with the launch, booking means joining the waiting list.
-  const handleAction = (_item: ClassItem) => openWaitlist('student');
+  const handleAction = (_item: ClassItem) => openSignup('student');
 
   return (
     <div className="app-shell" dir="rtl">

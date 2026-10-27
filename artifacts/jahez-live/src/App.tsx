@@ -2,7 +2,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { type ReactNode, useEffect } from 'react';
 import { Redirect, Route, Router as WouterRouter, Switch, useLocation } from 'wouter';
 import { ErrorBoundary } from '@/components/error-boundary';
-import { WaitlistDialog } from '@/components/marketing/waitlist-dialog';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
@@ -72,7 +71,6 @@ function App({ ssrPath }: { ssrPath?: string } = {}) {
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')} ssrPath={ssrPath}>
           <Router />
         </WouterRouter>
-        <WaitlistDialog />
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>

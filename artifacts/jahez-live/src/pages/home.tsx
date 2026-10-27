@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { Header } from '@/components/marketing/header';
 import { Footer } from '@/components/marketing/footer';
-import { LAUNCH_DATE, openWaitlist } from '@/lib/waitlist';
+import { openSignup } from '@/lib/signup';
 import { SectionHeader } from '@/components/marketing/section-header';
 import { StepCard } from '@/components/marketing/step-card';
 import { FeatureCard } from '@/components/marketing/feature-card';
@@ -24,7 +24,7 @@ import { liveClasses, teachers, upcomingClasses } from '@/data/classes';
 function LandingSignalVisual() {
   return (
     <div className="landing-visual fade-up delay-2" aria-label="معاينة لمساحة مذاكرة مباشرة">
-      <div className="landing-visual-top"><span className="signal-live"><i /> LIVE / جلسة مباشرة</span><span>جاهز / 01</span></div>
+      <div className="landing-visual-top"><span className="signal-live"><i /> LIVE / جلسة مباشرة</span></div>
       <div className="lesson-window">
         <div className="lesson-window-head"><span className="teacher-avatar avatar-a">نع</span><span><b>أ. نورة العتيبي</b><small>رياضيات • شرح النهايات</small></span><span className="window-users"><Users size={14} /> 342</span></div>
         <div className="lesson-board"><span className="board-label">THE EXPLANATION SIGNAL</span><div><small>السؤال الذي يفتح الفكرة</small><strong>متى تصبح<br /><em>النهاية واضحة؟</em></strong><div className="mini-equation"><span>سؤال</span><b>→</b><span>تجربة</span><b>→</b><span>فهم</span></div></div><span className="mini-note">هنا تبدأ الـ «آها»</span></div>
@@ -32,7 +32,6 @@ function LandingSignalVisual() {
       </div>
       <div className="visual-sticker visual-sticker-one"><Radio size={16} /><span>حصص مباشرة<br /><b>كل يوم</b></span></div>
       <div className="landing-mascot" aria-hidden="true"><ClientOnly><div data-gahez-mascot="hero" data-face="star" data-dir="rtl" /></ClientOnly></div>
-      <div className="visual-sticker visual-sticker-two"><span>+ ٦</span><small>مواد دراسية متاحة</small></div>
     </div>
   );
 }
@@ -118,7 +117,7 @@ export default function Home() {
                   item={item}
                   followed={followed.has(item.teacherId)}
                   onFollow={() => toggleTeacher(item.teacherId, item.teacher)}
-                  onAction={() => openWaitlist('student')}
+                  onAction={() => openSignup('student')}
                 />
               ))}
             </div>
@@ -165,7 +164,7 @@ export default function Home() {
                 <div className="upcoming-teacher"><span className={`teacher-avatar ${premiereClass.avatar}`}>{premiereClass.initials}</span><span>{premiereClass.teacher}</span></div>
                 <div className="card-price-row">
                   <span className="card-price">{premiereClass.price}</span>
-                  <button className="card-action" onClick={() => notify(`تم حفظ مقعدك في حصة ${premiereClass.teacher}`)} data-testid="button-premiere-reserve">احجز مقعدك الآن</button>
+                  <button className="card-action" onClick={() => openSignup('student')} data-testid="button-premiere-reserve">احجز مقعدك الآن</button>
                 </div>
               </div>
             </div>
@@ -266,10 +265,10 @@ export default function Home() {
         <AppDownloadSection />
 
         {/* FINAL CTA */}
-        <CTASection variant="landing" kicker="جاهز للحصة الأولى؟" title={<>جاهز تبدأ<br /><span>حصتك؟</span></>} copy={`التسجيل بيفتح يوم الإطلاق، ${LAUNCH_DATE}. احجز مكانك دلوقتي ونبلّغك قبل أي حد.`}>
+        <CTASection variant="landing" kicker="جاهز للحصة الأولى؟" title={<>جاهز تبدأ<br /><span>حصتك؟</span></>} copy="التسجيل مفتوح. اعمل حسابك في دقيقة واحجز أول حصة لك.">
           <div className="final-cta-actions">
             <Link href={routes.classes.path} className="button-secondary" data-testid="link-final-browse">تصفح الحصص</Link>
-            <button className="button-secondary" onClick={() => openWaitlist()} data-testid="button-final-waitlist"><UserPlus size={16} /> احجز مكانك</button>
+            <button className="button-secondary" onClick={() => openSignup()} data-testid="button-final-signup"><UserPlus size={16} /> اعمل حساب</button>
           </div>
           <div className="landing-cta-mascot" aria-hidden="true"><ClientOnly><div data-gahez-mascot="dance" data-face="surprised" data-dir="rtl" /></ClientOnly></div>
         </CTASection>

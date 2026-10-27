@@ -115,7 +115,6 @@ main, .topbar, .footer, .toast { position: relative; z-index: 2; }
 .header-login:hover { background: hsl(var(--secondary)); }
 .landing-shell { background: var(--paper); }
 .landing-hero { min-height: 680px; padding: 82px 0 96px; position: relative; border-bottom: 1px solid hsl(var(--border) / .75); overflow: hidden; }
-.landing-hero::before { content: 'LIVE'; position: absolute; left: -45px; bottom: -77px; color: hsl(var(--primary) / .035); font: 800 18rem var(--app-font-mono); letter-spacing: 0; direction: ltr; }
 .landing-hero-grid { display: grid; grid-template-columns: minmax(0, .92fr) minmax(460px, 1.08fr); gap: 72px; align-items: center; }
 .landing-hero-copy { padding-top: 12px; }
 .landing-hero h1 { font-size: clamp(3.1rem, 5.4vw, 5.55rem); line-height: 1.08; letter-spacing: 0; max-width: 650px; margin: 0; color: hsl(var(--primary)); font-weight: 800; }
@@ -129,11 +128,11 @@ main, .topbar, .footer, .toast { position: relative; z-index: 2; }
 .scroll-cue { position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%); display: inline-flex; flex-direction: column; align-items: center; gap: 5px; color: hsl(var(--muted-foreground)); border: 0; background: transparent; font: 600 .61rem var(--app-font-mono); letter-spacing: .1em; }
 .scroll-cue svg { color: hsl(var(--accent)); animation: fade-up 1.8s infinite; }
 .landing-visual { min-height: 455px; position: relative; padding: 26px 20px 26px 0; }
-.landing-visual::before { content: ''; position: absolute; inset: 18px 0 4px 18px; border: 1px solid hsl(var(--accent) / .3); border-radius: 30px 30px 30px 5px; transform: rotate(-2.2deg); }
+.landing-visual::before { content: ''; position: absolute; inset: 18px 0 4px 18px; border: 1px solid hsl(var(--accent) / .3); border-radius: 30px 30px 30px 5px; transform: rotate(-1.2deg); }
 .landing-visual-top { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; color: hsl(var(--muted-foreground)); padding: 0 24px 12px; font: 600 .62rem var(--app-font-mono); letter-spacing: .08em; direction: ltr; }
 .signal-live { display: inline-flex; align-items: center; gap: 7px; color: hsl(var(--accent)); direction: rtl; }
 .signal-live i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: hsl(var(--accent)); animation: pulse-live 1.7s infinite; }
-.lesson-window { position: relative; z-index: 1; overflow: hidden; min-height: 390px; border-radius: 24px 24px 24px 5px; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); box-shadow: 13px 13px 0 hsl(var(--sun) / .9); transform: rotate(1.5deg); }
+.lesson-window { position: relative; z-index: 1; overflow: hidden; min-height: 390px; border-radius: 24px 24px 24px 5px; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); box-shadow: var(--shadow-sticker-xl) hsl(var(--primary) / .55); }
 .lesson-window-head { display: flex; align-items: center; gap: 11px; padding: 18px 20px; border-bottom: 1px solid hsl(var(--background) / .13); }
 .lesson-window-head .teacher-avatar { width: 38px; height: 38px; border-radius: 12px; font-size: .76rem; }
 .lesson-window-head b, .lesson-window-head small { display: block; }
@@ -154,7 +153,7 @@ main, .topbar, .footer, .toast { position: relative; z-index: 2; }
 .lesson-window-foot span { display: inline-flex; align-items: center; gap: 5px; }
 .focus-chip { color: var(--sun); }
 .visual-sticker { position: absolute; z-index: 2; display: flex; align-items: center; gap: 8px; color: hsl(var(--primary)); background: hsl(var(--card)); border: 1px solid hsl(var(--border)); box-shadow: 7px 8px 0 hsl(var(--primary) / .1); }
-.visual-sticker-one { right: -22px; top: 86px; padding: 12px 13px; border-radius: 4px 13px 13px 13px; transform: rotate(4deg); font-size: .64rem; }
+.visual-sticker-one { right: -14px; top: -8px; padding: 10px 13px; border-radius: 4px 13px 13px 13px; transform: rotate(3deg); font-size: .64rem; }
 .visual-sticker-one svg { color: hsl(var(--accent)); }
 .visual-sticker-one b, .visual-sticker-two span, .visual-sticker-two small { display: block; }
 .visual-sticker-two { left: -23px; bottom: 210px; flex-direction: column; align-items: flex-start; padding: 12px 15px; border-radius: 13px 4px 13px 13px; transform: rotate(-4deg); }
@@ -173,7 +172,9 @@ main, .topbar, .footer, .toast { position: relative; z-index: 2; }
 .steps-mascot { width: 230px; height: 210px; margin-top: 18px; }
 /* Perched on the premiere card's top edge, on the corner the badge leaves free. */
 .premiere-mascot { position: absolute; z-index: 2; left: 22px; bottom: calc(100% - 46px); width: 150px; height: 170px; }
-.premiere-section .premiere-grid { padding-top: 70px; row-gap: 110px; }
+/* No room reserved for the perch: the mascot embed is switched off site-wide
+   (gahez.space/mascot/embed.js hides every host), and the reserved space read
+   as a broken gap. Bring the padding back if the mascot is turned on. */
 .teacher-cta-mascot { width: 190px; height: 210px; margin-top: 18px; }
 /* Full-width strip under the closing CTA's buttons, never over its text. */
 .landing-cta { flex-wrap: wrap; }
@@ -181,10 +182,10 @@ main, .topbar, .footer, .toast { position: relative; z-index: 2; }
 .mp-contact-side { display: grid; gap: 18px; }
 .contact-mascot { width: 220px; height: 250px; margin-inline: auto; }
 .friction-section { padding: 103px 0 115px; background: hsl(var(--secondary) / .35); border-bottom: 1px solid hsl(var(--border) / .7); }
-.landing-section-intro { align-items: flex-start; margin-bottom: 22px; }
+.landing-section-intro { align-items: flex-start; margin-bottom: 32px; }
 .landing-section-intro .section-title { font-size: clamp(2rem, 3.8vw, 3.2rem); line-height: 1.2; }
 .title-accent { color: hsl(var(--accent)); position: relative; }
-.title-accent::after { content: ''; position: absolute; right: 0; left: 0; bottom: -5px; border-bottom: 2px solid currentColor; border-radius: 50%; transform: rotate(-2deg); }
+.title-accent::after { content: ''; position: absolute; right: 0; left: 0; bottom: -2px; border-bottom: 2px solid currentColor; border-radius: 50%; transform: rotate(-.8deg); }
 .friction-lead { width: min(670px, 100%); color: hsl(var(--muted-foreground)); line-height: 2; font-size: .96rem; margin: 0 0 30px; }
 .friction-grid { display: grid; grid-template-columns: 1fr 1.22fr 1fr 1fr; gap: 13px; }
 .friction-card { min-height: 225px; padding: 22px 19px; background: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-radius: 4px 19px 19px 19px; position: relative; transition: transform .22s, box-shadow .22s; }
@@ -200,7 +201,7 @@ main, .topbar, .footer, .toast { position: relative; z-index: 2; }
 .friction-card-featured p { color: hsl(var(--primary-foreground) / .68); }
 .card-underline { display: inline-block; margin-top: 17px; padding-bottom: 3px; color: var(--sun); border-bottom: 2px solid var(--sun); font-size: .68rem; font-weight: 800; }
 .steps-section { padding: 108px 0; }
-.steps-layout { display: grid; grid-template-columns: .82fr 1.18fr; gap: 100px; align-items: center; }
+.steps-layout { display: grid; grid-template-columns: .82fr 1.18fr; gap: 100px; align-items: start; }
 .steps-intro .section-title { font-size: clamp(2rem, 3.4vw, 3rem); line-height: 1.18; margin-bottom: 18px; }
 .steps-intro > p:not(.section-kicker) { color: hsl(var(--muted-foreground)); font-size: .84rem; line-height: 2; max-width: 285px; margin: 0 0 19px; }
 .steps-list { border-top: 1px solid hsl(var(--border)); }
@@ -337,6 +338,7 @@ main, .topbar, .footer, .toast { position: relative; z-index: 2; }
 .section-cta-row { margin-top: 26px; }
 .card-price-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; }
 .card-price-row .card-action { flex: 1; margin-top: 0; }
+.card-action { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
 .card-price { font: 800 .95rem var(--app-font-mono); color: hsl(var(--primary)); direction: ltr; white-space: nowrap; }
 
 .class-rows { display: flex; flex-direction: column; gap: 52px; }
@@ -569,3 +571,14 @@ main, .topbar, .footer, .toast { position: relative; z-index: 2; }
 .auth-submit:disabled { opacity: .6; cursor: progress; transform: none; }
 .section-kicker svg { display: inline; vertical-align: -2px; margin-inline-end: 4px; }
 .auth-dialog { border-radius: 22px; box-shadow: 0 24px 60px -24px hsl(222 47% 11% / .45); }
+
+/* Icons inside buttons and links stay on the text line. Tailwind's preflight
+   makes every svg a block, which broke any non-flex control with an icon. */
+:where(button, a) > svg { display: inline-block; vertical-align: middle; }
+
+/* Sign-in links to the app, next to the main call to action. */
+.header-login { text-decoration: none; }
+a.header-signup { text-decoration: none; }
+.mobile-panel .mobile-auth { display: flex; gap: 10px; padding-top: 6px; }
+.mobile-panel .mobile-auth a { flex: 1; text-align: center; }
+@media (max-width: 760px) { .topbar-actions .desktop-only { display: none; } }

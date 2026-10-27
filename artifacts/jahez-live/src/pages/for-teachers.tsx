@@ -1,7 +1,7 @@
 import { CalendarClock, CircleDollarSign, UserPlus, Users, Video } from 'lucide-react';
 import { Header } from '@/components/marketing/header';
 import { Footer } from '@/components/marketing/footer';
-import { openWaitlist } from '@/lib/waitlist';
+import { openSignup } from '@/lib/signup';
 import { SectionHeader } from '@/components/marketing/section-header';
 import { CTASection } from '@/components/marketing/cta-section';
 import { useSeo } from '@/hooks/use-seo';
@@ -35,7 +35,7 @@ export default function ForTeachers() {
               <h1 style={{ fontSize: 'var(--text-display-hero)' }}>درّس أونلاين<br /><em>من غير ما تبني المنصة بنفسك.</em></h1>
               <p className="hero-copy">افتح حسابك كمدرس، اعمل حصتك، حدد الميعاد والسعر، وخلي الطلاب يلاقوك ويحجزوا.</p>
               <div className="hero-actions">
-                <button className="button-primary" onClick={() => openWaitlist('teacher')} data-testid="button-teachers-hero-cta"><UserPlus size={18} /> ابدأ كمدرس</button>
+                <button className="button-primary" onClick={() => openSignup('teacher')} data-testid="button-teachers-hero-cta"><UserPlus size={18} /> ابدأ كمدرس</button>
               </div>
             </div>
             <div className="teacher-dashboard-preview fade-up delay-1" aria-hidden="true">
@@ -66,7 +66,7 @@ export default function ForTeachers() {
         </section>
 
         <CTASection kicker="خطوتك الأولى" title="ابدأ تدريسك أونلاين النهاردة." copy="افتح حسابك كمدرس مجانًا وابدأ حصتك الأولى.">
-          <button className="button-secondary" onClick={() => openWaitlist('teacher')} data-testid="button-teachers-final-cta"><UserPlus size={16} /> ابدأ كمدرس</button>
+          <button className="button-secondary" onClick={() => openSignup('teacher')} data-testid="button-teachers-final-cta"><UserPlus size={16} /> ابدأ كمدرس</button>
         </CTASection>
       </main>
       <Footer />

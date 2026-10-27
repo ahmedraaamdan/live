@@ -1,5 +1,5 @@
 import type { FaqCategory } from '@/components/marketing/faq-accordion';
-import { LAUNCH_DATE } from '@/lib/waitlist';
+import { LAUNCH_DATE } from '@/lib/signup';
 
 export const faqCategories: FaqCategory[] = [
   {
@@ -11,7 +11,7 @@ export const faqCategories: FaqCategory[] = [
       { q: 'هل لازم أكون طالب مدرسة أو جامعة؟', a: 'لأ. المنصة مفتوحة لأي حد عايز يتعلم — طالب مدرسة، طالب جامعة، أو أي متعلم مستقل.' },
       { q: 'هل فيه حصص أونلاين فقط ولا فيه حضوري؟', a: 'كل الحصص على جاهز Live أونلاين ومباشرة (لايف). مفيش حضور فعلي في مكان.' },
       { q: 'الحصص لايف ولا مسجلة؟', a: 'الحصص على جاهز Live مباشرة، يعني بتدخل مع المدرس في نفس الوقت.' },
-      { q: 'إمتى الإطلاق؟', a: `الإطلاق المستهدف ${LAUNCH_DATE}.` },
+      { q: 'إمتى الإطلاق؟', a: `التسجيل مفتوح دلوقتي للطلاب والمدرسين وأولياء الأمور، والإطلاق الرسمي يوم ${LAUNCH_DATE}.` },
     ],
   },
   {
