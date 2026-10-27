@@ -1,0 +1,347 @@
+/**
+ * Gahez Live — design tokens
+ * ===========================
+ * Three layers, the way Material Design 3 structures them:
+ *
+ *   1. Reference  (--ref-*)  the raw palette: Gahez rose, blue, cyan, slate…
+ *                             Never used by components directly.
+ *   2. System     (--primary, --surface-container, --on-surface…)
+ *                             Roles that flip between light and dark. Every
+ *                             component reads these, through Tailwind
+ *                             utilities (bg-primary, text-on-surface…).
+ *   3. Component  (--nav-height, --control-height…) a few sizes shared by
+ *                             several components.
+ *
+ * Brand mapping: rose (#E11D48) is Gahez Live's own colour and the primary
+ * role (the action you want taken, "live"); Gahez blue (#2563EB) is
+ * secondary (selection, links, data); cyan (#22D3EE) is tertiary (progress,
+ * highlights). Neutrals are navy-tinted slate. See DESIGN_SYSTEM.md.
+ */
+
+:root {
+  /* ------------------------------------------------------------------ */
+  /* 1. Reference palette                                                 */
+  /* ------------------------------------------------------------------ */
+  --ref-rose-50: #fff1f3;
+  --ref-rose-100: #ffe4e8;
+  --ref-rose-200: #fecdd5;
+  --ref-rose-300: #fda4b4;
+  --ref-rose-400: #fb7189;
+  --ref-rose-500: #f43f5e;
+  --ref-rose-600: #e11d48; /* Gahez Live */
+  --ref-rose-700: #be123c;
+  --ref-rose-800: #9f1239;
+  --ref-rose-900: #881337;
+  --ref-rose-950: #4c0519;
+
+  --ref-blue-50: #eff6ff;
+  --ref-blue-100: #dbeafe;
+  --ref-blue-200: #bfdbfe;
+  --ref-blue-300: #93c5fd;
+  --ref-blue-400: #60a5fa;
+  --ref-blue-600: #2563eb; /* Gahez */
+  --ref-blue-700: #1d4ed8;
+  --ref-blue-800: #1e40af;
+  --ref-blue-900: #1e3a8a;
+  --ref-blue-950: #172554;
+
+  --ref-cyan-100: #cffafe;
+  --ref-cyan-300: #67e8f9;
+  --ref-cyan-400: #22d3ee; /* Gahez gradient end */
+  --ref-cyan-700: #0e7490;
+  --ref-cyan-800: #155e75;
+  --ref-cyan-900: #164e63;
+  --ref-cyan-950: #083344;
+
+  --ref-slate-0: #ffffff;
+  --ref-slate-25: #f8fafc;
+  --ref-slate-50: #f1f5f9;
+  --ref-slate-75: #ebf0f6;
+  --ref-slate-100: #e3e9f1;
+  --ref-slate-150: #dae2ec;
+  --ref-slate-200: #cbd5e1;
+  --ref-slate-400: #94a3b8;
+  --ref-slate-500: #64748b;
+  --ref-slate-600: #475569;
+  --ref-slate-700: #334155;
+  --ref-slate-800: #1e293b;
+  --ref-navy-850: #1c2638;
+  --ref-navy-875: #151e2e;
+  --ref-navy-900: #0f172a; /* Gahez navy */
+  --ref-navy-925: #0b1120;
+  --ref-navy-950: #070c17;
+
+  --ref-green-100: #dcfae6;
+  --ref-green-300: #75e0a7;
+  --ref-green-700: #067647;
+  --ref-green-800: #085d3a;
+  --ref-green-950: #053321;
+  --ref-amber-100: #fef0c7;
+  --ref-amber-300: #fec84b;
+  --ref-amber-700: #b54708;
+  --ref-amber-800: #93370d;
+  --ref-amber-950: #4e1d09;
+  --ref-red-100: #fee4e2;
+  --ref-red-300: #fda29b;
+  --ref-red-700: #b42318;
+  --ref-red-800: #912018;
+  --ref-red-950: #55160c;
+  --ref-violet-100: #ede9fe;
+  --ref-violet-700: #6d28d9;
+  --ref-orange-400: #fb923c;
+
+  /* ------------------------------------------------------------------ */
+  /* 2. System roles — light                                              */
+  /* ------------------------------------------------------------------ */
+  --primary: var(--ref-rose-600);
+  --on-primary: var(--ref-slate-0);
+  --primary-container: var(--ref-rose-100);
+  --on-primary-container: var(--ref-rose-900);
+
+  --secondary: var(--ref-blue-600);
+  --on-secondary: var(--ref-slate-0);
+  --secondary-container: var(--ref-blue-100);
+  --on-secondary-container: var(--ref-blue-900);
+
+  --tertiary: var(--ref-cyan-700);
+  --on-tertiary: var(--ref-slate-0);
+  --tertiary-container: var(--ref-cyan-100);
+  --on-tertiary-container: var(--ref-cyan-900);
+
+  --error: var(--ref-red-700);
+  --on-error: var(--ref-slate-0);
+  --error-container: var(--ref-red-100);
+  --on-error-container: var(--ref-red-800);
+
+  --success: var(--ref-green-700);
+  --on-success: var(--ref-slate-0);
+  --success-container: var(--ref-green-100);
+  --on-success-container: var(--ref-green-800);
+
+  --warning: var(--ref-amber-700);
+  --on-warning: var(--ref-slate-0);
+  --warning-container: var(--ref-amber-100);
+  --on-warning-container: var(--ref-amber-800);
+
+  /* "On air". Always the brand rose, in both themes, so LIVE reads the same everywhere. */
+  --live: var(--ref-rose-600);
+  --on-live: var(--ref-slate-0);
+
+  /* Surfaces, lowest (cards on the page) to highest (inputs, chips). */
+  --background: var(--ref-slate-25);
+  --surface: var(--ref-slate-25);
+  --surface-bright: var(--ref-slate-0);
+  --surface-container-lowest: var(--ref-slate-0);
+  --surface-container-low: var(--ref-slate-50);
+  --surface-container: var(--ref-slate-75);
+  --surface-container-high: var(--ref-slate-100);
+  --surface-container-highest: var(--ref-slate-150);
+  --on-surface: var(--ref-navy-900);
+  --on-surface-variant: var(--ref-slate-600);
+  --outline: var(--ref-slate-400);
+  --outline-variant: var(--ref-slate-100);
+  --inverse-surface: var(--ref-slate-800);
+  --inverse-on-surface: var(--ref-slate-50);
+  --inverse-primary: var(--ref-rose-400);
+  --scrim: rgb(2 6 23 / 0.5);
+
+  /* The live room is always dark, whatever the theme: video looks best on black. */
+  --stage: #05070d;
+  --stage-panel: #0b0f19;
+  --on-stage: #f1f5f9;
+
+  /* Avatar fills (container / content pairs), picked by a hash of the name. */
+  --avatar-1-bg: var(--ref-rose-100);
+  --avatar-1-fg: var(--ref-rose-800);
+  --avatar-2-bg: var(--ref-blue-100);
+  --avatar-2-fg: var(--ref-blue-800);
+  --avatar-3-bg: var(--ref-cyan-100);
+  --avatar-3-fg: var(--ref-cyan-800);
+  --avatar-4-bg: var(--ref-green-100);
+  --avatar-4-fg: var(--ref-green-800);
+  --avatar-5-bg: var(--ref-amber-100);
+  --avatar-5-fg: var(--ref-amber-800);
+  --avatar-6-bg: var(--ref-violet-100);
+  --avatar-6-fg: var(--ref-violet-700);
+
+  /* Brand gradients. Hero surfaces only (one per screen at most). */
+  --gradient-brand: linear-gradient(135deg, var(--ref-blue-600) 0%, var(--ref-cyan-400) 100%);
+  --gradient-live: linear-gradient(135deg, var(--ref-rose-700) 0%, var(--ref-rose-500) 55%, var(--ref-orange-400) 100%);
+  --gradient-ink: linear-gradient(160deg, var(--ref-navy-900) 0%, var(--ref-navy-850) 100%);
+
+  /* Elevation: soft, navy-tinted (never pure black). Level 1 = resting card, 5 = dialog. */
+  --shadow-color: 222 47% 11%;
+  --elevation-1: 0 1px 2px hsl(var(--shadow-color) / 0.06), 0 1px 3px hsl(var(--shadow-color) / 0.08);
+  --elevation-2: 0 2px 6px -1px hsl(var(--shadow-color) / 0.08), 0 6px 16px -4px hsl(var(--shadow-color) / 0.08);
+  --elevation-3: 0 8px 24px -6px hsl(var(--shadow-color) / 0.14);
+  --elevation-4: 0 16px 40px -12px hsl(var(--shadow-color) / 0.22);
+  --elevation-5: 0 24px 64px -16px hsl(var(--shadow-color) / 0.32);
+  /* The rose glow under the primary call to action. */
+  --glow-primary: 0 8px 20px -8px rgb(225 29 72 / 0.55);
+
+  /* State layers (M3): an overlay of the content colour at these opacities. */
+  --state-hover: 0.08;
+  --state-focus: 0.12;
+  --state-pressed: 0.12;
+  --state-dragged: 0.16;
+  --disabled-content: 0.38;
+  --disabled-container: 0.12;
+
+  /* ------------------------------------------------------------------ */
+  /* Motion (M3 easing & duration tokens)                                 */
+  /* ------------------------------------------------------------------ */
+  --motion-standard: cubic-bezier(0.2, 0, 0, 1);
+  --motion-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --motion-emphasized-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
+  --motion-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-short: 150ms;
+  --duration-medium: 300ms;
+  --duration-long: 500ms;
+
+  /* ------------------------------------------------------------------ */
+  /* 3. Component sizes                                                   */
+  /* ------------------------------------------------------------------ */
+  --control-height-sm: 2.25rem; /* 36 */
+  --control-height: 2.75rem; /* 44, Apple's minimum tap target */
+  --control-height-lg: 3.5rem; /* 56, full-width primary CTA */
+  --top-bar-height: 4rem;
+  --nav-height: 5rem; /* bottom navigation bar, before the safe area */
+  --rail-width: 5.5rem;
+  --content-max: 72rem;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ------------------------------------------------------------------ */
+/* 2. System roles — dark                                               */
+/* Applied for the OS dark setting unless the user picked light, or when */
+/* the user picked dark explicitly.                                      */
+/* ------------------------------------------------------------------ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --primary: var(--ref-rose-400);
+    --on-primary: var(--ref-rose-950);
+    --primary-container: var(--ref-rose-800);
+    --on-primary-container: var(--ref-rose-100);
+    --secondary: var(--ref-blue-300);
+    --on-secondary: var(--ref-blue-950);
+    --secondary-container: var(--ref-blue-800);
+    --on-secondary-container: var(--ref-blue-100);
+    --tertiary: var(--ref-cyan-300);
+    --on-tertiary: var(--ref-cyan-950);
+    --tertiary-container: var(--ref-cyan-800);
+    --on-tertiary-container: var(--ref-cyan-100);
+    --error: var(--ref-red-300);
+    --on-error: var(--ref-red-950);
+    --error-container: var(--ref-red-800);
+    --on-error-container: var(--ref-red-100);
+    --success: var(--ref-green-300);
+    --on-success: var(--ref-green-950);
+    --success-container: var(--ref-green-800);
+    --on-success-container: var(--ref-green-100);
+    --warning: var(--ref-amber-300);
+    --on-warning: var(--ref-amber-950);
+    --warning-container: var(--ref-amber-800);
+    --on-warning-container: var(--ref-amber-100);
+    --background: var(--ref-navy-925);
+    --surface: var(--ref-navy-925);
+    --surface-bright: var(--ref-navy-850);
+    --surface-container-lowest: var(--ref-navy-950);
+    --surface-container-low: var(--ref-navy-900);
+    --surface-container: var(--ref-navy-875);
+    --surface-container-high: var(--ref-navy-850);
+    --surface-container-highest: #243045;
+    --on-surface: #e2e8f0;
+    --on-surface-variant: var(--ref-slate-400);
+    --outline: var(--ref-slate-500);
+    --outline-variant: #263244;
+    --inverse-surface: #e2e8f0;
+    --inverse-on-surface: var(--ref-navy-900);
+    --inverse-primary: var(--ref-rose-600);
+    --scrim: rgb(0 0 0 / 0.6);
+    --avatar-1-bg: var(--ref-rose-800);
+    --avatar-1-fg: var(--ref-rose-100);
+    --avatar-2-bg: var(--ref-blue-800);
+    --avatar-2-fg: var(--ref-blue-100);
+    --avatar-3-bg: var(--ref-cyan-800);
+    --avatar-3-fg: var(--ref-cyan-100);
+    --avatar-4-bg: var(--ref-green-800);
+    --avatar-4-fg: var(--ref-green-100);
+    --avatar-5-bg: var(--ref-amber-800);
+    --avatar-5-fg: var(--ref-amber-100);
+    --avatar-6-bg: #4c1d95;
+    --avatar-6-fg: var(--ref-violet-100);
+    --shadow-color: 0 0% 0%;
+    --elevation-1: 0 1px 2px hsl(0 0% 0% / 0.3);
+    --elevation-2: 0 4px 12px -2px hsl(0 0% 0% / 0.4);
+    --elevation-3: 0 8px 24px -6px hsl(0 0% 0% / 0.5);
+    --elevation-4: 0 16px 40px -12px hsl(0 0% 0% / 0.6);
+    --elevation-5: 0 24px 64px -16px hsl(0 0% 0% / 0.7);
+    --glow-primary: 0 8px 22px -8px rgb(251 113 137 / 0.45);
+  }
+}
+
+/* Same values as above, for an explicit choice in Settings. Kept in sync by hand. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --primary: var(--ref-rose-400);
+  --on-primary: var(--ref-rose-950);
+  --primary-container: var(--ref-rose-800);
+  --on-primary-container: var(--ref-rose-100);
+  --secondary: var(--ref-blue-300);
+  --on-secondary: var(--ref-blue-950);
+  --secondary-container: var(--ref-blue-800);
+  --on-secondary-container: var(--ref-blue-100);
+  --tertiary: var(--ref-cyan-300);
+  --on-tertiary: var(--ref-cyan-950);
+  --tertiary-container: var(--ref-cyan-800);
+  --on-tertiary-container: var(--ref-cyan-100);
+  --error: var(--ref-red-300);
+  --on-error: var(--ref-red-950);
+  --error-container: var(--ref-red-800);
+  --on-error-container: var(--ref-red-100);
+  --success: var(--ref-green-300);
+  --on-success: var(--ref-green-950);
+  --success-container: var(--ref-green-800);
+  --on-success-container: var(--ref-green-100);
+  --warning: var(--ref-amber-300);
+  --on-warning: var(--ref-amber-950);
+  --warning-container: var(--ref-amber-800);
+  --on-warning-container: var(--ref-amber-100);
+  --background: var(--ref-navy-925);
+  --surface: var(--ref-navy-925);
+  --surface-bright: var(--ref-navy-850);
+  --surface-container-lowest: var(--ref-navy-950);
+  --surface-container-low: var(--ref-navy-900);
+  --surface-container: var(--ref-navy-875);
+  --surface-container-high: var(--ref-navy-850);
+  --surface-container-highest: #243045;
+  --on-surface: #e2e8f0;
+  --on-surface-variant: var(--ref-slate-400);
+  --outline: var(--ref-slate-500);
+  --outline-variant: #263244;
+  --inverse-surface: #e2e8f0;
+  --inverse-on-surface: var(--ref-navy-900);
+  --inverse-primary: var(--ref-rose-600);
+  --scrim: rgb(0 0 0 / 0.6);
+  --avatar-1-bg: var(--ref-rose-800);
+  --avatar-1-fg: var(--ref-rose-100);
+  --avatar-2-bg: var(--ref-blue-800);
+  --avatar-2-fg: var(--ref-blue-100);
+  --avatar-3-bg: var(--ref-cyan-800);
+  --avatar-3-fg: var(--ref-cyan-100);
+  --avatar-4-bg: var(--ref-green-800);
+  --avatar-4-fg: var(--ref-green-100);
+  --avatar-5-bg: var(--ref-amber-800);
+  --avatar-5-fg: var(--ref-amber-100);
+  --avatar-6-bg: #4c1d95;
+  --avatar-6-fg: var(--ref-violet-100);
+  --shadow-color: 0 0% 0%;
+  --elevation-1: 0 1px 2px hsl(0 0% 0% / 0.3);
+  --elevation-2: 0 4px 12px -2px hsl(0 0% 0% / 0.4);
+  --elevation-3: 0 8px 24px -6px hsl(0 0% 0% / 0.5);
+  --elevation-4: 0 16px 40px -12px hsl(0 0% 0% / 0.6);
+  --elevation-5: 0 24px 64px -16px hsl(0 0% 0% / 0.7);
+  --glow-primary: 0 8px 22px -8px rgb(251 113 137 / 0.45);
+}

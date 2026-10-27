@@ -1,0 +1,62 @@
+# The Gahez Live app on the shared server, next to the marketing site.
+# Publishes no ports: the Caddy proxy in /srv/proxy reaches it over `edge`
+# as live-app (add a site block: app.live.gahez.space → live-app:8080).
+#
+#   cd /srv/live-app && git pull && docker compose --env-file .env.app -f docker-compose.app.yml up -d --build
+#
+# /srv/live-app is its own checkout of this repo, so deploying the app never
+# touches the marketing site's checkout in /srv/live.
+#
+# .env.app holds the secrets (see .env.app.example), POSTGRES_PASSWORD
+# included (--env-file makes it available to the db service); it lives only on the
+# server. The database migrates itself when the app starts.
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    restart: unless-stopped
+    env_file:
+      - path: .env.app
+        required: false
+    environment:
+      DATABASE_URL: postgres://live:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.app}@db:5432/live
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - uploads:/data/uploads
+    networks:
+      edge:
+        aliases: [live-app]
+      internal: {}
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://localhost:8080/api/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: live
+      POSTGRES_USER: live
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.app}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [internal]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U live -d live']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata: {}
+  uploads: {}
+
+networks:
+  edge:
+    external: true
+  internal: {}

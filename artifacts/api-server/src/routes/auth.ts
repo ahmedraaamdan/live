@@ -1,0 +1,157 @@
+import { Router } from "express";
+import { and, eq, gt, isNull } from "drizzle-orm";
+import {
+  db,
+  parentLinksTable,
+  passwordResetsTable,
+  sessionsTable,
+  studentProfilesTable,
+  teacherProfilesTable,
+  usersTable,
+} from "@workspace/db";
+import {
+  forgotSchema,
+  loginSchema,
+  parentInviteSchema,
+  profileUpdateSchema,
+  resetSchema,
+  signupSchema,
+  type AuthResult,
+} from "@workspace/live-core";
+import { bearer, createSession, destroySession, hashPassword, randomToken, requireRole, requireUser, sha256, verifyPassword } from "../lib/auth";
+import { shortCode } from "../lib/codes";
+import { loadMe } from "../lib/dto";
+import { sendParentInvite, sendPasswordReset, sendWelcome } from "../lib/emails";
+import { env } from "../lib/env";
+import { badRequest, conflict, parse, unauthorized } from "../lib/http";
+
+const router = Router();
+
+async function uniqueLinkCode(): Promise<string> {
+  for (;;) {
+    const code = shortCode(6);
+    const taken = await db.query.studentProfilesTable.findFirst({ where: eq(studentProfilesTable.linkCode, code) });
+    if (!taken) return code;
+  }
+}
+
+router.post("/auth/signup", async (req, res) => {
+  const input = parse(signupSchema, req.body);
+  const exists = await db.query.usersTable.findFirst({ where: eq(usersTable.email, input.email) });
+  if (exists) throw conflict("الإيميل ده عليه حساب بالفعل، سجّل دخول", "email_taken");
+
+  // Platform owners sign up like anyone else and are promoted by ADMIN_EMAILS.
+  const role = env.adminEmails.includes(input.email) ? "admin" : input.role;
+  const passwordHash = await hashPassword(input.password);
+  const childCode = input.childCode?.toUpperCase();
+  // Before the transaction: it queries outside it, and must not wait on it.
+  const linkCode = role === "student" ? await uniqueLinkCode() : "";
+
+  const user = await db.transaction(async (tx) => {
+    const [u] = await tx.insert(usersTable).values({ role, name: input.name, email: input.email, phone: input.phone, passwordHash }).returning();
+    if (role === "teacher") await tx.insert(teacherProfilesTable).values({ userId: u!.id, subject: input.subject });
+    if (role === "student")
+      await tx.insert(studentProfilesTable).values({ userId: u!.id, grade: input.grade, parentEmail: input.parentEmail, linkCode });
+    if (role === "parent" && childCode) {
+      const child = await tx.query.studentProfilesTable.findFirst({ where: eq(studentProfilesTable.linkCode, childCode) });
+      if (child) await tx.insert(parentLinksTable).values({ parentId: u!.id, studentId: child.userId }).onConflictDoNothing();
+    }
+    return u!;
+  });
+
+  if (user.role === "student" && input.parentEmail) {
+    const profile = await db.query.studentProfilesTable.findFirst({ where: eq(studentProfilesTable.userId, user.id) });
+    void sendParentInvite({ student: user, email: input.parentEmail, code: profile!.linkCode });
+  }
+  void sendWelcome(user);
+
+  const token = await createSession(user.id, req.headers["user-agent"]);
+  const body: AuthResult = { token, me: await loadMe(user) };
+  res.status(201).json(body);
+});
+
+router.post("/auth/login", async (req, res) => {
+  const input = parse(loginSchema, req.body);
+  const user = await db.query.usersTable.findFirst({ where: eq(usersTable.email, input.email) });
+  if (!user || !(await verifyPassword(input.password, user.passwordHash))) throw unauthorized("الإيميل أو الباسورد غلط");
+  if (user.suspended) throw unauthorized("الحساب ده موقوف، كلّمنا على support@gahez.space");
+  const token = await createSession(user.id, req.headers["user-agent"]);
+  const body: AuthResult = { token, me: await loadMe(user) };
+  res.json(body);
+});
+
+router.post("/auth/logout", async (req, res) => {
+  const token = bearer(req);
+  if (token) await destroySession(token);
+  res.json({ ok: true });
+});
+
+router.post("/auth/forgot", async (req, res) => {
+  const { email } = parse(forgotSchema, req.body);
+  const user = await db.query.usersTable.findFirst({ where: eq(usersTable.email, email) });
+  // Same answer either way, so the endpoint doesn't reveal who has an account.
+  if (user) {
+    const token = randomToken();
+    await db.insert(passwordResetsTable).values({ tokenHash: sha256(token), userId: user.id, expiresAt: new Date(Date.now() + 3_600_000) });
+    void sendPasswordReset(user, token);
+  }
+  res.json({ ok: true });
+});
+
+router.post("/auth/reset", async (req, res) => {
+  const { token, password } = parse(resetSchema, req.body);
+  const reset = await db.query.passwordResetsTable.findFirst({
+    where: and(eq(passwordResetsTable.tokenHash, sha256(token)), gt(passwordResetsTable.expiresAt, new Date()), isNull(passwordResetsTable.usedAt)),
+  });
+  if (!reset) throw badRequest("اللينك ده خلص أو اتستخدم قبل كده، اطلب لينك جديد");
+  await db.transaction(async (tx) => {
+    await tx.update(usersTable).set({ passwordHash: await hashPassword(password) }).where(eq(usersTable.id, reset.userId));
+    await tx.update(passwordResetsTable).set({ usedAt: new Date() }).where(eq(passwordResetsTable.tokenHash, reset.tokenHash));
+    // Signs out every device: whoever had the old password is out.
+    await tx.delete(sessionsTable).where(eq(sessionsTable.userId, reset.userId));
+  });
+  res.json({ ok: true });
+});
+
+router.get("/me", async (req, res) => {
+  res.json(await loadMe(requireUser(req)));
+});
+
+router.patch("/me", async (req, res) => {
+  const user = requireUser(req);
+  const input = parse(profileUpdateSchema, req.body);
+  // Only touch the tables that have changes: drizzle refuses an empty update.
+  const userSet = {
+    ...(input.name !== undefined && { name: input.name }),
+    ...(input.phone !== undefined && { phone: input.phone ?? null }),
+    ...(input.avatarUrl !== undefined && { avatarUrl: input.avatarUrl || null }),
+  };
+  const teacherSet = {
+    ...(input.bio !== undefined && { bio: input.bio }),
+    ...(input.headline !== undefined && { headline: input.headline }),
+    ...(input.subject !== undefined && { subject: input.subject }),
+  };
+  const studentSet = {
+    ...(input.grade !== undefined && { grade: input.grade }),
+    ...(input.parentEmail !== undefined && { parentEmail: input.parentEmail ?? null }),
+  };
+  let updated = user;
+  if (Object.keys(userSet).length) [updated] = await db.update(usersTable).set(userSet).where(eq(usersTable.id, user.id)).returning() as [typeof user];
+  if (user.role === "teacher" && Object.keys(teacherSet).length)
+    await db.update(teacherProfilesTable).set(teacherSet).where(eq(teacherProfilesTable.userId, user.id));
+  if (user.role === "student" && Object.keys(studentSet).length)
+    await db.update(studentProfilesTable).set(studentSet).where(eq(studentProfilesTable.userId, user.id));
+  res.json(await loadMe(updated));
+});
+
+/** A student (re)sends the invitation to their parent's email. */
+router.post("/me/parent-invite", async (req, res) => {
+  const user = requireRole(req, "student");
+  const { email } = parse(parentInviteSchema, req.body);
+  const profile = await db.query.studentProfilesTable.findFirst({ where: eq(studentProfilesTable.userId, user.id) });
+  await db.update(studentProfilesTable).set({ parentEmail: email }).where(eq(studentProfilesTable.userId, user.id));
+  await sendParentInvite({ student: user, email, code: profile!.linkCode });
+  res.json({ ok: true });
+});
+
+export default router;

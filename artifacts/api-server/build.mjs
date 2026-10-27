@@ -47,6 +47,11 @@ async function buildAll() {
       "isolated-vm",
       "lightningcss",
       "pg-native",
+      // Development-only embedded Postgres (lib/db imports it lazily); it
+      // loads its .wasm next to itself, so it can't be bundled.
+      "@electric-sql/pglite",
+      "drizzle-orm/pglite",
+      "drizzle-orm/pglite/migrator",
       "oracledb",
       "mongodb-client-encryption",
       "nodemailer",

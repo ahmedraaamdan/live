@@ -1,0 +1,326 @@
+/**
+ * Response shapes the API returns and the app renders. Timestamps are ISO
+ * strings; money is integer piasters.
+ */
+import type { BoardOp } from "./board";
+import type {
+  BookingStatus,
+  LectureStatus,
+  MessageKind,
+  PaymentMethod,
+  PaymentStatus,
+  PayoutMethod,
+  PayoutStatus,
+  Role,
+  WalletEntryKind,
+} from "./constants";
+
+export interface UserDTO {
+  id: string;
+  role: Role;
+  name: string;
+  email: string;
+  phone: string | null;
+  avatarUrl: string | null;
+  createdAt: string;
+}
+
+export interface PersonMini {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+}
+
+export interface TeacherMini extends PersonMini {
+  headline: string | null;
+  subject: string | null;
+}
+
+export interface MeDTO {
+  user: UserDTO;
+  teacher: { bio: string; headline: string; subject: string | null } | null;
+  student: { grade: string | null; parentEmail: string | null; linkCode: string; parents: PersonMini[] } | null;
+  unreadNotifications: number;
+}
+
+export interface AuthResult {
+  token: string;
+  me: MeDTO;
+}
+
+export interface RecordingDTO {
+  id: string;
+  status: "recording" | "processing" | "ready" | "failed";
+  url: string | null;
+  durationSec: number | null;
+  createdAt: string;
+}
+
+export interface LectureDTO {
+  id: string;
+  code: string;
+  title: string;
+  subject: string;
+  grade: string;
+  description: string;
+  startsAt: string;
+  durationMin: number;
+  priceCents: number;
+  capacity: number | null;
+  status: LectureStatus;
+  listed: boolean;
+  liveStartedAt: string | null;
+  liveEndedAt: string | null;
+  teacher: TeacherMini;
+  seatsTaken: number;
+  /** The viewer's own booking, for a student. */
+  booking: { id: string; status: BookingStatus } | null;
+  recording: RecordingDTO | null;
+  votes: LectureVotes;
+  /** Students watching right now (live lectures). */
+  viewersNow: number;
+  /** Only for the lecture's teacher (and admins). */
+  stats: { bookings: number; revenueCents: number; teacherCents: number; attendees: number } | null;
+}
+
+export interface LectureVotes {
+  likes: number;
+  dislikes: number;
+  /** The viewer's own vote. */
+  mine: -1 | 0 | 1;
+  /** Whether the viewer has watched enough to vote. */
+  canVote: boolean;
+}
+
+/** One card in the discovery feed, with the short reason it ranks where it does. */
+export interface FeedItem {
+  lecture: LectureDTO;
+  reason: string | null;
+  score: number;
+}
+
+export interface FeedDTO {
+  live: FeedItem[];
+  upcoming: FeedItem[];
+}
+
+export interface BookingDTO {
+  id: string;
+  lectureId: string;
+  status: BookingStatus;
+  pricePaidCents: number;
+  createdAt: string;
+  confirmedAt: string | null;
+  student: (PersonMini & { email: string; grade: string | null }) | null;
+}
+
+export interface PaymentDTO {
+  id: string;
+  status: PaymentStatus;
+  amountCents: number;
+  method: PaymentMethod | null;
+  provider: string;
+  bookingId: string;
+  lectureId: string;
+  lectureTitle: string;
+  createdAt: string;
+}
+
+export interface BookResult {
+  booking: BookingDTO;
+  payment: PaymentDTO | null;
+  /** Where to send the student to pay; null for a free lecture. */
+  checkoutUrl: string | null;
+}
+
+export interface MessageDTO {
+  id: string;
+  lectureId: string;
+  kind: MessageKind;
+  body: string;
+  parentId: string | null;
+  answered: boolean;
+  pinned: boolean;
+  createdAt: string;
+  author: PersonMini & { role: Role };
+}
+
+export interface AttendanceDTO {
+  student: PersonMini;
+  liveSeconds: number;
+  replaySeconds: number;
+  firstSeenAt: string | null;
+  lastSeenAt: string | null;
+}
+
+export interface UploadDTO {
+  id: string;
+  url: string;
+  filename: string;
+  mime: string;
+  size: number;
+}
+
+export interface SubmissionDTO {
+  id: string;
+  assignmentId: string;
+  body: string;
+  attachments: UploadDTO[];
+  submittedAt: string;
+  score: number | null;
+  feedback: string | null;
+  gradedAt: string | null;
+  student: PersonMini | null;
+}
+
+export interface AssignmentDTO {
+  id: string;
+  lectureId: string;
+  lectureTitle: string;
+  title: string;
+  instructions: string;
+  dueAt: string | null;
+  maxScore: number;
+  createdAt: string;
+  /** For the teacher. */
+  counts: { submitted: number; graded: number; students: number } | null;
+  /** For a student (or a parent looking at a child). */
+  mySubmission: SubmissionDTO | null;
+}
+
+export interface AssignmentDetailDTO extends AssignmentDTO {
+  submissions: SubmissionDTO[];
+}
+
+export interface WalletEntryDTO {
+  id: string;
+  kind: WalletEntryKind;
+  amountCents: number;
+  status: "pending" | "available" | "void";
+  memo: string;
+  lectureTitle: string | null;
+  createdAt: string;
+}
+
+export interface PayoutDTO {
+  id: string;
+  amountCents: number;
+  method: PayoutMethod;
+  account: string;
+  status: PayoutStatus;
+  adminNote: string | null;
+  createdAt: string;
+  processedAt: string | null;
+  teacher: PersonMini | null;
+}
+
+export interface WalletDTO {
+  availableCents: number;
+  pendingCents: number;
+  lifetimeCents: number;
+  paidOutCents: number;
+  requestedCents: number;
+  feeBps: number;
+  entries: WalletEntryDTO[];
+  payouts: PayoutDTO[];
+}
+
+export interface ChildStats {
+  lecturesBooked: number;
+  lecturesPast: number;
+  lecturesAttended: number;
+  /** 0..1, or null before any lecture has happened. */
+  attendanceRate: number | null;
+  minutesWatched: number;
+  assignmentsTotal: number;
+  assignmentsSubmitted: number;
+  /** 0..100 across graded work, or null. */
+  avgScorePct: number | null;
+}
+
+export interface ChildSummaryDTO {
+  student: PersonMini & { grade: string | null };
+  stats: ChildStats;
+  next: LectureDTO | null;
+}
+
+export interface ChildDetailDTO extends ChildSummaryDTO {
+  lectures: Array<{ lecture: LectureDTO; attendedSeconds: number }>;
+  assignments: AssignmentDTO[];
+  payments: PaymentDTO[];
+}
+
+export interface TeacherDashboardDTO {
+  stats: {
+    monthEarningsCents: number;
+    availableCents: number;
+    pendingCents: number;
+    upcomingCount: number;
+    studentsCount: number;
+    monthBookings: number;
+    toGrade: number;
+  };
+  liveNow: LectureDTO | null;
+  upcoming: LectureDTO[];
+}
+
+export interface StudentHomeDTO {
+  liveNow: LectureDTO[];
+  upcoming: LectureDTO[];
+  pendingAssignments: AssignmentDTO[];
+  recent: LectureDTO[];
+}
+
+export interface AdminOverviewDTO {
+  gmvCents: number;
+  platformCents: number;
+  teacherPayableCents: number;
+  paidOutCents: number;
+  counts: { teachers: number; students: number; parents: number; lectures: number; bookings: number };
+  recentPayments: Array<PaymentDTO & { payer: PersonMini; teacher: PersonMini }>;
+  pendingPayouts: PayoutDTO[];
+}
+
+export interface AdminUserDTO extends UserDTO {
+  lectures: number;
+  bookings: number;
+}
+
+export interface NotificationDTO {
+  id: string;
+  kind: string;
+  title: string;
+  body: string;
+  link: string | null;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface LiveTokenDTO {
+  /** False when LiveKit isn't configured on the server; the app shows a notice. */
+  configured: boolean;
+  url: string | null;
+  token: string | null;
+  role: "host" | "viewer";
+}
+
+export type LectureEvent =
+  | { type: "message"; message: MessageDTO }
+  | { type: "message_update"; message: MessageDTO }
+  | { type: "status"; status: LectureStatus; liveStartedAt: string | null; liveEndedAt: string | null }
+  | { type: "viewers"; count: number }
+  | { type: "recording"; recording: RecordingDTO }
+  | { type: "votes"; likes: number; dislikes: number }
+  | { type: "board"; ops: BoardOp[] };
+
+export interface ApiErrorBody {
+  error: string;
+  code?: string;
+}
+
+export interface PublicConfigDTO {
+  paymentProvider: "mock" | "paymob";
+  liveConfigured: boolean;
+  feeBps: number;
+  appUrl: string;
+}

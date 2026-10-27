@@ -1,0 +1,366 @@
+@import "tailwindcss";
+@import "./tokens.css";
+
+/*
+ * Tailwind is limited to the design system: the default palette, type
+ * sizes, radii, shadows and breakpoints are cleared and replaced by the
+ * tokens, so `bg-blue-500` or `text-2xl` simply don't exist here. If a
+ * screen needs something that isn't below, it needs a new token first.
+ */
+@theme {
+  --color-*: initial;
+  --text-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
+  --breakpoint-*: initial;
+  --font-*: initial;
+  --ease-*: initial;
+
+  /* Window size classes (M3): compact < 600 ≤ medium < 840 ≤ expanded < 1200 ≤ large. */
+  --breakpoint-md: 37.5rem;
+  --breakpoint-lg: 52.5rem;
+  --breakpoint-xl: 75rem;
+
+  --font-sans: "Cairo Variable", "Cairo", system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif;
+  /* Numbers: prices, timers, stats, codes. Tabular so columns line up. */
+  /* Arabic in a numbers slot ("مجانية") falls back to Cairo, never a monospace font. */
+  --font-num: "Space Grotesk Variable", "Space Grotesk", "Cairo Variable", "Cairo", system-ui, sans-serif;
+
+  /*
+   * Type scale (M3 roles, sized up for Arabic: Cairo's glyphs read smaller
+   * than Latin ones at the same size, and need taller lines).
+   * One screen uses at most four of these.
+   */
+  --text-display-lg: 2.75rem;
+  --text-display-lg--line-height: 3.5rem;
+  --text-display-lg--font-weight: 800;
+  --text-display-md: 2.25rem;
+  --text-display-md--line-height: 3rem;
+  --text-display-md--font-weight: 800;
+  --text-display-sm: 1.875rem;
+  --text-display-sm--line-height: 2.5rem;
+  --text-display-sm--font-weight: 800;
+  --text-headline-lg: 1.75rem;
+  --text-headline-lg--line-height: 2.5rem;
+  --text-headline-lg--font-weight: 700;
+  --text-headline-md: 1.5rem;
+  --text-headline-md--line-height: 2.125rem;
+  --text-headline-md--font-weight: 700;
+  --text-headline-sm: 1.25rem;
+  --text-headline-sm--line-height: 1.875rem;
+  --text-headline-sm--font-weight: 700;
+  --text-title-lg: 1.125rem;
+  --text-title-lg--line-height: 1.75rem;
+  --text-title-lg--font-weight: 700;
+  --text-title-md: 1rem;
+  --text-title-md--line-height: 1.625rem;
+  --text-title-md--font-weight: 600;
+  --text-title-sm: 0.875rem;
+  --text-title-sm--line-height: 1.375rem;
+  --text-title-sm--font-weight: 600;
+  --text-body-lg: 1rem;
+  --text-body-lg--line-height: 1.75rem;
+  --text-body-md: 0.875rem;
+  --text-body-md--line-height: 1.5rem;
+  --text-body-sm: 0.75rem;
+  --text-body-sm--line-height: 1.25rem;
+  --text-label-lg: 0.875rem;
+  --text-label-lg--line-height: 1.25rem;
+  --text-label-lg--font-weight: 600;
+  --text-label-md: 0.75rem;
+  --text-label-md--line-height: 1rem;
+  --text-label-md--font-weight: 600;
+  --text-label-sm: 0.6875rem;
+  --text-label-sm--line-height: 1rem;
+  --text-label-sm--font-weight: 600;
+
+  /* Shape scale (M3): xs chips/badges · sm small controls · md inputs · lg cards · xl sheets · 2xl hero. */
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-2xl: 2rem;
+  --radius-full: 9999px;
+
+  --shadow-e1: var(--elevation-1);
+  --shadow-e2: var(--elevation-2);
+  --shadow-e3: var(--elevation-3);
+  --shadow-e4: var(--elevation-4);
+  --shadow-e5: var(--elevation-5);
+  --shadow-glow: var(--glow-primary);
+
+  --ease-standard: var(--motion-standard);
+  --ease-decelerate: var(--motion-emphasized-decelerate);
+  --ease-accelerate: var(--motion-emphasized-accelerate);
+  --ease-spring: var(--motion-spring);
+
+  --animate-live-pulse: live-pulse 1.6s var(--motion-standard) infinite;
+  --animate-shimmer: shimmer 1.4s linear infinite;
+  --animate-enter: enter var(--duration-medium) var(--motion-emphasized-decelerate) both;
+  --animate-pop: pop 450ms var(--motion-spring) both;
+  --animate-spin: spin 0.8s linear infinite;
+  --animate-float: float 4s ease-in-out infinite;
+}
+
+/* Roles → utilities: bg-primary, text-on-surface, border-outline-variant… */
+@theme inline {
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-white: #fff;
+  --color-black: #000;
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-primary-container: var(--primary-container);
+  --color-on-primary-container: var(--on-primary-container);
+  --color-secondary: var(--secondary);
+  --color-on-secondary: var(--on-secondary);
+  --color-secondary-container: var(--secondary-container);
+  --color-on-secondary-container: var(--on-secondary-container);
+  --color-tertiary: var(--tertiary);
+  --color-on-tertiary: var(--on-tertiary);
+  --color-tertiary-container: var(--tertiary-container);
+  --color-on-tertiary-container: var(--on-tertiary-container);
+  --color-error: var(--error);
+  --color-on-error: var(--on-error);
+  --color-error-container: var(--error-container);
+  --color-on-error-container: var(--on-error-container);
+  --color-success: var(--success);
+  --color-on-success: var(--on-success);
+  --color-success-container: var(--success-container);
+  --color-on-success-container: var(--on-success-container);
+  --color-warning: var(--warning);
+  --color-on-warning: var(--on-warning);
+  --color-warning-container: var(--warning-container);
+  --color-on-warning-container: var(--on-warning-container);
+  --color-live: var(--live);
+  --color-on-live: var(--on-live);
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-bright: var(--surface-bright);
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline-variant);
+  --color-inverse-surface: var(--inverse-surface);
+  --color-inverse-on-surface: var(--inverse-on-surface);
+  --color-inverse-primary: var(--inverse-primary);
+  --color-scrim: var(--scrim);
+  --color-stage: var(--stage);
+  --color-stage-panel: var(--stage-panel);
+  --color-on-stage: var(--on-stage);
+}
+
+/* ------------------------------------------------------------------ base */
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background: var(--background);
+    color: var(--on-surface);
+    font-family: var(--font-sans);
+    font-size: var(--text-body-lg);
+    line-height: var(--text-body-lg--line-height);
+    overscroll-behavior-y: none;
+  }
+  ::selection {
+    background: var(--primary-container);
+    color: var(--on-primary-container);
+  }
+  :focus-visible {
+    outline: 2px solid var(--secondary);
+    outline-offset: 2px;
+  }
+  button,
+  [role="button"] {
+    cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+  input,
+  textarea,
+  select {
+    font: inherit;
+    color: inherit;
+  }
+  /* Latin digits, tabular, in every number we render with font-num. */
+  .font-num {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+  }
+}
+
+/* ------------------------------------------------------------------ utilities */
+
+/*
+ * M3 state layer: an overlay of the element's own content colour that
+ * shows hover/focus/press, so every interactive surface responds the same
+ * way whatever its colour.
+ */
+@utility state-layer {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: currentColor;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--duration-short) var(--motion-standard);
+  }
+  @media (hover: hover) {
+    &:hover:not(:disabled)::after {
+      opacity: var(--state-hover);
+    }
+  }
+  &:focus-visible::after {
+    opacity: var(--state-focus);
+  }
+  &:active:not(:disabled)::after {
+    opacity: var(--state-pressed);
+  }
+}
+
+/* Press feedback for tap targets: a quick squeeze. */
+@utility press {
+  transition: transform var(--duration-short) var(--motion-standard);
+  &:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+}
+
+@utility pt-safe {
+  padding-top: var(--safe-top);
+}
+@utility pb-safe {
+  padding-bottom: var(--safe-bottom);
+}
+@utility pb-nav {
+  padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + 1rem);
+}
+
+@utility bg-gradient-brand {
+  background-image: var(--gradient-brand);
+}
+@utility bg-gradient-live {
+  background-image: var(--gradient-live);
+}
+@utility bg-gradient-ink {
+  background-image: var(--gradient-ink);
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Skeleton placeholder while data loads. */
+@utility skeleton {
+  background: linear-gradient(90deg, var(--surface-container) 25%, var(--surface-container-high) 50%, var(--surface-container) 75%);
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+  border-radius: var(--radius-sm);
+}
+
+/* ------------------------------------------------------------------ keyframes */
+
+@keyframes live-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(225 29 72 / 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgb(225 29 72 / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgb(225 29 72 / 0);
+  }
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-20vh) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) rotate(720deg);
+    opacity: 0.9;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
