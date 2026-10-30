@@ -24,6 +24,10 @@ export function authorizationUrl(provider: SocialProvider, state: string, nonce:
   const url = new URL(provider === "google" ? "https://accounts.google.com/o/oauth2/v2/auth" : `https://www.facebook.com/${env.security.facebookVersion}/dialog/oauth`);
   for (const [key, value] of Object.entries({ client_id: config.clientId, redirect_uri: config.redirectUri, response_type: "code", state, scope: provider === "google" ? "openid email profile" : "public_profile,email" })) url.searchParams.set(key, value);
   if (provider === "google") { url.searchParams.set("nonce", nonce); url.searchParams.set("code_challenge", createHash("sha256").update(verifier).digest("base64url")); url.searchParams.set("code_challenge_method", "S256"); url.searchParams.set("prompt", "select_account"); }
+  if (provider === "facebook" && env.security.facebookConfigId) {
+    url.searchParams.delete("scope");
+    url.searchParams.set("config_id", env.security.facebookConfigId);
+  }
   return url.href;
 }
 export async function verifyGoogleIdentity(token: string, clientId: string, nonce: string, keys: JWTVerifyGetKey = googleKeys) {

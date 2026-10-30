@@ -89,6 +89,7 @@ export const env = {
     mfaEncryptionKey: str("MFA_ENCRYPTION_KEY"),
     googleClientId: str("GOOGLE_CLIENT_ID"), googleClientSecret: str("GOOGLE_CLIENT_SECRET"),
     facebookAppId: str("META_APP_ID"), facebookAppSecret: str("META_APP_SECRET"),
+    facebookConfigId: str("META_AUTH_CONFIG_ID"),
     facebookVersion: str("META_GRAPH_VERSION", "v23.0"),
     brokerUrl: str("SOCIAL_BROKER_URL"),
   },
