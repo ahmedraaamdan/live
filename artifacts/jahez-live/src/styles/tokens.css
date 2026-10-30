@@ -243,32 +243,83 @@
   --studio-ink: #edf0f9; --studio-accent: #fb7185; --accent: 351 95% 71%; --accent-foreground: 224 24% 10%;
 }
 
-/* Playful Arabic art direction: requested Lalezar / Readex typography. */
+/* Playful Arabic art direction: Lalezar / Readex typography with crisp snow canvas & obsidian accents */
 :root {
- --app-font-sans: 'Readex Pro', sans-serif;
- --app-font-display: 'Lalezar', 'Readex Pro', sans-serif;
- --paper: #faf7f0; --background: 40 50% 96%; --foreground: 15 10% 8%;
- --primary: 15 10% 8%; --primary-foreground: 40 50% 96%;
- --card: 0 0% 100%; --card-foreground: 15 10% 8%;
- --muted-foreground: 20 8% 35%; --border: 20 15% 80%;
- --studio-white: #fffefa; --studio-soft: #fff0ed; --studio-line: #ddd6cc;
- --studio-ink: #181513; --studio-board: #211b18; --studio-lime: #ffdc69;
- --playful-outline: #181513; --playful-shadow: #181513; --playful-paper: #faf7f0;
- --playful-radius: 24px; --playful-shadow-card: 5px 6px 0 var(--playful-shadow);
+  --app-font-sans: 'Readex Pro', sans-serif;
+  --app-font-display: 'Lalezar', 'Readex Pro', sans-serif;
+  --paper: #ffffff;
+  --background: 0 0% 100%;
+  --foreground: 222 47% 11%;
+  --primary: 222 47% 11%;
+  --primary-foreground: 0 0% 100%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --muted: 217 62% 96%;
+  --muted-foreground: 216 22% 37%;
+  --border: 217 36% 90%;
+  --studio-white: #ffffff;
+  --studio-soft: #f8fafc;
+  --studio-line: #e2e8f0;
+  --studio-ink: #0f172a;
+  --studio-board: #0f172a;
+  --studio-lime: #ffdc69;
+  --studio-accent: #e11d48;
+  --studio-accent-dark: #be123c;
+  --playful-outline: #0f172a;
+  --playful-shadow: #0f172a;
+  --playful-paper: #ffffff;
+  --playful-radius: 24px;
+  --playful-shadow-card: 5px 6px 0 var(--playful-shadow);
 }
 @media (prefers-color-scheme: dark) {
- :root:not([data-theme='light']) {
-  --paper: #1c1816; --background: 20 12% 10%; --foreground: 40 35% 94%;
-  --primary: 40 35% 94%; --primary-foreground: 20 12% 10%;
-  --card: 20 12% 14%; --card-foreground: 40 35% 94%; --muted-foreground: 25 15% 75%;
-  --studio-white: #27211e; --studio-soft: #33221f; --studio-line: #51433c;
-  --studio-ink: #faf1e3; --playful-outline: #f0dfca; --playful-shadow: #090807;
- }
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --paper: #06070c;
+    --background: 224 24% 4%;
+    --foreground: 225 30% 96%;
+    --primary: 345 80% 50%;
+    --primary-foreground: 0 0% 100%;
+    --card: 224 23% 7%;
+    --card-foreground: 225 30% 96%;
+    --muted: 224 22% 16%;
+    --muted-foreground: 222 15% 72%;
+    --border: 224 18% 18%;
+    --studio-white: #0c0e15;
+    --studio-soft: #161925;
+    --studio-line: #1c202d;
+    --studio-ink: #f8f9fd;
+    --studio-board: #0c0e15;
+    --studio-lime: #ffdc69;
+    --studio-accent: #e11d48;
+    --studio-accent-dark: #be123c;
+    --playful-outline: #1c202d;
+    --playful-shadow: #000000;
+    --playful-paper: #06070c;
+    --playful-shadow-card: 5px 6px 0 #000000;
+  }
 }
 :root[data-theme='dark'] {
- --paper: #1c1816; --background: 20 12% 10%; --foreground: 40 35% 94%;
- --primary: 40 35% 94%; --primary-foreground: 20 12% 10%;
- --card: 20 12% 14%; --card-foreground: 40 35% 94%; --muted-foreground: 25 15% 75%;
- --studio-white: #27211e; --studio-soft: #33221f; --studio-line: #51433c;
- --studio-ink: #faf1e3; --playful-outline: #f0dfca; --playful-shadow: #090807;
+  color-scheme: dark;
+  --paper: #06070c;
+  --background: 224 24% 4%;
+  --foreground: 225 30% 96%;
+  --primary: 345 80% 50%;
+  --primary-foreground: 0 0% 100%;
+  --card: 224 23% 7%;
+  --card-foreground: 225 30% 96%;
+  --muted: 224 22% 16%;
+  --muted-foreground: 222 15% 72%;
+  --border: 224 18% 18%;
+  --studio-white: #0c0e15;
+  --studio-soft: #161925;
+  --studio-line: #1c202d;
+  --studio-ink: #f8f9fd;
+  --studio-board: #0c0e15;
+  --studio-lime: #ffdc69;
+  --studio-accent: #e11d48;
+  --studio-accent-dark: #be123c;
+  --playful-outline: #1c202d;
+  --playful-shadow: #000000;
+  --playful-paper: #06070c;
+  --playful-shadow-card: 5px 6px 0 #000000;
 }
