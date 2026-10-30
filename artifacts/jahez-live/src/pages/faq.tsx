@@ -21,12 +21,12 @@ export default function Faq() {
     <ContentPage
       eyebrow="مركز المساعدة"
       title="الأسئلة الشائعة"
-      subtitle="إجابات على أكتر الأسئلة اللي بتوصلنا من الطلاب والمدرسين."
+      subtitle="إجابات عن أسئلة الطلاب والمدرسين حول الحجز والحضور والحسابات."
       crumbs={[{ label: 'الرئيسية', path: '/' }, { label: 'الأسئلة الشائعة' }]}
     >
       <FaqAccordion categories={faqCategories} />
       <p className="mp-inline-link">
-        لسه عندك سؤال؟ <Link href={routes.contact.path}>تواصل معنا</Link>
+        لم تجد إجابة لسؤالك؟ <Link href={routes.contact.path}>تواصل معنا</Link>
       </p>
     </ContentPage>
   );

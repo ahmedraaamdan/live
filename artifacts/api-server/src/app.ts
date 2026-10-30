@@ -1,3 +1,4 @@
+import { retainAppAssets } from "./lib/asset-cache";
 import express, { type Express } from "express";
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -37,6 +38,10 @@ app.use(express.json({ limit: "1mb", type: ["application/json"] }));
 app.use(express.urlencoded({ extended: true }));
 app.use(authenticate);
 
+app.use("/api", (_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
 app.use("/api", router);
 app.use("/api", (_req, res) => {
   res.status(404).json({ error: "not found", code: "not_found" });
@@ -44,8 +49,19 @@ app.use("/api", (_req, res) => {
 
 // Production: the same server hands out the built app (one origin, no CORS).
 if (env.appDist && existsSync(env.appDist)) {
-  app.use(express.static(env.appDist, { index: false, maxAge: "1h" }));
+  const assets = path.join(env.appDist, "assets");
+  const cache = path.join(env.uploadDir, ".app-assets");
+  try { retainAppAssets(assets, cache); }
+  catch (err) { logger.warn({ err }, "Could not retain versioned app assets"); }
+  app.use("/assets", express.static(cache, { maxAge: "1y", immutable: true }));
+  app.use("/assets", express.static(assets, { maxAge: "1y", immutable: true }));
+  // A missing script is not an HTML app route.
+  app.use("/assets", (_req, res) => { res.status(404).type("text/plain").send("Asset unavailable"); });
+  app.use(express.static(env.appDist, { index: false, maxAge: "1h", setHeaders: (res, file) => {
+    if (path.basename(file) === "index.html") res.setHeader("Cache-Control", "no-store");
+  } }));
   app.get("/{*path}", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
     res.sendFile(path.join(env.appDist, "index.html"));
   });
 }

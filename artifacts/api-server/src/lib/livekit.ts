@@ -51,9 +51,10 @@ export async function liveToken(lecture: Lecture, user: User, host: boolean): Pr
 export async function openRoom(lecture: Lecture) {
   if (!rooms) return;
   try {
-    await rooms.createRoom({ name: roomName(lecture.id), emptyTimeout: 15 * 60, departureTimeout: 120 });
+    await rooms.createRoom({ name: roomName(lecture.id), emptyTimeout: 15 * 60, departureTimeout: 120, maxParticipants: env.livekit.maxParticipants || undefined });
   } catch (err) {
     logger.warn({ err, lectureId: lecture.id }, "createRoom failed");
+    throw err;
   }
 }
 

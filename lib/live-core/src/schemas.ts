@@ -35,10 +35,15 @@ export type LoginInput = z.input<typeof loginSchema>;
 export const forgotSchema = z.object({ email });
 export const resetSchema = z.object({ token: z.string().min(10), password });
 
+const publicUrl = z.url({ message: "أدخل رابطًا كاملًا يبدأ بـ https://" }).max(1000).refine(value => /^https?:\/\//i.test(value), { message: "الرابط يجب أن يبدأ بـ https://" });
+export const profileLinkSchema = z.object({ label: z.string().trim().min(2, { message: "أدخل اسم الرابط أو الشهادة" }).max(100), url: publicUrl, kind: z.enum(["image", "document", "link"]).optional() });
 export const profileUpdateSchema = z.object({
   name: name.optional(),
   phone,
-  avatarUrl: z.string().max(500).optional(),
+  avatarUrl: publicUrl.or(z.literal("")).optional(),
+  experience: z.string().trim().max(3000).optional(),
+  socialLinks: z.array(profileLinkSchema).max(8).optional(),
+  certificates: z.array(profileLinkSchema).max(12).optional(),
   bio: z.string().max(600).optional(),
   headline: z.string().max(120).optional(),
   subject: z.string().max(40).optional(),
@@ -52,6 +57,7 @@ export const lectureInputSchema = z.object({
   subject: z.string().min(1, { message: "اختار المادة" }).max(40),
   grade: z.string().min(1, { message: "اختار الصف" }).max(20),
   description: z.string().trim().max(2000).optional().default(""),
+  coverUrl: publicUrl.nullable().optional(),
   /** ISO timestamp. */
   startsAt: z.iso.datetime({ offset: true, message: "اختار ميعاد صحيح" }),
   durationMin: z.coerce.number().int().min(15, { message: "أقل مدة 15 دقيقة" }).max(300, { message: "أقصى مدة 5 ساعات" }),
@@ -77,17 +83,36 @@ export const messagePatchSchema = z.object({
 
 export const heartbeatSchema = z.object({ mode: z.enum(["live", "replay"]).default("live") });
 
+export const quizQuestionSchema = z.object({
+  id: z.string().uuid(),
+  prompt: z.string().trim().min(3, { message: "اكتب نص السؤال (3 أحرف على الأقل)" }).max(1000),
+  options: z.array(z.string().trim().min(1, { message: "أكمل جميع خيارات السؤال" }).max(400)).min(2).max(6),
+  correctIndex: z.number().int().min(0),
+  points: z.number().int({ message: "درجة السؤال يجب أن تكون عددًا صحيحًا" }).min(1, { message: "أقل درجة للسؤال هي 1" }).max(100, { message: "أقصى درجة للسؤال هي 100" }),
+}).superRefine((q, ctx) => {
+  if (q.correctIndex >= q.options.length) ctx.addIssue({ code: 'custom', message: 'اختر الإجابة الصحيحة', path: ['correctIndex'] });
+  if (new Set(q.options.map(o => o.toLowerCase())).size !== q.options.length) ctx.addIssue({ code: 'custom', message: 'يجب أن تكون الخيارات مختلفة', path: ['options'] });
+});
+export type QuizQuestion = z.infer<typeof quizQuestionSchema>;
+
 export const assignmentInputSchema = z.object({
   title: z.string().trim().min(3, { message: "اكتب عنوان الواجب" }).max(120),
   instructions: z.string().trim().max(4000).optional().default(""),
   dueAt: z.iso.datetime({ offset: true }).nullable().optional(),
   maxScore: z.coerce.number().int().min(1).max(1000).default(10),
+  questions: z.array(quizQuestionSchema).max(30).optional().default([]),
+}).superRefine((a, ctx) => {
+  if (new Set(a.questions.map(q => q.id)).size !== a.questions.length) ctx.addIssue({ code: 'custom', message: 'الأسئلة مكررة', path: ['questions'] });
+  if (a.questions.length && a.questions.reduce((n, q) => n + q.points, 0) !== a.maxScore) ctx.addIssue({ code: 'custom', message: 'الدرجة النهائية يجب أن تساوي مجموع درجات الأسئلة', path: ['maxScore'] });
 });
 export type AssignmentInput = z.input<typeof assignmentInputSchema>;
+/** Templates deliberately carry no lecture-specific deadline. */
+export const homeworkTemplateInputSchema = assignmentInputSchema.transform(({ dueAt: _deadline, ...template }) => template);
 
 export const submissionInputSchema = z.object({
   body: z.string().trim().max(8000).optional().default(""),
   attachmentIds: z.array(z.string().uuid()).max(10).optional().default([]),
+  answers: z.record(z.string().uuid(), z.number().int().min(0).max(5)).optional().default({}),
 });
 export type SubmissionInput = z.input<typeof submissionInputSchema>;
 
@@ -126,3 +151,17 @@ export const voteSchema = z.object({ value: z.union([z.literal(1), z.literal(-1)
 export const boardOpsSchema = z.object({
   ops: z.array(z.object({ op: z.string().max(10) }).passthrough()).min(1).max(200),
 });
+
+export const teacherVerificationInputSchema = z.object({
+  fullName: z.string().trim().min(6, { message: "أدخل اسمك الكامل" }).max(150),
+  phone: z.string().trim().min(10, { message: "أدخل رقم هاتف صحيحًا" }).max(25),
+  subject: z.string().trim().min(2, { message: "أدخل تخصصك" }).max(80),
+  governorate: z.string().trim().min(2, { message: "أدخل المحافظة" }).max(80),
+  qualification: z.string().trim().min(5, { message: "أدخل المؤهل والجهة المانحة" }).max(300),
+  experienceYears: z.coerce.number().int().min(0).max(70),
+  membershipNumber: z.string().trim().min(2, { message: "أدخل رقم عضوية النقابة" }).max(60),
+  frontDocumentId: z.uuid({ message: "ارفع الوجه الأمامي للكارنيه" }),
+  backDocumentId: z.uuid({ message: "ارفع الوجه الخلفي للكارنيه" }),
+}).refine(value => value.frontDocumentId !== value.backDocumentId, { message: "ارفع صورتين مختلفتين لوجهي الكارنيه" });
+export type TeacherVerificationInput = z.infer<typeof teacherVerificationInputSchema>;
+export const verificationReviewSchema = z.object({ submittedAt: z.iso.datetime({ offset: true }), action: z.enum(["approve", "reject", "changes"]), note: z.string().trim().max(2000).default("") }).refine(value => value.action === "approve" || value.note.length >= 5, { message: "اكتب سبب الرفض أو التعديل المطلوب" });

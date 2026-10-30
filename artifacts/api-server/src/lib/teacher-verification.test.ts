@@ -1,0 +1,65 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {mkdtemp,mkdir,rm,readFile} from "node:fs/promises";
+import path from "node:path";
+import {fileURLToPath} from "node:url";
+import {randomUUID} from "node:crypto";
+test("teacher identity review, private documents and enforced two-factor login",async()=>{
+ if(process.env.DATABASE_URL){const url=new URL(process.env.DATABASE_URL);if(url.hostname!=="gahez-audit-db-20261030"||url.pathname!=="/audit_verification"||url.username!=="audit"||process.env.VERIFICATION_TEST_DATABASE!=="isolated")throw new Error("Refusing verification tests outside isolated database");}
+ const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"../../../../tmp");await mkdir(root,{recursive:true});const dir=await mkdtemp(path.join(root,"verification-test-"));
+ Object.assign(process.env,{NODE_ENV:"test",PAYMENT_PROVIDER:"mock",SUPER_ADMIN_EMAILS:"verification-owner@audit.gahez",ADMIN_EMAILS:"",SMTP_HOST:"",SMTP_USER:"",SMTP_PASS:"",LIVEKIT_URL:"",LOG_LEVEL:"silent",UPLOAD_DIR:path.join(dir,"uploads"),GOOGLE_CLIENT_ID:"fixture-client",GOOGLE_CLIENT_SECRET:"fixture-google-secret",META_APP_ID:"fixture-facebook",META_APP_SECRET:"fixture-facebook-secret"});
+ const database=await import("@workspace/db");await database.initDb({migrationsFolder:path.resolve(root,"../lib/db/drizzle"),pgliteDir:dir});
+ const{db,usersTable,userSecurityTable,verificationDocumentsTable,teacherVerificationsTable,lecturesTable,notificationsTable}=database;
+ const{eq}=await import("drizzle-orm"),{hashPassword,createSession}=await import("./auth"),{totp}=await import("./two-factor"),{default:app}=await import("../app");
+ const password="verification-password",passwordHash=await hashPassword(password),suffix=randomUUID().slice(0,8);
+ const[owner,admin,teacher,other,student]=await db.insert(usersTable).values([{role:"admin" as const,name:"Owner",email:"verification-owner@audit.gahez",passwordHash},{role:"admin" as const,name:"Other admin",email:`admin-${suffix}@audit.gahez`,passwordHash},{role:"teacher" as const,name:"Verified Teacher",email:`teacher-${suffix}@audit.gahez`,passwordHash},{role:"teacher" as const,name:"Other teacher",email:`other-${suffix}@audit.gahez`,passwordHash},{role:"student" as const,name:"Student",email:`student-${suffix}@audit.gahez`,passwordHash}]).returning();
+ const[ownerToken,adminToken,teacherToken,otherToken,studentToken]=await Promise.all([owner!,admin!,teacher!,other!,student!].map(u=>createSession(u.id)));
+ const server=app.listen(0,"127.0.0.1");await new Promise<void>(r=>server.once("listening",r));const base=`http://127.0.0.1:${(server.address() as {port:number}).port}/api`;
+ const call=async(route:string,token?:string,body?:unknown,method?:string)=>{const response=await fetch(base+route,{method:method??(body===undefined?"GET":"POST"),headers:{...(token?{Authorization:`Bearer ${token}`} :{}),...(body===undefined?{}:{"Content-Type":"application/json"})},...(body===undefined?{}:{body:JSON.stringify(body)})});return{status:response.status,data:await response.json() as any};};
+ let checks=0;const check=(name:string,value:unknown)=>{assert.ok(value,name);checks++;};
+ const png=Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2IX8AAAAASUVORK5CYII=","base64");
+ const upload=async(token:string)=>{const response=await fetch(base+"/teacher/verification/documents",{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"image/png","X-Filename":"card.png"},body:png});return{status:response.status,data:await response.json() as any};};
+ try{
+  const lecture={title:"حصة موثقة",subject:"physics",grade:"g12",startsAt:new Date(Date.now()+86400000).toISOString(),durationMin:90,priceCents:0};
+  check("new teachers cannot schedule",(await call("/lectures",teacherToken,lecture)).status===403);
+  check("teacher cannot upload private cards before security steps",(await upload(teacherToken!)).status===400);
+  check("MFA setup requires password",(await call("/me/security/mfa/setup",teacherToken,{password:"wrong-password"})).status===400);
+  const setup=await call("/me/security/mfa/setup",teacherToken,{password});check("authenticator setup supplies secret and local otpauth URI",setup.status===200&&setup.data.secret.length>=32&&setup.data.uri.startsWith("otpauth://"));
+  const enabled=await call("/me/security/mfa/confirm",teacherToken,{code:totp(setup.data.secret,Math.floor(Date.now()/30000))});check("MFA activation gives one-use recovery codes",enabled.status===200&&enabled.data.recoveryCodes.length===10);
+  const security=await db.query.userSecurityTable.findFirst({where:eq(userSecurityTable.userId,teacher!.id)});check("TOTP secret and recovery codes are not stored as plaintext",security?.totpSecretEnc&&!security.totpSecretEnc.includes(setup.data.secret)&&!security.recoveryHashes.includes(enabled.data.recoveryCodes[0]));
+  let login=await call("/auth/login",undefined,{email:teacher!.email,password});check("password alone cannot produce a session once MFA enabled",login.status===200&&login.data.requiresMfa===true&&!login.data.token&&!login.data.me);
+  const firstCode=enabled.data.recoveryCodes[0];const signedIn=await call("/auth/mfa",undefined,{challenge:login.data.challenge,code:firstCode});check("recovery code completes two-factor login",signedIn.status===200&&Boolean(signedIn.data.token));
+  check("login challenges are one-use",(await call("/auth/mfa",undefined,{challenge:login.data.challenge,code:firstCode})).status===400);
+  login=await call("/auth/login",undefined,{email:teacher!.email,password});check("used recovery code cannot be reused",(await call("/auth/mfa",undefined,{challenge:login.data.challenge,code:firstCode})).status===400);
+  // Provider JWT validation is tested separately with real signed JWTs. No provider bypass exists in production routes.
+  await db.update(userSecurityTable).set({googleSubject:`verification-${suffix}`,googleEmail:teacher!.email}).where(eq(userSecurityTable.userId,teacher!.id));
+  const front=await upload(teacherToken!),back=await upload(teacherToken!);check("private card upload works after both security steps",front.status===201&&back.status===201&&front.data.id!==back.data.id);
+  const document=await db.query.verificationDocumentsTable.findFirst({where:eq(verificationDocumentsTable.id,front.data.id)});const disk=await readFile(path.join(dir,"uploads",document!.storageKey));check("membership-card bytes are encrypted on disk",!disk.equals(png)&&!disk.subarray(0,8).equals(png.subarray(0,8)));
+  check("private documents are absent from public upload endpoint",(await call(`/uploads/${front.data.id}`)).status===404);
+  const privateGet=async(token?:string)=>fetch(base+`/teacher/verification/documents/${front.data.id}`,{headers:token?{Authorization:`Bearer ${token}`}:{}});
+  check("private document refuses anonymous access",(await privateGet()).status===401);
+  check("private document refuses other teacher, student and regular admin",(await privateGet(otherToken)).status===404&&(await privateGet(studentToken)).status===404&&(await privateGet(adminToken)).status===404);
+  const ownerView=await privateGet(ownerToken);check("super owner can inspect decrypted image with no-store caching",ownerView.status===200&&ownerView.headers.get("cache-control")==="private, no-store"&&Buffer.from(await ownerView.arrayBuffer()).equals(png));
+  const input={fullName:"أحمد محمد رمضان",phone:"01012345678",subject:"الفيزياء",governorate:"القاهرة",qualification:"بكالوريوس العلوم والتربية",experienceYears:7,membershipNumber:"fixture-123",frontDocumentId:front.data.id,backDocumentId:back.data.id};
+  let submitted=await call("/teacher/verification/submit",teacherToken,input);check("complete verification enters review without self-approval",submitted.status===200&&submitted.data.status==="pending");
+  check("pending review still cannot schedule",(await call("/lectures",teacherToken,lecture)).status===403);
+  check("pending application cannot be silently replaced",(await call("/teacher/verification/submit",teacherToken,input)).status===409);
+  check("review queue is super-owner only",(await call("/admin/teacher-verifications",adminToken)).status===403&&(await call("/admin/teacher-verifications",studentToken)).status===403);
+  const queue=await call("/admin/teacher-verifications",ownerToken);check("owner sees pending review and exact count",queue.status===200&&queue.data.counts.pending===1&&queue.data.items[0].teacher.id===teacher!.id);
+  check("owner receives request notification",(await db.select().from(notificationsTable).where(eq(notificationsTable.userId,owner!.id))).some(n=>n.kind==="verification"));
+  const firstSubmitted=submitted.data.submittedAt;
+  check("regular admin cannot approve",(await call(`/admin/teacher-verifications/${teacher!.id}/review`,adminToken,{action:"approve",submittedAt:firstSubmitted})).status===403);
+  const changes=await call(`/admin/teacher-verifications/${teacher!.id}/review`,ownerToken,{action:"changes",note:"أعد تصوير الوجه الخلفي بوضوح",submittedAt:firstSubmitted});check("owner can request changes with visible note",changes.status===200&&changes.data.status==="needs_changes"&&changes.data.note.includes("الخلفي"));
+  check("teacher receives decision notification",(await db.select().from(notificationsTable).where(eq(notificationsTable.userId,teacher!.id))).some(n=>n.title.includes("تعديل")));
+  submitted=await call("/teacher/verification/submit",teacherToken,input);check("teacher can correct and resubmit",submitted.status===200&&submitted.data.status==="pending");
+  check("stale review cannot approve unseen replacement",(await call(`/admin/teacher-verifications/${teacher!.id}/review`,ownerToken,{action:"approve",submittedAt:firstSubmitted})).status===409);
+  const approved=await call(`/admin/teacher-verifications/${teacher!.id}/review`,ownerToken,{action:"approve",submittedAt:submitted.data.submittedAt});check("owner approval is required before scheduling",approved.status===200&&approved.data.status==="approved");
+  const created=await call("/lectures",teacherToken,lecture);check("approved teacher can schedule",created.status===201);
+  const publicProfile=await call(`/teachers/${teacher!.id}`);check("public profile shows verification without leaking legal identity",publicProfile.data.teacher.verified===true&&!JSON.stringify(publicProfile.data).includes(input.membershipNumber)&&!JSON.stringify(publicProfile.data).includes(front.data.id));
+  const disabled=await call("/me/security/mfa/disable",teacherToken,{password,code:enabled.data.recoveryCodes[1]});check("disabling MFA removes verified scheduling eligibility",disabled.status===200&&(await call("/teacher/verification",teacherToken)).data.status==="needs_changes"&&(await call("/lectures",teacherToken,lecture)).status===403);
+  check("unverified teacher cannot get scheduled publishing token",(await call(`/lectures/${created.data.id}/live/token`,teacherToken,{})).status===403);
+  await db.update(lecturesTable).set({status:"live",liveStartedAt:new Date()}).where(eq(lecturesTable.id,created.data.id));check("already running class can continue during rollout",(await call(`/lectures/${created.data.id}/live/token`,teacherToken,{})).status===200);
+  const reviewHistory=await call(`/admin/teacher-verifications/${teacher!.id}`,ownerToken);check("review actions retain history",reviewHistory.data.history.some((h:any)=>h.action==="approved")&&reviewHistory.data.history.some((h:any)=>h.action==="needs_changes"));
+  console.log(`${checks} verification, privacy and two-factor checks passed`);
+ }finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));if(database.pool)await database.pool.end();else await(db as any).$client.close();await rm(dir,{recursive:true,force:true});}
+});

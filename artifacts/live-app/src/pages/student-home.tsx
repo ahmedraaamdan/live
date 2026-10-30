@@ -1,3 +1,5 @@
+import { StudyBanner, StudyIllustration } from '@/components/study-illustration';
+import { QueryError } from '@/components/query-error';
 import { useState } from 'react';
 import { Eye, NotebookPen, Radio, Sparkles, ThumbsUp, Ticket } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
@@ -24,28 +26,32 @@ export function StudentHome() {
 
   return (
     <>
-      <TopBar title={`${greeting()} يا ${me.user.name.split(' ')[0]}`} large subtitle="يلا نذاكر 💪" actions={<NotificationsButton />} />
+      <TopBar title={`${greeting()}، ${me.user.name.split(' ')[0]}`} large subtitle="ما الذي تريد تعلّمه اليوم؟" actions={<NotificationsButton />} />
       <Page wide>
+        {home.isError && <QueryError error={home.error} retry={home.refetch} />}
+        {feed.isError && <QueryError error={feed.error} retry={feed.refetch} />}
+        {!myLive && !next && home.isSuccess && <StudyBanner title="خطوة جديدة في تعلّمك" body="اختر حصتك، واسأل مدرسك، وتابع مهامك من هنا." />}
         {/* Mine first: my class on air, or my next one. */}
         {myLive ? (
           <Card variant="ink" pad="lg" className="relative mb-6 overflow-hidden rounded-xl">
             <div className="pointer-events-none absolute -top-16 -left-16 size-56 rounded-full bg-gradient-live opacity-40 blur-3xl" aria-hidden="true" />
             <div className="relative">
-              <LiveBadge label="حصتك شغالة دلوقتي" />
+              <LiveBadge label="حصتك مباشرة الآن" />
               <h2 className="mt-3 text-headline-md">{myLive.title}</h2>
               <p className="mt-1 text-body-md text-white/70">{myLive.teacher.name}</p>
               <Button variant="live" size="lg" className="mt-5" onClick={() => navigate(`/live/${myLive.id}`)}>
-                <Radio /> ادخل البث
+                <Radio /> انضم إلى البث
               </Button>
             </div>
           </Card>
         ) : next ? (
-          <LinkCard href={`/lectures/${next.id}`} variant="filled" className="mb-6 flex items-center gap-4 rounded-xl">
+          <LinkCard href={`/lectures/${next.id}`} variant="filled" className="app-upcoming-ticket mb-6 flex items-center gap-4 rounded-xl">
+            <StudyIllustration />
             <div className="grid size-14 shrink-0 place-items-center rounded-lg bg-primary-container text-on-primary-container">
               <Ticket className="size-7" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-label-lg text-on-surface-variant">حصتك الجاية · {subjectLabel(next.subject)}</p>
+              <p className="text-label-lg text-on-surface-variant">حصتك القادمة · {subjectLabel(next.subject)}</p>
               <p className="truncate text-title-lg">{next.title}</p>
               <p className="text-body-md text-on-surface-variant">{fmtDateTime(next.startsAt)}</p>
             </div>
@@ -55,13 +61,13 @@ export function StudentHome() {
 
         {h && h.pendingAssignments.length > 0 && (
           <section className="mb-8">
-            <SectionHeader title="واجبات مستنياك" action={<SectionLink href="/s/assignments">الكل</SectionLink>} />
+            <SectionHeader title="واجبات بانتظارك" action={<SectionLink href="/s/assignments">الكل</SectionLink>} />
             <div className="scrollbar-none -mx-4 flex snap-x gap-3 overflow-x-auto px-4 md:mx-0 md:px-0">
               {h.pendingAssignments.map((a) => (
                 <LinkCard key={a.id} href={`/s/assignments/${a.id}`} pad="sm" className="w-64 shrink-0 snap-start">
                   <div className="flex items-center gap-2 text-tertiary">
                     <NotebookPen className="size-5" />
-                    <span className="text-label-md">{a.dueAt ? `التسليم ${fmtRelative(a.dueAt)}` : 'من غير ميعاد'}</span>
+                    <span className="text-label-md">{a.dueAt ? `التسليم ${fmtRelative(a.dueAt)}` : 'دون موعد محدد'}</span>
                   </div>
                   <p className="mt-2 line-clamp-2 text-title-md">{a.title}</p>
                   <p className="mt-1 truncate text-body-sm text-on-surface-variant">{a.lectureTitle}</p>
@@ -74,7 +80,7 @@ export function StudentHome() {
         {/* Discovery: every teacher's classes, ranked (docs/app/RANKING.md). */}
         <div className="scrollbar-none -mx-4 mb-5 flex gap-2 overflow-x-auto px-4 md:mx-0 md:px-0">
           <Chip selected={!subject} onClick={() => setSubject('')} icon={<Sparkles />}>
-            ليك
+            لك
           </Chip>
           {SUBJECTS.filter((s) => s.key !== 'other').map((s) => (
             <Chip key={s.key} selected={subject === s.key} onClick={() => setSubject(s.key)}>
@@ -87,7 +93,7 @@ export function StudentHome() {
           <SectionHeader
             title={
               <span className="inline-flex items-center gap-2">
-                <span className="size-2.5 animate-live-pulse rounded-full bg-live" aria-hidden="true" /> مباشر دلوقتي
+                <span className="size-2.5 animate-live-pulse rounded-full bg-live" aria-hidden="true" /> مباشر الآن
               </span>
             }
           />
@@ -111,7 +117,7 @@ export function StudentHome() {
         </section>
 
         <section>
-          <SectionHeader title="جاية قريب" />
+          <SectionHeader title="حصص قادمة" />
           {feed.data?.upcoming.length ? (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {feed.data.upcoming.map((it) => (
@@ -135,9 +141,11 @@ function FeedCard({ item, rank }: { item: FeedItem; rank?: number }) {
   const pct = approvalPct(l.votes);
   const full = l.capacity != null && l.seatsTaken >= l.capacity;
   return (
-    <Link href={href} className={cn('state-layer press group block overflow-hidden rounded-lg bg-surface-container-lowest shadow-e1 transition-shadow hover:shadow-e3', rank === 0 && 'md:col-span-2 xl:col-span-1')}>
+    <article className={cn('lecture-card gl-feed-card state-layer press group block overflow-hidden rounded-lg bg-surface-container-lowest shadow-e1 transition-shadow hover:shadow-e3', rank === 0 && 'md:col-span-2 xl:col-span-1')}>
+      <Link href={href} className="lecture-card-hitbox" aria-label={`تفاصيل حصة ${l.title}`} />
       {/* Cover: subject colour field with the teacher, like a stream thumbnail. */}
-      <div className={cn('relative flex h-28 items-end p-4', l.status === 'live' ? 'bg-gradient-live' : 'bg-gradient-brand')}>
+      <div className={cn('gl-feed-cover relative flex h-28 items-end p-4', l.status === 'live' ? 'bg-gradient-live' : 'bg-gradient-brand')}>
+        {l.coverUrl && <><img src={l.coverUrl} className="feed-cover-photo" alt="" loading="lazy" /><div className="feed-cover-shade" /></>}
         <div className="absolute top-3 start-3 flex items-center gap-2">
           {l.status === 'live' ? <LiveBadge /> : <Badge className="bg-black/30 text-white backdrop-blur">{fmtRelative(l.startsAt)}</Badge>}
           {l.status === 'live' && l.viewersNow > 0 && (
@@ -149,10 +157,10 @@ function FeedCard({ item, rank }: { item: FeedItem; rank?: number }) {
         <div className="absolute top-3 end-3">
           {booked ? <Badge tone="success">حاجز</Badge> : full ? <Badge tone="error">كامل</Badge> : null}
         </div>
-        <div className="flex items-center gap-2 text-white">
+        <Link href={`/teachers/${l.teacher.id}`} className="teacher-link lecture-card-teacher flex items-center gap-2 text-white">
           <Avatar name={l.teacher.name} src={l.teacher.avatarUrl} size="sm" ring />
           <span className="text-title-sm drop-shadow">{l.teacher.name}</span>
-        </div>
+        </Link>
       </div>
       <div className="p-4">
         <div className="flex items-center gap-2 text-body-sm text-on-surface-variant">
@@ -166,10 +174,10 @@ function FeedCard({ item, rank }: { item: FeedItem; rank?: number }) {
         </div>
         <h3 className="mt-1.5 line-clamp-2 text-title-lg">{l.title}</h3>
         <div className="mt-3 flex items-center justify-between">
-          <span className="text-body-sm text-on-surface-variant">{l.status === 'live' ? 'شغالة دلوقتي' : fmtDateTime(l.startsAt)}</span>
+          <span className="text-body-sm text-on-surface-variant">{l.status === 'live' ? 'مباشرة الآن' : fmtDateTime(l.startsAt)}</span>
           <span className="font-num text-title-md">{l.priceCents ? money(l.priceCents) : 'مجانية'}</span>
         </div>
       </div>
-    </Link>
+    </article>
   );
 }

@@ -1,6 +1,4 @@
-/* Cairo + Space Grotesk are loaded via a <link rel="stylesheet"> in
-   index.html (not @import here) so they don't block the CSS from parsing —
-   see index.html's performance note. */
+/* Cairo and Space Grotesk are self-hosted in public/fonts with font-display: swap. */
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import './styles/tokens.css';

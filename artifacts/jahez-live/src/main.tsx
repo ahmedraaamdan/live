@@ -1,9 +1,12 @@
+import './lib/content-protection';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 
 import App from './App';
 import { ErrorBoundary } from '@/components/error-boundary';
 
 import './index.css';
+import './styles/studio.css';
+import './styles/playful.css';
 
 const container = document.getElementById('root')!;
 const app = (

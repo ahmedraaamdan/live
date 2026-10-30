@@ -1,19 +1,25 @@
+import { VerificationQueueLink } from '@/components/verification-notice';
+import { QueryError } from '@/components/query-error';
 import { useState } from 'react';
 import { Banknote, CheckCircle2, GraduationCap, HandCoins, Landmark, Presentation, Ticket, Users, XCircle } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { PAYMENT_METHOD_LABELS, PAYOUT_METHOD_LABELS, ROLE_LABELS, type AdminOverviewDTO, type AdminUserDTO, type PayoutDTO, type Role } from '@workspace/live-core';
 import { api, errorMessage } from '@/lib/api';
 import { fmtDateTime, money } from '@/lib/format';
-import { Avatar, Badge, Button, Card, Chip, EmptyState, List, ListItem, Page, PageSpinner, SectionHeader, Sheet, Stat, StatGrid, TextArea, TopBar, toast } from '@/ui';
+import { Avatar, Badge, Banner, Button, Card, Chip, EmptyState, List, ListItem, Page, PageSpinner, SectionHeader, Sheet, Stat, StatGrid, TextArea, TopBar, toast } from '@/ui';
 
 export function AdminOverview() {
   const q = useQuery({ queryKey: ['admin-overview'], queryFn: () => api<AdminOverviewDTO>('/admin/overview'), refetchInterval: 60_000 });
   if (q.isPending) return <PageSpinner />;
-  const d = q.data!;
+  if (!q.data) return <><TopBar title="لوحة الإدارة" /><Page><QueryError error={q.error} retry={q.refetch} /></Page></>;
+  const d = q.data;
   return (
     <>
       <TopBar title="لوحة الإدارة" large subtitle="الفلوس والنشاط على المنصة" />
       <Page wide>
+        <div className="mb-5"><VerificationQueueLink /></div>
+        {d.pendingReviews.length > 0 && <section className="mb-6"><SectionHeader title="معاملات تحتاج إلى مراجعة" /><Banner tone="warning">راجع هذه المعاملات في لوحة بوابة الدفع. لا يُعد الاسترداد مكتملًا حتى يؤكده المزود.</Banner><List className="mt-4">{d.pendingReviews.map(p => <ListItem key={p.id} title={p.lectureTitle} subtitle={`${p.payer.name} · ${money(p.amountCents)} · ${p.id}`} trailing={<Badge tone="warning">{p.refundPending ? 'استرداد قيد التنفيذ' : 'مراجعة المبلغ'}</Badge>} />)}</List></section>}
+
         <StatGrid>
           <Stat icon={<Banknote />} tone="secondary" label="إجمالي المدفوعات" value={money(d.gmvCents)} />
           <Stat icon={<HandCoins />} tone="success" label="عمولة المنصة" value={money(d.platformCents)} />
@@ -35,7 +41,7 @@ export function AdminOverview() {
           <section>
             <SectionHeader title="آخر المدفوعات" />
             {d.recentPayments.length === 0 ? (
-              <EmptyState icon={<Banknote />} title="مفيش مدفوعات لسه" />
+              <EmptyState icon={<Banknote />} title="لا توجد مدفوعات بعد" />
             ) : (
               <List>
                 {d.recentPayments.map((p) => (
@@ -76,7 +82,7 @@ function PayoutList({ payouts }: { payouts: PayoutDTO[] }) {
     },
     onError: (e) => toast(errorMessage(e)),
   });
-  if (payouts.length === 0) return <EmptyState icon={<CheckCircle2 />} title="مفيش طلبات مستنية" />;
+  if (payouts.length === 0) return <EmptyState icon={<CheckCircle2 />} title="لا توجد طلبات بانتظار المراجعة" />;
   return (
     <>
       <List>
@@ -133,7 +139,7 @@ export function AdminPayouts() {
   return (
     <>
       <TopBar title="السحوبات" large />
-      <Page>{q.isPending ? <PageSpinner /> : <PayoutList payouts={q.data ?? []} />}</Page>
+      <Page>{q.isPending ? <PageSpinner /> : q.isError ? <QueryError error={q.error} retry={q.refetch} /> : <PayoutList payouts={q.data ?? []} />}</Page>
     </>
   );
 }
@@ -160,7 +166,7 @@ export function AdminUsers() {
             </Chip>
           ))}
         </div>
-        {q.isPending ? (
+        {q.isError ? <QueryError error={q.error} retry={q.refetch} /> : q.isPending ? (
           <PageSpinner />
         ) : (
           <List>

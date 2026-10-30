@@ -7,8 +7,10 @@ import { createHash, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 import type { NextFunction, Request, RequestHandler, Response } from "express";
 import { and, eq, gt } from "drizzle-orm";
-import { db, sessionsTable, usersTable, type User } from "@workspace/db";
+import { accountSwitchesTable, db, sessionsTable, usersTable, type User } from "@workspace/db";
 import type { Role } from "@workspace/live-core";
+import { env } from "./env";
+import { logger } from "./logger";
 import { forbidden, unauthorized } from "./http";
 
 declare global {
@@ -16,6 +18,7 @@ declare global {
   namespace Express {
     interface Request {
       user?: User;
+      impersonation?: { actor: User; switchId: string; parentHash: string };
     }
   }
 }
@@ -52,7 +55,10 @@ export async function createSession(userId: string, userAgent?: string): Promise
 }
 
 export async function destroySession(token: string) {
-  await db.delete(sessionsTable).where(eq(sessionsTable.tokenHash, sha256(token)));
+  const hash = sha256(token);
+  const current = await db.query.sessionsTable.findFirst({ where: eq(sessionsTable.tokenHash, hash) });
+  if (current?.switchId) await db.update(accountSwitchesTable).set({ endedAt: new Date() }).where(eq(accountSwitchesTable.id, current.switchId));
+  await db.delete(sessionsTable).where(eq(sessionsTable.tokenHash, hash));
 }
 
 export function bearer(req: Request): string | null {
@@ -66,12 +72,21 @@ export const authenticate: RequestHandler = async (req, _res, next) => {
   const token = bearer(req);
   if (!token) return next();
   const [row] = await db
-    .select({ user: usersTable })
+    .select({ user: usersTable, session: sessionsTable })
     .from(sessionsTable)
     .innerJoin(usersTable, eq(usersTable.id, sessionsTable.userId))
     .where(and(eq(sessionsTable.tokenHash, sha256(token)), gt(sessionsTable.expiresAt, new Date())))
     .limit(1);
-  if (row && !row.user.suspended) req.user = row.user;
+  if (row?.session.actorTokenHash && row.session.switchId) {
+    const [parent] = await db.select({ user: usersTable, session: sessionsTable }).from(sessionsTable)
+      .innerJoin(usersTable, eq(usersTable.id, sessionsTable.userId))
+      .where(and(eq(sessionsTable.tokenHash, row.session.actorTokenHash), gt(sessionsTable.expiresAt, new Date()))).limit(1);
+    if (parent && !parent.session.actorTokenHash && isSuperAdmin(parent.user)) {
+      req.user = row.user;
+      req.impersonation = { actor: parent.user, switchId: row.session.switchId, parentHash: parent.session.tokenHash };
+      if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) _res.on("finish", () => logger.info({ actorId: parent.user.id, targetId: row.user.id, switchId: row.session.switchId, method: req.method, path: req.path, status: _res.statusCode }, "Account switch action"));
+    }
+  } else if (row && !row.session.actorTokenHash && !row.user.suspended) req.user = row.user;
   next();
 };
 
@@ -93,3 +108,14 @@ export const roleGate =
     requireRole(req, ...roles);
     next();
   };
+
+/** Existing administrator plus explicit operator allowlist; never based on public signup. */
+export function isSuperAdmin(user: User): boolean {
+  const owners = env.superAdminEmails.length ? env.superAdminEmails : env.adminEmails;
+  return user.role === "admin" && !user.suspended && owners.includes(user.email.toLowerCase());
+}
+export function requireSuperAdmin(req: Request): User {
+  const user = requireUser(req);
+  if (req.impersonation || !isSuperAdmin(user)) throw forbidden();
+  return user;
+}

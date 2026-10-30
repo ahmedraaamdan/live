@@ -9,7 +9,7 @@ import { Spinner } from './feedback';
  * `text` for the least emphasis. `live` is reserved for going/joining live.
  */
 export const buttonVariants = cva(
-  'state-layer press inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full font-sans text-label-lg transition-[background-color,box-shadow,color] duration-150 ease-standard disabled:pointer-events-none disabled:opacity-40',
+  'gl-button state-layer press inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full font-sans text-label-lg transition-[background-color,box-shadow,color] duration-150 ease-standard disabled:pointer-events-none disabled:opacity-40',
   {
     variants: {
       variant: {
@@ -43,14 +43,14 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   ref,
 ) {
   return (
-    <button ref={ref} type={type} className={cn(buttonVariants({ variant, size, block }), className)} disabled={disabled || loading} {...props}>
+    <button ref={ref} data-variant={variant ?? 'filled'} type={type} className={cn(buttonVariants({ variant, size, block }), className)} disabled={disabled || loading} {...props}>
       {loading ? <Spinner className="size-5" /> : children}
     </button>
   );
 });
 
 const iconButtonVariants = cva(
-  'state-layer press inline-grid shrink-0 place-items-center rounded-full transition-colors duration-150 disabled:opacity-40 [&_svg]:size-6',
+  'gl-icon-button state-layer press inline-grid shrink-0 place-items-center rounded-full transition-colors duration-150 disabled:opacity-40 [&_svg]:size-6',
   {
     variants: {
       variant: {
@@ -82,7 +82,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
   { className, variant, size, label, type = 'button', ...props },
   ref,
 ) {
-  return <button ref={ref} type={type} aria-label={label} title={label} className={cn(iconButtonVariants({ variant, size }), className)} {...props} />;
+  return <button ref={ref} data-variant={variant ?? 'standard'} type={type} aria-label={label} title={label} className={cn(iconButtonVariants({ variant, size }), className)} {...props} />;
 });
 
 /** Floating action button: the one creation action on list screens. */
@@ -91,7 +91,7 @@ export function Fab({ className, children, label, ...props }: ButtonHTMLAttribut
     <button
       type="button"
       className={cn(
-        'state-layer press fixed z-30 flex h-14 items-center gap-3 rounded-lg bg-primary px-5 text-label-lg text-on-primary shadow-e3 [&_svg]:size-6',
+        'gl-fab state-layer press fixed z-30 flex h-14 items-center gap-3 rounded-lg bg-primary px-5 text-label-lg text-on-primary shadow-e3 [&_svg]:size-6',
         'bottom-[calc(var(--nav-height)+var(--safe-bottom)+1rem)] left-4 lg:bottom-8 lg:left-8',
         className,
       )}

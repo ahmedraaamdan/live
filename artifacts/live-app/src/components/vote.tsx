@@ -46,13 +46,13 @@ export function VoteBar({ lecture, dark, className }: { lecture: LectureDTO; dar
     );
   return (
     <div className={cn('flex items-center gap-2', className)}>
-      <button type="button" className={btn(v.mine === 1, 'up')} disabled={!v.canVote} onClick={() => vote.mutate(v.mine === 1 ? 0 : 1)} aria-pressed={v.mine === 1} aria-label="عجبتني">
+      <button type="button" className={btn(v.mine === 1, 'up')} disabled={!v.canVote || vote.isPending} onClick={() => vote.mutate(v.mine === 1 ? 0 : 1)} aria-pressed={v.mine === 1} aria-label="أعجبتني الحصة">
         <ThumbsUp className={v.mine === 1 ? 'fill-current' : ''} /> <span className="font-num">{v.likes}</span>
       </button>
-      <button type="button" className={btn(v.mine === -1, 'down')} disabled={!v.canVote} onClick={() => vote.mutate(v.mine === -1 ? 0 : -1)} aria-pressed={v.mine === -1} aria-label="معجبتنيش">
+      <button type="button" className={btn(v.mine === -1, 'down')} disabled={!v.canVote || vote.isPending} onClick={() => vote.mutate(v.mine === -1 ? 0 : -1)} aria-pressed={v.mine === -1} aria-label="لم تعجبني الحصة">
         <ThumbsDown className={v.mine === -1 ? 'fill-current' : ''} /> <span className="font-num">{v.dislikes}</span>
       </button>
-      {!v.canVote && <span className={cn('text-body-sm', dark ? 'text-on-stage/60' : 'text-on-surface-variant')}>تقدر تقيّم بعد {Math.round(VOTE_MIN_LIVE_SECONDS / 60)} دقايق مشاهدة</span>}
+      {!v.canVote && <span className={cn('text-body-sm', dark ? 'text-on-stage/60' : 'text-on-surface-variant')}>يتاح التقييم بعد {Math.round(VOTE_MIN_LIVE_SECONDS / 60)} دقائق مشاهدة مسجلة</span>}
     </div>
   );
 }

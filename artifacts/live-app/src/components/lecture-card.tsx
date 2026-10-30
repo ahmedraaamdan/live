@@ -1,8 +1,9 @@
 import { CalendarClock, Clock, PlayCircle, Users } from 'lucide-react';
 import { LECTURE_STATUS_LABELS, gradeLabel, subjectLabel, type LectureDTO } from '@workspace/live-core';
+import { Link } from 'wouter';
 import { cn } from '@/lib/cn';
 import { fmtDateTime, fmtDuration, fmtRelative, money } from '@/lib/format';
-import { Avatar, Badge, LinkCard, LiveBadge } from '@/ui';
+import { Avatar, Badge, Card, LiveBadge } from '@/ui';
 
 export function lectureEnded(l: LectureDTO) {
   return l.status === 'ended' || (l.status === 'scheduled' && new Date(l.startsAt).getTime() + l.durationMin * 60_000 < Date.now());
@@ -27,7 +28,9 @@ export function StatusBadge({ lecture }: { lecture: LectureDTO }) {
 export function LectureCard({ lecture, showTeacher, className, href }: { lecture: LectureDTO; showTeacher?: boolean; className?: string; href?: string }) {
   const seats = lecture.capacity ? `${lecture.seatsTaken}/${lecture.capacity}` : String(lecture.seatsTaken);
   return (
-    <LinkCard href={href ?? `/lectures/${lecture.id}`} className={cn('flex flex-col gap-3', lecture.status === 'live' && 'ring-2 ring-live', className)}>
+    <Card className={cn('lecture-card flex flex-col gap-3', lecture.status === 'live' && 'ring-2 ring-live', className)}>
+      <Link href={href ?? `/lectures/${lecture.id}`} className="lecture-card-hitbox" aria-label={`تفاصيل حصة ${lecture.title}`} />
+      {lecture.coverUrl && <img src={lecture.coverUrl} className="lecture-card-cover" alt="" loading="lazy" />}
       <div className="flex items-center gap-2">
         <Badge tone="primary">{subjectLabel(lecture.subject)}</Badge>
         <span className="text-body-sm text-on-surface-variant">{gradeLabel(lecture.grade)}</span>
@@ -54,10 +57,10 @@ export function LectureCard({ lecture, showTeacher, className, href }: { lecture
       </div>
       <div className="flex items-center gap-3 border-t border-outline-variant pt-3">
         {showTeacher ? (
-          <>
+          <Link href={`/teachers/${lecture.teacher.id}`} className="teacher-link lecture-card-teacher">
             <Avatar name={lecture.teacher.name} src={lecture.teacher.avatarUrl} size="sm" />
             <span className="min-w-0 flex-1 truncate text-title-sm">{lecture.teacher.name}</span>
-          </>
+          </Link>
         ) : (
           <span className="flex-1 text-body-md text-on-surface-variant">
             {lecture.stats ? (
@@ -69,7 +72,7 @@ export function LectureCard({ lecture, showTeacher, className, href }: { lecture
         )}
         <span className="font-num text-title-md">{lecture.priceCents ? money(lecture.priceCents) : 'مجانية'}</span>
       </div>
-    </LinkCard>
+    </Card>
   );
 }
 

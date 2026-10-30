@@ -1,3 +1,4 @@
+import { QueryError } from '@/components/query-error';
 import { useState } from 'react';
 import { CalendarPlus, CalendarX2, Ticket } from 'lucide-react';
 import { useLocation } from 'wouter';
@@ -41,23 +42,24 @@ export function LectureList() {
           onChange={setScope}
           options={[
             { value: 'upcoming', label: 'الجاية' },
-            { value: 'past', label: 'اللي فاتت' },
+            { value: 'past', label: 'السابقة' },
           ]}
         />
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {q.isPending && [0, 1, 2].map((i) => <LectureCardSkeleton key={i} />)}
+          {q.isError && <QueryError error={q.error} retry={q.refetch} />}
+        {q.isPending && [0, 1, 2].map((i) => <LectureCardSkeleton key={i} />)}
           {q.data?.map((l) => <LectureCard key={l.id} lecture={l} showTeacher={!teacher} />)}
         </div>
         {q.data?.length === 0 &&
           (scope === 'upcoming' ? (
             <EmptyState
               icon={teacher ? <CalendarPlus /> : <Ticket />}
-              title={teacher ? 'مفيش حصص جاية' : 'محجزتش حصص لسه'}
-              body={teacher ? 'اعمل حصة وابعت اللينك لطلابك.' : 'افتح لينك الحصة اللي بعتهولك المدرس، أو اكتب الكود فوق.'}
-              action={teacher ? <Button onClick={() => navigate('/t/lectures/new')}>اعمل حصة</Button> : undefined}
+              title={teacher ? 'مفيش حصص قادمة' : 'لم تحجز حصصًا بعد'}
+              body={teacher ? 'إنشاء حصة ومشاركة الرابط لطلابك.' : 'افتح رابط الحصة الذي شاركه المدرس، أو أدخل رمزها في الحقل أعلاه.'}
+              action={teacher ? <Button onClick={() => navigate('/t/lectures/new')}>إنشاء حصة</Button> : undefined}
             />
           ) : (
-            <EmptyState icon={<CalendarX2 />} title="مفيش حصص فاتت" body="أول ما تحضر حصص هتلاقيها هنا، بالتسجيلات." />
+            <EmptyState icon={<CalendarX2 />} title="لا توجد حصص سابقة" body="تظهر هنا الحصص التي حضرتها مع التسجيلات المتاحة." />
           ))}
       </Page>
       {teacher && (

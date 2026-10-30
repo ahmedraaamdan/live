@@ -13,6 +13,7 @@ export interface LiveState {
   error: string | null;
   camera: VideoTrack | null;
   screen: VideoTrack | null;
+  screenIsBoard: boolean;
   micOn: boolean;
   camOn: boolean;
   screenOn: boolean;
@@ -22,7 +23,7 @@ export interface LiveState {
   hostPresent: boolean;
 }
 
-const initial: LiveState = { status: 'idle', error: null, camera: null, screen: null, micOn: false, camOn: false, screenOn: false, audioBlocked: false, hostPresent: false };
+const initial: LiveState = { status: 'idle', error: null, camera: null, screen: null, screenIsBoard: false, micOn: false, camOn: false, screenOn: false, audioBlocked: false, hostPresent: false };
 
 export function useLiveRoom(opts: { url: string | null; token: string | null; host: boolean }) {
   const [state, setState] = useState<LiveState>(initial);
@@ -36,13 +37,14 @@ export function useLiveRoom(opts: { url: string | null; token: string | null; ho
     (async () => {
       const lk = await import('livekit-client');
       if (cancelled) return;
-      room = new lk.Room({ adaptiveStream: true, dynacast: true, videoCaptureDefaults: { resolution: lk.VideoPresets.h720.resolution } });
+      room = new lk.Room({ adaptiveStream: true, dynacast: true, videoCaptureDefaults: { resolution: lk.VideoPresets.h360.resolution }, publishDefaults: { videoEncoding: { maxBitrate: 400_000, maxFramerate: 15 }, screenShareEncoding: { maxBitrate: 1_000_000, maxFramerate: 15 } } });
       roomRef.current = room;
 
       const refresh = () => {
-        if (!room) return;
+        if (!room || cancelled) return;
         let camera: VideoTrack | null = null;
         let screen: VideoTrack | null = null;
+        let screenIsBoard = false;
         let hostPresent = false;
         const participants = opts.host ? [room.localParticipant] : [...room.remoteParticipants.values()];
         for (const p of participants) {
@@ -50,8 +52,8 @@ export function useLiveRoom(opts: { url: string | null; token: string | null; ho
           hostPresent = true;
           for (const pub of p.trackPublications.values()) {
             const t = pub.track;
-            if (!t || t.kind !== lk.Track.Kind.Video || pub.isMuted) continue;
-            if (pub.source === lk.Track.Source.ScreenShare) screen = t as VideoTrack;
+            if (!t || t.kind !== lk.Track.Kind.Video || pub.isMuted || t.mediaStreamTrack.readyState === 'ended') continue;
+            if (pub.source === lk.Track.Source.ScreenShare) { screen = t as VideoTrack; screenIsBoard = pub.trackName === 'whiteboard'; }
             else if (pub.source === lk.Track.Source.Camera) camera = t as VideoTrack;
           }
         }
@@ -60,6 +62,7 @@ export function useLiveRoom(opts: { url: string | null; token: string | null; ho
           ...s,
           camera,
           screen,
+          screenIsBoard,
           hostPresent: opts.host || hostPresent,
           micOn: lp.isMicrophoneEnabled,
           camOn: lp.isCameraEnabled,
@@ -81,23 +84,29 @@ export function useLiveRoom(opts: { url: string | null; token: string | null; ho
         })
         .on(E.TrackUnsubscribed, (track) => {
           if (track.kind === lk.Track.Kind.Audio) track.detach().forEach((el) => el.remove());
-          refresh();
+          // LiveKit emits unsubscribe before clearing publication.track.
+          // Clear the old reference immediately, then inspect the final maps.
+          setState(s => ({ ...s, camera: s.camera === track ? null : s.camera, screen: s.screen === track ? null : s.screen, screenIsBoard: s.screen === track ? false : s.screenIsBoard }));
+          queueMicrotask(refresh);
         })
+        .on(E.TrackUnpublished, () => queueMicrotask(refresh))
+        .on(E.TrackPublished, refresh)
+        .on(E.TrackSubscriptionStatusChanged, () => queueMicrotask(refresh))
         .on(E.TrackMuted, refresh)
         .on(E.TrackUnmuted, refresh)
         .on(E.LocalTrackPublished, refresh)
-        .on(E.LocalTrackUnpublished, refresh)
+        .on(E.LocalTrackUnpublished, () => queueMicrotask(refresh))
         .on(E.ParticipantConnected, refresh)
         .on(E.ParticipantDisconnected, refresh)
         .on(E.AudioPlaybackStatusChanged, refresh)
         .on(E.Reconnecting, () => setState((s) => ({ ...s, status: 'reconnecting' })))
-        .on(E.Reconnected, () => setState((s) => ({ ...s, status: 'connected' })))
+        .on(E.Reconnected, () => { setState((s) => ({ ...s, status: 'connected' })); refresh(); })
         .on(E.Disconnected, () => setState((s) => ({ ...s, status: 'disconnected' })));
 
       setState((s) => ({ ...s, status: 'connecting' }));
       try {
         await room.connect(opts.url!, opts.token!);
-        if (cancelled) return;
+        if (cancelled) { await room.disconnect(); return; }
         if (opts.host) {
           await room.localParticipant.setMicrophoneEnabled(true);
           await room.localParticipant.setCameraEnabled(true);
@@ -145,9 +154,12 @@ export function useLiveRoom(opts: { url: string | null; token: string | null; ho
     const lk = await import('livekit-client');
     const track = canvas.captureStream(15).getVideoTracks()[0];
     if (!track) return () => undefined;
-    const pub = await room.localParticipant.publishTrack(track, { source: lk.Track.Source.ScreenShare, name: 'whiteboard' });
+    let pub;
+    try { pub = await room.localParticipant.publishTrack(track, { source: lk.Track.Source.ScreenShare, name: 'whiteboard' }); }
+    catch (error) { track.stop(); throw error; }
     return () => {
-      if (pub.track) void room.localParticipant.unpublishTrack(pub.track);
+      setState(s => ({ ...s, screen: s.screen === pub.track ? null : s.screen, screenIsBoard: s.screen === pub.track ? false : s.screenIsBoard }));
+      if (pub.track) void room.localParticipant.unpublishTrack(pub.track).catch(() => undefined);
       track.stop();
     };
   }, []);

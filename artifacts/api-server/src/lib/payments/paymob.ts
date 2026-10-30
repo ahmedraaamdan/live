@@ -59,6 +59,7 @@ export const paymobProvider: PaymentProvider = {
     };
     const res = await fetch(`${cfg.baseUrl}/v1/intention/`, {
       method: "POST",
+        signal: AbortSignal.timeout(30_000),
       headers: { Authorization: `Token ${cfg.secretKey}`, "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
@@ -75,6 +76,7 @@ export const paymobProvider: PaymentProvider = {
     if (!payment.providerTxnId) throw new Error("No Paymob transaction id to refund");
     const res = await fetch(`${cfg.baseUrl}/api/acceptance/void_refund/refund`, {
       method: "POST",
+        signal: AbortSignal.timeout(30_000),
       headers: { Authorization: `Token ${cfg.secretKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({ transaction_id: payment.providerTxnId, amount_cents: payment.amountCents }),
     });

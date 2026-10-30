@@ -12,7 +12,7 @@ export interface CheckoutInput {
  * mock), which ends in payments.confirmPayment / failPayment.
  */
 export interface PaymentProvider {
-  name: "mock" | "paymob";
+  name: "mock" | "paymob" | "easykash";
   createCheckout(input: CheckoutInput): Promise<{ checkoutUrl: string; providerRef: string | null }>;
   refund(payment: Payment): Promise<void>;
 }

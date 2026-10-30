@@ -12,9 +12,9 @@ const FALLBACK_WHATSAPP = 'https://wa.me/201557947788';
 const FALLBACK_EMAIL = 'support@gahez.space';
 
 const ERRORS = {
-  invalid: 'اكتب اسمك وإيميل صحيح، والموضوع والرسالة.',
-  busy: 'وصلنا رسايل كتير من نفس الجهاز. جرّب تاني بعد شوية.',
-  failed: 'مقدرناش نبعت رسالتك دلوقتي. جرّب تاني بعد شوية.',
+  invalid: 'أدخل اسمك وبريدًا إلكترونيًا صحيحًا، وأكمل الموضوع والرسالة.',
+  busy: 'بلغت الحد المسموح لإرسال الرسائل. يرجى المحاولة لاحقًا.',
+  failed: 'تعذّر إرسال رسالتك. يرجى المحاولة بعد قليل.',
 } as const;
 
 type ContactState = 'idle' | 'sending' | 'sent' | keyof typeof ERRORS;
@@ -74,8 +74,8 @@ export default function Contact() {
   return (
     <ContentPage
       eyebrow="مركز المساعدة"
-      title="عندك سؤال؟"
-      subtitle="لو عندك سؤال عن حجز، مدرس، دفع أو استخدام المنصة، ابعتلنا."
+      title="كيف يمكننا مساعدتك؟"
+      subtitle="أرسل استفسارك عن الحجز أو الدفع أو استخدام المنصة، وسيراجعه فريقنا."
       crumbs={[{ label: 'الرئيسية', path: '/' }, { label: 'تواصل معنا' }]}
     >
       <div className="mp-contact-grid">
@@ -84,7 +84,7 @@ export default function Contact() {
             <div className="mp-contact-success fade-up" data-testid="text-contact-success">
               <Send size={22} />
               <h2>وصلتنا رسالتك.</h2>
-              <p>هنراجعها ونتواصل معاك في أقرب وقت.</p>
+              <p>سنراجع رسالتك ونرد عليك عبر البريد الإلكتروني.</p>
             </div>
           ) : (
             <form className="auth-form mp-contact-form" onSubmit={submit} data-testid="form-contact">
@@ -102,7 +102,7 @@ export default function Contact() {
               </label>
               <label>
                 الموضوع
-                <input required name="subject" maxLength={200} placeholder="عايز تتكلم عن إيه؟" data-testid="input-contact-subject" />
+                <input required name="subject" maxLength={200} placeholder="ما موضوع استفسارك؟" data-testid="input-contact-subject" />
               </label>
               <label>
                 الرسالة
@@ -114,7 +114,7 @@ export default function Contact() {
                 <p className="waitlist-error" role="alert" data-testid="text-contact-error">
                   {ERRORS[state as keyof typeof ERRORS]}
                   <br />
-                  تقدر كمان تكلّمنا مباشرة على{' '}
+                  يمكنك أيضًا التواصل معنا عبر{' '}
                   <a href={FALLBACK_WHATSAPP} target="_blank" rel="noreferrer noopener">واتساب</a> أو{' '}
                   <a href={`mailto:${FALLBACK_EMAIL}`} dir="ltr">{FALLBACK_EMAIL}</a>.
                 </p>
@@ -129,7 +129,7 @@ export default function Contact() {
         <div className="contact-mascot" aria-hidden="true"><ClientOnly><div data-gahez-mascot="phone" data-face="talk" data-dir="rtl" /></ClientOnly></div>
         {directChannels.length > 0 && (
           <div className="mp-contact-channels">
-            <h2>قنوات تانية</h2>
+            <h2>طرق أخرى للتواصل</h2>
             {directChannels.map(({ key, href, icon: Icon, label }) => (
               <a key={key} href={href} target="_blank" rel="noreferrer noopener" className="mp-contact-channel" data-testid={`link-contact-${key}`}>
                 <Icon size={18} /> {label}

@@ -67,14 +67,14 @@
   --card-foreground: 222 47% 11%;
   --border: 217 36% 90%;           /* #DDE4EF */
   --input: 217 36% 90%;
-  --ring: 221 83% 53%;
+  --ring: 347 77% 50%;
   --primary: 222 47% 11%;          /* navy: headings, dark surfaces */
   --primary-foreground: 0 0% 100%;
-  --secondary: 218 92% 95%;        /* #E8F0FE */
-  --secondary-foreground: 224 76% 48%;
+  --secondary: 347 95% 96%;        /* #E8F0FE */
+  --secondary-foreground: 347 77% 42%;
   --muted: 217 62% 96%;            /* #EEF3FB */
   --muted-foreground: 216 22% 37%; /* #4A5B74 */
-  --accent: 347 77% 50%;           /* #E11D48 rose: "live broadcast" brand accent, every call to action */
+  --accent: 347 77% 50%;           /* Live brand red */
   --accent-foreground: 0 0% 100%;
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
@@ -102,9 +102,9 @@
      for UI chrome; reach for these only in illustrative/brand contexts. */
   --ink: #0f172a;    /* navy */
   --paper: #f7f9fc;  /* page */
-  --coral: #e11d48;  /* rose/red again: matches the new --accent, undoing the old blue rebrand */
-  --sun: #22d3ee;    /* cyan, where it had yellow */
-  --mint: #dbe7fe;   /* soft blue, where it had mint */
+  --coral: #e11d48;  /* Live red brand accent */
+  --sun: #fda4af;    /* cyan, where it had yellow */
+  --mint: #ffe4e6;   /* soft blue, where it had mint */
 
   /* ---------------------------------------------------------------- */
   /* Typography scale                                                  */
@@ -211,4 +211,64 @@
   --z-dropdown: 40;    /* mobile nav panel, menus */
   --z-toast: 60;       /* toast notifications */
   --z-modal: 80;       /* auth dialog and other blocking overlays */
+}
+
+/* Studio tokens: the Live red accent, one supporting classroom highlight. */
+:root {
+ --studio-accent: #e11d48; --studio-accent-dark: #be123c; --studio-white: #fff;
+ --studio-soft: #fff0f3; --studio-line: #d8dde8; --studio-ink: #151b2b;
+ --studio-board: #172033; --studio-board-line: #ffffff0d; --studio-lime: #d8f56c;
+ --studio-lab-text: #f5cbd6; --studio-shadow: 0 28px 70px -34px #7e153d30;
+ --studio-radius: 20px; --studio-display: clamp(2.4rem, 4.1vw, 4rem);
+ --paper: #f6f7fa; --background: 225 29% 97%; --muted-foreground: 222 14% 40%;
+}
+@media (prefers-color-scheme: dark) {
+ :root:not([data-theme='light']) {
+  --background: 224 24% 10%; --foreground: 225 30% 94%; --card: 224 23% 13%;
+  --card-foreground: 225 30% 94%; --primary: 225 30% 94%; --primary-foreground: 224 24% 10%;
+  --muted: 224 22% 16%; --muted-foreground: 222 15% 72%; --border: 224 18% 25%;
+  --secondary: 340 25% 15%; --secondary-foreground: 350 95% 82%;
+  --popover: 224 23% 13%; --popover-foreground: 225 30% 94%; --input: 224 18% 25%;
+  --paper: #131722; --studio-white: #1b2030; --studio-soft: #301d27; --studio-line: #323b50;
+  --studio-ink: #edf0f9; --studio-accent: #fb7185; --accent: 351 95% 71%; --accent-foreground: 224 24% 10%;
+ }
+}
+:root[data-theme='dark'] {
+  --background: 224 24% 10%; --foreground: 225 30% 94%; --card: 224 23% 13%;
+  --card-foreground: 225 30% 94%; --primary: 225 30% 94%; --primary-foreground: 224 24% 10%;
+  --muted: 224 22% 16%; --muted-foreground: 222 15% 72%; --border: 224 18% 25%;
+  --secondary: 340 25% 15%; --secondary-foreground: 350 95% 82%;
+  --popover: 224 23% 13%; --popover-foreground: 225 30% 94%; --input: 224 18% 25%;
+  --paper: #131722; --studio-white: #1b2030; --studio-soft: #301d27; --studio-line: #323b50;
+  --studio-ink: #edf0f9; --studio-accent: #fb7185; --accent: 351 95% 71%; --accent-foreground: 224 24% 10%;
+}
+
+/* Playful Arabic art direction: requested Lalezar / Readex typography. */
+:root {
+ --app-font-sans: 'Readex Pro', sans-serif;
+ --app-font-display: 'Lalezar', 'Readex Pro', sans-serif;
+ --paper: #faf7f0; --background: 40 50% 96%; --foreground: 15 10% 8%;
+ --primary: 15 10% 8%; --primary-foreground: 40 50% 96%;
+ --card: 0 0% 100%; --card-foreground: 15 10% 8%;
+ --muted-foreground: 20 8% 35%; --border: 20 15% 80%;
+ --studio-white: #fffefa; --studio-soft: #fff0ed; --studio-line: #ddd6cc;
+ --studio-ink: #181513; --studio-board: #211b18; --studio-lime: #ffdc69;
+ --playful-outline: #181513; --playful-shadow: #181513; --playful-paper: #faf7f0;
+ --playful-radius: 24px; --playful-shadow-card: 5px 6px 0 var(--playful-shadow);
+}
+@media (prefers-color-scheme: dark) {
+ :root:not([data-theme='light']) {
+  --paper: #1c1816; --background: 20 12% 10%; --foreground: 40 35% 94%;
+  --primary: 40 35% 94%; --primary-foreground: 20 12% 10%;
+  --card: 20 12% 14%; --card-foreground: 40 35% 94%; --muted-foreground: 25 15% 75%;
+  --studio-white: #27211e; --studio-soft: #33221f; --studio-line: #51433c;
+  --studio-ink: #faf1e3; --playful-outline: #f0dfca; --playful-shadow: #090807;
+ }
+}
+:root[data-theme='dark'] {
+ --paper: #1c1816; --background: 20 12% 10%; --foreground: 40 35% 94%;
+ --primary: 40 35% 94%; --primary-foreground: 20 12% 10%;
+ --card: 20 12% 14%; --card-foreground: 40 35% 94%; --muted-foreground: 25 15% 75%;
+ --studio-white: #27211e; --studio-soft: #33221f; --studio-line: #51433c;
+ --studio-ink: #faf1e3; --playful-outline: #f0dfca; --playful-shadow: #090807;
 }

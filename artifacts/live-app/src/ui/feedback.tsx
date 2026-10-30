@@ -1,4 +1,4 @@
-import type { HTMLAttributes, ReactNode } from 'react';
+import { useEffect, useState, type HTMLAttributes, type ReactNode } from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { AlertCircle, CheckCircle2, Info, TriangleAlert } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -13,9 +13,15 @@ export function Spinner({ className }: { className?: string }) {
 }
 
 export function PageSpinner() {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSlow(true), 180);
+    return () => window.clearTimeout(timer);
+  }, []);
   return (
-    <div className="grid min-h-[50dvh] place-items-center text-primary" role="status" aria-label="بيحمّل">
-      <Spinner className="size-8" />
+    <div className="gl-page-loading" role="status" aria-label="جارٍ تحميل الصفحة">
+      <div className="gl-loading-top" aria-hidden="true"><span /><i>{slow && <Spinner className="size-5" />}</i></div>
+      <div className="gl-loading-content" aria-hidden="true"><div className="gl-loading-title" /><div className="gl-loading-subtitle" /><div className="gl-loading-card" /><div className="gl-loading-pair"><div /><div /></div></div>
     </div>
   );
 }
@@ -24,7 +30,7 @@ export function Skeleton({ className }: { className?: string }) {
   return <div className={cn('skeleton h-4', className)} aria-hidden="true" />;
 }
 
-const badgeVariants = cva('inline-flex h-6 shrink-0 items-center gap-1 rounded-full px-2.5 text-label-md [&_svg]:size-3.5', {
+const badgeVariants = cva('gl-badge inline-flex h-6 shrink-0 items-center gap-1 rounded-full px-2.5 text-label-md [&_svg]:size-3.5', {
   variants: {
     tone: {
       neutral: 'bg-surface-container-high text-on-surface-variant',
@@ -87,7 +93,7 @@ export function Banner({
 }) {
   const { cls, Icon } = bannerTone[tone];
   return (
-    <div role={tone === 'error' ? 'alert' : 'status'} className={cn('flex gap-3 rounded-lg p-4', cls, className)}>
+    <div role={tone === 'error' ? 'alert' : 'status'} className={cn('gl-banner flex gap-3 rounded-lg p-4', cls, className)}>
       <Icon className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
       <div className="min-w-0 flex-1">
         {title && <p className="text-title-sm">{title}</p>}
@@ -112,7 +118,7 @@ export function EmptyState({
   className?: string;
 }) {
   return (
-    <div className={cn('flex flex-col items-center px-6 py-12 text-center', className)}>
+    <div className={cn('gl-empty flex flex-col items-center px-6 py-12 text-center', className)}>
       <div className="mb-5 grid size-20 animate-float place-items-center rounded-2xl bg-primary-container text-on-primary-container [&_svg]:size-9">{icon}</div>
       <h3 className="text-title-lg">{title}</h3>
       {body && <p className="mt-2 max-w-sm text-body-md text-on-surface-variant">{body}</p>}

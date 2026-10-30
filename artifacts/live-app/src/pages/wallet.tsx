@@ -1,3 +1,4 @@
+import { QueryError } from '@/components/query-error';
 import { useState } from 'react';
 import { ArrowDownToLine, ArrowUpFromLine, Clock, Info, RotateCcw, Wallet as WalletIcon } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -29,12 +30,13 @@ export function WalletPage() {
       qc.invalidateQueries({ queryKey: ['teacher-dashboard'] });
       setOpen(false);
       setTab('payouts');
-      toast('طلب السحب وصل، هيتحوّل خلال يومين عمل');
+      toast('أُرسل طلب السحب إلى الإدارة للمراجعة');
     },
     onError: (e) => setError(errorMessage(e)),
   });
   if (q.isPending) return <PageSpinner />;
-  const w = q.data!;
+  if (!q.data) return <><TopBar title="المحفظة" back /><Page><QueryError error={q.error} retry={q.refetch} /></Page></>;
+  const w = q.data;
   const feePct = w.feeBps / 100;
 
   const submit = () => {

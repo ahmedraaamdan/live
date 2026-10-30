@@ -1,3 +1,5 @@
+import { applyEasykashResult, reconcileEasykashPayment } from "../lib/easykash-reconcile";
+import { easykashPaymentId, verifyEasykashCallback } from "../lib/payments/easykash";
 import express, { Router } from "express";
 import { eq } from "drizzle-orm";
 import { db, lecturesTable, paymentsTable, bookingsTable, recordingsTable } from "@workspace/db";
@@ -24,7 +26,16 @@ router.get("/payments/:id", async (req, res) => {
     .where(eq(paymentsTable.id, id));
   if (!row) throw notFound();
   if (row.p.userId !== user.id && user.role !== "admin") throw forbidden();
+  if (row.p.provider === "easykash") {
+    await reconcileEasykashPayment(row.p).catch(() => undefined);
+    const updated = await db.query.paymentsTable.findFirst({ where: eq(paymentsTable.id, id) });
+    if (updated) row.p = updated;
+  }
+  const flags = (row.p.raw ?? {}) as Record<string, unknown>;
   const body: PaymentDTO = {
+    refundPending: Boolean(flags.gahezRefundPending),
+    voucher: /^\d{3,40}$/.test(String(flags.voucher ?? "")) ? String(flags.voucher) : null,
+    requiresReview: Boolean(flags.gahezReviewReason),
     id: row.p.id,
     status: row.p.status,
     amountCents: row.p.amountCents,
@@ -49,6 +60,16 @@ router.post("/payments/mock/:id/complete", async (req, res) => {
   if (outcome === "success") await confirmPayment(id, { txnId: `mock_txn_${Date.now()}`, method, raw: { mock: true, method } });
   else await failPayment(id, { mock: true, method });
   res.json({ ok: true });
+});
+
+router.post("/webhooks/easykash", async (req, res) => {
+  if (!verifyEasykashCallback(req.body ?? {})) return void res.status(403).json({ error: "invalid signature" });
+  const id = easykashPaymentId(req.body.customerReference);
+  if (!id) return void res.status(400).json({ error: "invalid product reference" });
+  const payment = await db.query.paymentsTable.findFirst({ where: eq(paymentsTable.id, id) });
+  if (!payment || payment.provider !== "easykash") return void res.status(404).json({ error: "unknown payment" });
+  await applyEasykashResult(payment, req.body);
+  res.json({ received: true });
 });
 
 // ---------------------------------------------------------------- webhooks

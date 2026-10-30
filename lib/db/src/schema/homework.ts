@@ -14,6 +14,7 @@ export const assignmentsTable = pgTable(
       .references(() => usersTable.id),
     title: text("title").notNull(),
     instructions: text("instructions").notNull().default(""),
+    questions: jsonb("questions").$type<Array<{ id: string; prompt: string; options: string[]; correctIndex: number; points: number }>>().notNull().default([]),
     dueAt: timestamp("due_at", { withTimezone: true }),
     maxScore: integer("max_score").notNull().default(10),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -32,6 +33,8 @@ export const submissionsTable = pgTable(
       .notNull()
       .references(() => usersTable.id),
     body: text("body").notNull().default(""),
+    answers: jsonb("answers").$type<Record<string, number>>().notNull().default({}),
+    gradingMethod: text("grading_method").$type<"manual" | "automatic">().notNull().default("manual"),
     attachmentIds: jsonb("attachment_ids").$type<string[]>().notNull().default([]),
     submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
     score: integer("score"),
@@ -58,3 +61,15 @@ export const uploadsTable = pgTable("uploads", {
 export type Assignment = typeof assignmentsTable.$inferSelect;
 export type Submission = typeof submissionsTable.$inferSelect;
 export type Upload = typeof uploadsTable.$inferSelect;
+
+/** Private reusable homework library; answer keys are teacher-owned. */
+export const homeworkTemplatesTable = pgTable("homework_templates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  teacherId: uuid("teacher_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  instructions: text("instructions").notNull().default(""),
+  questions: jsonb("questions").$type<Array<{ id: string; prompt: string; options: string[]; correctIndex: number; points: number }>>().notNull().default([]),
+  maxScore: integer("max_score").notNull().default(10),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, t => [index("homework_templates_teacher_idx").on(t.teacherId, t.updatedAt)]);

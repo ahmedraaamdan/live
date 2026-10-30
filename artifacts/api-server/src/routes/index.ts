@@ -1,4 +1,8 @@
 import { Router, type IRouter } from "express";
+import teacherVerificationRouter from "./teacher-verification";
+import socialIdentityRouter from "./social-identity";
+import accountSecurityRouter from "./account-security";
+import accountSwitchRouter from "./account-switch";
 import adminRouter from "./admin";
 import assignmentsRouter from "./assignments";
 import authRouter from "./auth";
@@ -6,6 +10,8 @@ import feedRouter from "./feed";
 import healthRouter from "./health";
 import lecturesRouter from "./lectures";
 import liveRouter from "./live";
+import teacherProfilesRouter from "./teacher-profiles";
+import homeworkTemplatesRouter from "./homework-templates";
 import miscRouter from "./misc";
 import parentRouter from "./parent";
 import paymentsRouter from "./payments";
@@ -15,6 +21,10 @@ const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(authRouter);
+router.use(accountSecurityRouter);
+router.use(socialIdentityRouter);
+router.use(teacherVerificationRouter);
+router.use(accountSwitchRouter);
 router.use(lecturesRouter);
 router.use(feedRouter);
 router.use(liveRouter);
@@ -24,5 +34,7 @@ router.use(walletRouter);
 router.use(parentRouter);
 router.use(adminRouter);
 router.use(miscRouter);
+router.use(teacherProfilesRouter);
+router.use(homeworkTemplatesRouter);
 
 export default router;

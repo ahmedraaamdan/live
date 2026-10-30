@@ -1,5 +1,7 @@
+import { MfaLogin } from '@/components/mfa-login';
+import type { LoginResult } from '@workspace/live-core';
 import { useState, type FormEvent, type ReactNode } from 'react';
-import { BookOpenCheck, GraduationCap, Presentation, ShieldCheck, Users, Video } from 'lucide-react';
+import { ArrowLeft, BookOpenCheck, GraduationCap, Presentation, ShieldCheck, Users, Video } from 'lucide-react';
 import { Link, Redirect, useLocation, useSearch } from 'wouter';
 import { useMutation } from '@tanstack/react-query';
 import { GRADES, SUBJECTS, loginSchema, signupSchema, type AuthResult, type SignupRole } from '@workspace/live-core';
@@ -15,91 +17,31 @@ function useNext() {
 
 function AuthLayout({ title, subtitle, children, footer }: { title: string; subtitle?: ReactNode; children: ReactNode; footer?: ReactNode }) {
   return (
-    <div className="min-h-dvh bg-background md:grid md:place-items-center md:p-6">
-      <div className="mx-auto w-full max-w-md px-5 pt-[calc(var(--safe-top)+2rem)] pb-10 md:rounded-xl md:bg-surface-container-lowest md:p-10 md:shadow-e3">
-        <Link href="/welcome" className="mb-8 inline-flex text-on-surface">
-          <Logo />
-        </Link>
-        <h1 className="text-headline-lg">{title}</h1>
-        {subtitle && <p className="mt-1 text-body-lg text-on-surface-variant">{subtitle}</p>}
-        <div className="mt-8">{children}</div>
-        {footer && <div className="mt-8 text-center text-body-md text-on-surface-variant">{footer}</div>}
+    <main className="gl-auth">
+      <header className="gl-auth-header"><Link href="/welcome"><Logo /></Link><a href="https://live.gahez.space/">عن جاهز Live <ArrowLeft size={16} /></a></header>
+      <div className="gl-auth-grid">
+        <aside className="gl-auth-story"><span className="gl-eyebrow">السؤال بداية التعلّم.</span><h2>شرح أقرب.<br /><span>وبداية أسهل.</span></h2><p>اختر حصتك، وتعلّم مع مدرّسك مباشرة. كل ما تحتاجه لرحلتك التعليمية في مكان واحد.</p><img src={`${import.meta.env.BASE_URL}images/learning-hero.webp`} width={1000} height={1250} alt="رسم توضيحي لمدرس مصري مع شاشات حصص مباشرة" decoding="async" /><div className="gl-auth-note"><BookOpenCheck size={18} /> معك من أول سؤال.</div></aside>
+        <section className="gl-auth-paper"><span className="gl-eyebrow">خطوتك التالية تبدأ هنا</span><h1>{title}</h1>{subtitle && <p className="gl-auth-subtitle">{subtitle}</p>}<div className="gl-auth-body">{children}</div>{footer && <div className="gl-auth-footer">{footer}</div>}</section>
       </div>
-    </div>
+    </main>
   );
 }
 
 const ROLE_CARDS: Array<{ role: SignupRole; title: string; body: string; icon: ReactNode }> = [
-  { role: 'student', title: 'أنا طالب', body: 'احجز حصصك، احضر لايف، واسأل المدرس على طول.', icon: <GraduationCap /> },
-  { role: 'teacher', title: 'أنا مدرس', body: 'اعمل جدولك، ابعت اللينك، والفلوس في محفظتك.', icon: <Presentation /> },
-  { role: 'parent', title: 'أنا ولي أمر', body: 'تابع الحضور والواجبات والدرجات أول بأول.', icon: <ShieldCheck /> },
+  { role: 'student', title: 'أنا طالب', body: 'اختر حصتك، واحضر مباشرة، واسأل حتى تفهم.', icon: <GraduationCap /> },
+  { role: 'teacher', title: 'أنا مدرس', body: 'نظّم حصصك، وشاركها مع طلابك، وتابع حجوزاتك.', icon: <Presentation /> },
+  { role: 'parent', title: 'أنا ولي أمر', body: 'تابع حضور أبنائك وواجباتهم ودرجاتهم من حسابك.', icon: <ShieldCheck /> },
 ];
 
 export function Welcome() {
   const { me } = useSession();
   if (me) return <Redirect to={homePath(me.user.role)} />;
   return (
-    <div className="min-h-dvh bg-background">
-      <div className="relative overflow-hidden bg-gradient-ink px-5 pt-[calc(var(--safe-top)+1.5rem)] pb-16 text-white">
-        <div className="pointer-events-none absolute -top-24 -left-24 size-72 rounded-full bg-gradient-live opacity-40 blur-3xl" aria-hidden="true" />
-        <div className="pointer-events-none absolute -bottom-32 -right-16 size-72 rounded-full bg-gradient-brand opacity-30 blur-3xl" aria-hidden="true" />
-        <div className="relative mx-auto max-w-3xl">
-          <div className="flex items-center justify-between">
-            <Logo />
-            <Link href="/login" className="state-layer rounded-full px-4 py-2 text-label-lg text-white/90">
-              تسجيل الدخول
-            </Link>
-          </div>
-          <div className="mt-14 max-w-xl md:mt-20">
-            <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-label-md backdrop-blur">
-              <span className="size-2 animate-live-pulse rounded-full bg-live" /> حصص مباشرة، من أي مكان
-            </span>
-            <h1 className="mt-4 text-display-md md:text-display-lg">
-              الحصة الحلوة
-              <br />
-              بقت <span className="bg-gradient-live bg-clip-text text-transparent">لايف</span>.
-            </h1>
-            <p className="mt-4 max-w-md text-body-lg text-white/75">مدرسك بيشرح لايف، وانت بتسأل وهو بيرد. والحصة بتتسجل لو فاتتك. وولي الأمر متابع كل حاجة.</p>
-          </div>
-          <div className="mt-8 flex flex-wrap gap-3 text-label-lg text-white/80">
-            <span className="inline-flex items-center gap-2">
-              <Video className="size-5" /> بث وتسجيل
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <BookOpenCheck className="size-5" /> واجبات ودرجات
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <Users className="size-5" /> متابعة ولي الأمر
-            </span>
-          </div>
-        </div>
-      </div>
-      <div className="mx-auto -mt-8 max-w-3xl px-5 pb-[calc(var(--safe-bottom)+2rem)]">
-        <h2 className="sr-only">اختار نوع حسابك</h2>
-        <div className="grid gap-3 md:grid-cols-3">
-          {ROLE_CARDS.map((c, i) => (
-            <Link
-              key={c.role}
-              href={`/signup?role=${c.role}`}
-              className="state-layer press flex animate-enter items-start gap-4 rounded-lg bg-surface-container-lowest p-5 shadow-e2 md:flex-col"
-              style={{ animationDelay: `${i * 80}ms` }}
-            >
-              <span className="grid size-12 shrink-0 place-items-center rounded-md bg-primary-container text-on-primary-container [&_svg]:size-6">{c.icon}</span>
-              <span>
-                <span className="block text-title-lg">{c.title}</span>
-                <span className="mt-1 block text-body-md text-on-surface-variant">{c.body}</span>
-              </span>
-            </Link>
-          ))}
-        </div>
-        <p className="mt-8 text-center text-body-md text-on-surface-variant">
-          عندك حساب؟{' '}
-          <Link href="/login" className="text-label-lg text-secondary">
-            سجّل دخول
-          </Link>
-        </p>
-      </div>
-    </div>
+    <main className="gl-welcome">
+      <header className="gl-welcome-header"><Logo /><Link className="gl-welcome-login" href="/login">تسجيل الدخول <ArrowLeft size={18} /></Link></header>
+      <section className="gl-welcome-hero"><div className="gl-welcome-copy"><span className="gl-eyebrow"><span /> حصص مباشرة، من أي مكان</span><h1>جاهز لتفهم؟<br /><span>اختر بدايتك.</span></h1><p>حصتك، ومدرّسك، وأسئلتك. مساحة واحدة تتعلّم فيها مباشرة، وتنظّم مواعيدك، وتتابع تقدّمك.</p><div className="gl-welcome-features"><span><Video size={18} /> شرح مباشر</span><span><BookOpenCheck size={18} /> واجبات ومراجعة</span><span><Users size={18} /> متابعة الأسرة</span></div></div><div className="gl-welcome-art"><img src={`${import.meta.env.BASE_URL}images/learning-hero.webp`} alt="تصميم توضيحي لمدرس مصري يحمل جهازًا لوحيًا" width={1000} height={1250} fetchPriority="high" /><span>السؤال جزء من الحصة.</span></div></section>
+      <section className="gl-welcome-roles" aria-labelledby="choose-role"><div className="gl-welcome-section-title"><h2 id="choose-role">أنت هنا بصفتك…</h2><span>اختر حسابك، ولنبدأ.</span></div><div className="gl-role-grid">{ROLE_CARDS.map((c, i) => <Link key={c.role} href={`/signup?role=${c.role}`} className="gl-role-card animate-enter" style={{ animationDelay: `${i * 80}ms` }}><span className="gl-role-icon">{c.icon}</span><div><strong>{c.title}</strong><p>{c.body}</p></div><ArrowLeft className="gl-role-arrow" size={21} /></Link>)}</div><p className="gl-welcome-footer">لديك حساب بالفعل؟ <Link href="/login">تسجيل الدخول</Link><span> · </span><a href="https://live.gahez.space/">استكشف جاهز Live</a></p></section>
+    </main>
   );
 }
 
@@ -108,10 +50,12 @@ export function Login() {
   const [, navigate] = useLocation();
   const next = useNext();
   const [form, setForm] = useState({ email: '', password: '' });
+  const [mfaChallenge, setMfaChallenge] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const login = useMutation({
-    mutationFn: (body: typeof form) => api<AuthResult>('/auth/login', { body }),
+    mutationFn: (body: typeof form) => api<LoginResult>('/auth/login', { body }),
     onSuccess: (r) => {
+      if ('requiresMfa' in r) { setMfaChallenge(r.challenge); setForm(current => ({ ...current, password: '' })); return; }
       signIn(r);
       navigate(next ?? homePath(r.me.user.role), { replace: true });
     },
@@ -119,6 +63,7 @@ export function Login() {
   });
   if (me && !login.isPending) return <Redirect to={next ?? homePath(me.user.role)} />;
 
+  if (mfaChallenge) return <AuthLayout title="خطوة أخيرة للدخول" subtitle="حسابك محمي بالمصادقة الثنائية."><MfaLogin challenge={mfaChallenge} onBack={() => { setMfaChallenge(null); setError(null); }} onAuthenticated={result => { signIn(result); navigate(next ?? homePath(result.me.user.role), { replace: true }); }} /></AuthLayout>;
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const v = loginSchema.safeParse(form);
@@ -128,23 +73,23 @@ export function Login() {
   };
   return (
     <AuthLayout
-      title="أهلاً بيك تاني 👋"
-      subtitle="سجّل دخول وكمّل من مكان ما وقفت."
+      title="مرحبًا بعودتك 👋"
+      subtitle="سجّل الدخول وتابع رحلتك من حيث توقّفت."
       footer={
         <>
-          لسه معندكش حساب؟{' '}
+          ليس لديك حساب؟{' '}
           <Link href={`/signup${next ? `?next=${encodeURIComponent(next)}` : ''}`} className="text-label-lg text-secondary">
-            اعمل حساب
+            إنشاء حساب
           </Link>
         </>
       }
     >
       <form onSubmit={submit} className="flex flex-col gap-5" noValidate>
         {error && <Banner tone="error">{error}</Banner>}
-        <TextField label="الإيميل" type="email" autoComplete="email" inputMode="email" ltr value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-        <TextField label="الباسورد" type="password" autoComplete="current-password" ltr value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+        <TextField label="البريد الإلكتروني" type="email" autoComplete="email" inputMode="email" ltr value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+        <TextField label="كلمة المرور" type="password" autoComplete="current-password" ltr value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
         <Link href="/forgot-password" className="-mt-2 self-start text-label-lg text-secondary">
-          نسيت الباسورد؟
+          نسيت كلمة المرور؟
         </Link>
         <Button type="submit" size="lg" block loading={login.isPending}>
           دخول
@@ -170,7 +115,7 @@ export function Signup() {
     mutationFn: (body: unknown) => api<AuthResult>('/auth/signup', { body }),
     onSuccess: (r) => {
       signIn(r);
-      navigate(next ?? homePath(r.me.user.role), { replace: true });
+      navigate(r.me.user.role === 'teacher' ? '/t/verification' : next ?? homePath(r.me.user.role), { replace: true });
     },
     onError: (e) => setError(errorMessage(e)),
   });
@@ -196,13 +141,13 @@ export function Signup() {
 
   return (
     <AuthLayout
-      title="اعمل حسابك"
-      subtitle="دقيقة واحدة وتبقى جاهز."
+      title="أنشئ حسابك"
+      subtitle="اختر نوع حسابك وأكمل بياناتك للبدء."
       footer={
         <>
-          عندك حساب؟{' '}
+          لديك حساب؟{' '}
           <Link href={`/login${next ? `?next=${encodeURIComponent(next)}` : ''}`} className="text-label-lg text-secondary">
-            سجّل دخول
+            تسجيل الدخول
           </Link>
         </>
       }
@@ -219,30 +164,30 @@ export function Signup() {
           ]}
         />
         {error && <Banner tone="error">{error}</Banner>}
-        <TextField label={role === 'teacher' ? 'اسمك زي ما الطلاب يعرفوه' : 'الاسم'} autoComplete="name" value={form.name} onChange={set('name')} placeholder={role === 'teacher' ? 'أ. محمد سامي' : ''} />
-        <TextField label="الإيميل" type="email" autoComplete="email" inputMode="email" ltr value={form.email} onChange={set('email')} />
-        <TextField label="رقم الموبايل" type="tel" autoComplete="tel" inputMode="tel" ltr value={form.phone} onChange={set('phone')} placeholder="01xxxxxxxxx" hint="اختياري" />
-        <TextField label="الباسورد" type="password" autoComplete="new-password" ltr value={form.password} onChange={set('password')} hint="8 حروف على الأقل" />
+        <TextField label={role === 'teacher' ? 'الاسم الذي يعرفك به طلابك' : 'الاسم'} autoComplete="name" value={form.name} onChange={set('name')} placeholder={role === 'teacher' ? 'أ. محمد سامي' : ''} />
+        <TextField label="البريد الإلكتروني" type="email" autoComplete="email" inputMode="email" ltr value={form.email} onChange={set('email')} />
+        <TextField label="رقم الهاتف" type="tel" autoComplete="tel" inputMode="tel" ltr value={form.phone} onChange={set('phone')} placeholder="01xxxxxxxxx" hint="اختياري" />
+        <TextField label="كلمة المرور" type="password" autoComplete="new-password" ltr value={form.password} onChange={set('password')} hint="8 أحرف على الأقل" />
         {role === 'student' && (
           <>
-            <Select label="الصف الدراسي" value={form.grade} onChange={set('grade')} placeholder="اختار صفّك" options={GRADES.map((g) => ({ value: g.key, label: g.label }))} />
+            <Select label="الصف الدراسي" value={form.grade} onChange={set('grade')} placeholder="اختر صفك الدراسي" options={GRADES.map((g) => ({ value: g.key, label: g.label }))} />
             <TextField
-              label="إيميل ولي الأمر"
+              label="البريد الإلكتروني لولي الأمر"
               type="email"
               inputMode="email"
               ltr
               value={form.parentEmail}
               onChange={set('parentEmail')}
-              hint="هيوصله إيميل بكل حجز، ويقدر يتابع حضورك وواجباتك."
+              hint="تصله إشعارات الحجوزات، ويمكنه متابعة حضورك وواجباتك."
             />
           </>
         )}
-        {role === 'teacher' && <Select label="المادة" value={form.subject} onChange={set('subject')} placeholder="بتدرّس إيه؟" options={SUBJECTS.map((s) => ({ value: s.key, label: s.label }))} />}
-        {role === 'parent' && <TextField label="كود ابنك أو بنتك" ltr value={form.childCode} onChange={set('childCode')} hint="موجود في صفحة «حسابي» عندهم. تقدر تضيفه بعدين." className="font-num tracking-widest uppercase" />}
+        {role === 'teacher' && <Select label="المادة" value={form.subject} onChange={set('subject')} placeholder="اختر المادة التي تدرّسها" options={SUBJECTS.map((s) => ({ value: s.key, label: s.label }))} />}
+        {role === 'parent' && <TextField label="رمز ربط حساب الابن أو الابنة" ltr value={form.childCode} onChange={set('childCode')} hint="تجده في صفحة «حسابي» لدى الابن أو الابنة، ويمكنك إضافته لاحقًا." className="font-num tracking-widest uppercase" />}
         <Button type="submit" size="lg" block loading={signup.isPending}>
-          اعمل الحساب
+          إنشاء الحساب
         </Button>
-        <p className="text-center text-body-sm text-on-surface-variant">بالتسجيل انت موافق على الشروط وسياسة الخصوصية.</p>
+        <p className="text-center text-body-sm text-on-surface-variant">بالتسجيل، فإنك توافق على <a href="https://live.gahez.space/terms" target="_blank" rel="noreferrer">الشروط</a> و<a href="https://live.gahez.space/privacy" target="_blank" rel="noreferrer">سياسة الخصوصية</a>.</p>
       </form>
     </AuthLayout>
   );
@@ -253,10 +198,10 @@ export function ForgotPassword() {
   const [sent, setSent] = useState(false);
   const m = useMutation({ mutationFn: () => api('/auth/forgot', { body: { email } }), onSuccess: () => setSent(true) });
   return (
-    <AuthLayout title="نسيت الباسورد؟" subtitle="اكتب إيميلك وهنبعتلك لينك تختار بيه باسورد جديد." footer={<Link href="/login" className="text-label-lg text-secondary">رجوع لتسجيل الدخول</Link>}>
+    <AuthLayout title="نسيت كلمة المرور؟" subtitle="أدخل بريدك الإلكتروني لتلقي رابط تعيين كلمة مرور جديدة." footer={<Link href="/login" className="text-label-lg text-secondary">العودة إلى تسجيل الدخول</Link>}>
       {sent ? (
-        <Banner tone="success" title="بعتنالك إيميل">
-          لو الإيميل ده عليه حساب، هيوصلك لينك خلال دقيقة. بص في الـSpam لو مش لاقيه.
+        <Banner tone="success" title="تحقّق من بريدك الإلكتروني">
+          إذا كان البريد مرتبطًا بحساب، فستصلك رسالة بالتعليمات. تحقّق أيضًا من مجلد الرسائل غير المرغوب فيها.
         </Banner>
       ) : (
         <form
@@ -267,9 +212,9 @@ export function ForgotPassword() {
           }}
         >
           {m.error && <Banner tone="error">{errorMessage(m.error)}</Banner>}
-          <TextField label="الإيميل" type="email" inputMode="email" ltr value={email} onChange={(e) => setEmail(e.target.value)} />
+          <TextField label="البريد الإلكتروني" type="email" inputMode="email" ltr value={email} onChange={(e) => setEmail(e.target.value)} />
           <Button type="submit" size="lg" block loading={m.isPending}>
-            ابعت اللينك
+            إرسال الرابط
           </Button>
         </form>
       )}
@@ -283,7 +228,7 @@ export function ResetPassword() {
   const [password, setPassword] = useState('');
   const m = useMutation({ mutationFn: () => api('/auth/reset', { body: { token, password } }), onSuccess: () => navigate('/login') });
   return (
-    <AuthLayout title="باسورد جديد" subtitle="اختار باسورد سهل تفتكره وصعب حد يخمّنه.">
+    <AuthLayout title="كلمة مرور جديدة" subtitle="اختر كلمة مرور يصعب تخمينها وتختلف عن كلمات مرور حساباتك الأخرى.">
       <form
         className="flex flex-col gap-5"
         onSubmit={(e) => {
@@ -292,9 +237,9 @@ export function ResetPassword() {
         }}
       >
         {m.error && <Banner tone="error">{errorMessage(m.error)}</Banner>}
-        <TextField label="الباسورد الجديد" type="password" autoComplete="new-password" ltr value={password} onChange={(e) => setPassword(e.target.value)} hint="8 حروف على الأقل" />
+        <TextField label="كلمة المرور الجديد" type="password" autoComplete="new-password" ltr value={password} onChange={(e) => setPassword(e.target.value)} hint="8 أحرف على الأقل" />
         <Button type="submit" size="lg" block loading={m.isPending}>
-          احفظ وادخل
+          حفظ ومتابعة
         </Button>
       </form>
     </AuthLayout>
@@ -313,16 +258,16 @@ export function JoinParent() {
   if (!me) return <Redirect to={`/signup?role=parent&code=${encodeURIComponent(code)}`} />;
   if (me.user.role !== 'parent') return <Redirect to={homePath(me.user.role)} />;
   return (
-    <AuthLayout title="ربط حساب ابنك" subtitle="هتتابع حضوره وواجباته ودرجاته من حسابك.">
+    <AuthLayout title="ربط حساب الابن أو الابنة" subtitle="تابع الحضور والواجبات والدرجات من حساب ولي الأمر.">
       <Card variant="filled" className="mb-6 text-center">
-        <p className="text-body-md text-on-surface-variant">كود الربط</p>
+        <p className="text-body-md text-on-surface-variant">رمز الربط</p>
         <p className="mt-1 font-num text-display-sm tracking-[0.3em]" dir="ltr">
           {code}
         </p>
       </Card>
       {link.error && <Banner tone="error" className="mb-4">{errorMessage(link.error)}</Banner>}
       <Button size="lg" block loading={link.isPending} onClick={() => link.mutate()}>
-        اربط الحساب
+        ربط الحساب
       </Button>
     </AuthLayout>
   );

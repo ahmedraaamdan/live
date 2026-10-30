@@ -39,7 +39,7 @@ export function AssignmentList() {
   const q = useQuery({ queryKey: ['assignments', 'all'], queryFn: () => api<AssignmentDTO[]>('/assignments') });
   const all = q.data ?? [];
   const list = teacher
-    ? all.filter((a) => (tab === 'todo' ? (a.counts?.submitted ?? 0) > (a.counts?.graded ?? 0) : (a.counts?.submitted ?? 0) <= (a.counts?.graded ?? 0)))
+    ? all.filter((a) => (tab === 'todo' ? (a.counts?.submitted ?? 0) > (a.counts?.graded ?? 0) : true))
     : all.filter((a) => (tab === 'todo' ? !a.mySubmission : Boolean(a.mySubmission)));
 
   return (
@@ -50,14 +50,15 @@ export function AssignmentList() {
           className="mb-5 max-w-sm"
           value={tab}
           onChange={setTab}
-          options={teacher ? [{ value: 'todo', label: 'محتاجة تصحيح' }, { value: 'done', label: 'خلصت' }] : [{ value: 'todo', label: 'مستنياك' }, { value: 'done', label: 'سلّمتها' }]}
+          options={teacher ? [{ value: 'todo', label: 'بانتظار التصحيح' }, { value: 'done', label: 'جميع الواجبات' }] : [{ value: 'todo', label: 'المطلوب' }, { value: 'done', label: 'المسلّم' }]}
         />
         {q.isPending && <div className="skeleton h-48 rounded-lg" />}
-        {!q.isPending && list.length === 0 && (
+        {q.isError && <Banner tone="error">{errorMessage(q.error)} <Button variant="text" onClick={() => void q.refetch()}>إعادة المحاولة</Button></Banner>}
+        {q.isSuccess && list.length === 0 && (
           <EmptyState
             icon={tab === 'todo' ? <CheckCircle2 /> : <NotebookPen />}
-            title={tab === 'todo' ? (teacher ? 'مفيش حاجة مستنية تصحيح' : 'مفيش واجبات عليك 🎉') : 'لسه مفيش'}
-            body={teacher ? 'الواجب بيتنزّل من صفحة الحصة، تبويب «الواجب».' : 'أول ما المدرس ينزّل واجب هيوصلك إشعار.'}
+            title={tab === 'todo' ? (teacher ? 'لا توجد إجابات بانتظار التصحيح' : 'أنجزت واجباتك الحالية') : 'لا توجد نتائج بعد'}
+            body={teacher ? 'أضف واجبًا من صفحة الحصة، تبويب «الواجب».' : 'يصلك إشعار حين ينشر المدرس واجبًا جديدًا.'}
           />
         )}
         {list.length > 0 && (
@@ -78,7 +79,7 @@ export function AssignmentList() {
                   teacher ? (
                     (a.counts?.submitted ?? 0) - (a.counts?.graded ?? 0) > 0 ? (
                       <Badge tone="warning">
-                        <span className="font-num">{(a.counts?.submitted ?? 0) - (a.counts?.graded ?? 0)}</span> مستني
+                        <span className="font-num">{(a.counts?.submitted ?? 0) - (a.counts?.graded ?? 0)}</span> بانتظار المراجعة
                       </Badge>
                     ) : null
                   ) : a.mySubmission?.score != null ? (
@@ -88,7 +89,7 @@ export function AssignmentList() {
                       </span>
                     </Badge>
                   ) : a.mySubmission ? (
-                    <Badge tone="secondary">بيتصحّح</Badge>
+                    <Badge tone="secondary">بانتظار التصحيح</Badge>
                   ) : overdue(a) ? (
                     <Badge tone="error">متأخر</Badge>
                   ) : null
@@ -125,7 +126,8 @@ function Brief({ a }: { a: AssignmentDTO }) {
       <h1 className="mt-1 text-headline-md">{a.title}</h1>
       <div className="mt-2 flex flex-wrap gap-2">
         <Badge tone="tertiary">من {a.maxScore}</Badge>
-        {a.dueAt && <Badge tone={overdue(a) ? 'error' : 'neutral'}>آخر ميعاد {fmtDateTime(a.dueAt)}</Badge>}
+        {a.questions.length > 0 && <Badge tone="primary">{a.questions.length} أسئلة · تصحيح تلقائي</Badge>}
+        {a.dueAt && <Badge tone={overdue(a) ? 'error' : 'neutral'}>آخر موعد {fmtDateTime(a.dueAt)}</Badge>}
       </div>
       {a.instructions && <p className="mt-4 text-body-lg whitespace-pre-wrap">{a.instructions}</p>}
     </Card>
@@ -159,21 +161,24 @@ function Submit({ a }: { a: AssignmentDetailDTO }) {
   const [editing, setEditing] = useState(!mine);
   const [body, setBody] = useState(mine?.body ?? '');
   const [files, setFiles] = useState<UploadDTO[]>(mine?.attachments ?? []);
+  const [answers, setAnswers] = useState<Record<string, number>>(mine?.answers ?? {});
+  const quiz = a.questions.length > 0;
   const [uploading, setUploading] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const submit = useMutation({
-    mutationFn: () => api<SubmissionDTO>(`/assignments/${a.id}/submit`, { body: { body, attachmentIds: files.map((f) => f.id) } }),
-    onSuccess: () => {
+    mutationFn: () => api<SubmissionDTO>(`/assignments/${a.id}/submit`, { body: { body, attachmentIds: files.map((f) => f.id), answers: quiz ? answers : {} } }),
+    onSuccess: (saved) => {
+      qc.setQueryData<AssignmentDetailDTO>(['assignment', a.id], old => old ? { ...old, mySubmission: saved } : old);
       qc.invalidateQueries({ queryKey: ['assignment', a.id] });
       qc.invalidateQueries({ queryKey: ['assignments'] });
       qc.invalidateQueries({ queryKey: ['student-home'] });
       setEditing(false);
-      toast('اتسلّم الواجب ✅');
+      toast(quiz ? 'سُلّم الاختبار وأصبحت نتيجتك جاهزة' : 'سُلّم الواجب بنجاح');
     },
     onError: (e) => toast(errorMessage(e)),
   });
   const onPick = async (list: FileList | null) => {
-    if (!list?.length) return;
+    if (!list?.length || uploading) return;
     setUploading(true);
     try {
       for (const f of Array.from(list).slice(0, 10 - files.length)) {
@@ -200,7 +205,7 @@ function Submit({ a }: { a: AssignmentDetailDTO }) {
               <span className="text-title-lg opacity-70">/{a.maxScore}</span>
             </div>
             <div className="flex-1">
-              <p className="text-title-md">درجتك</p>
+              <p className="text-title-md">درجتك</p><Badge tone="neutral">{mine!.gradingMethod === 'automatic' ? 'تصحيح تلقائي · قابل لمراجعة المدرس' : 'راجعه المدرس'}</Badge>
               {mine!.feedback && <p className="text-body-md">{mine!.feedback}</p>}
             </div>
           </Card>
@@ -209,26 +214,29 @@ function Submit({ a }: { a: AssignmentDetailDTO }) {
           <Card>
             <div className="flex items-center justify-between">
               <p className="text-title-md">إجابتك</p>
-              <span className="text-body-sm text-on-surface-variant">اتسلّمت {fmtRelative(mine.submittedAt)}</span>
+              {a.dueAt && new Date(mine.submittedAt) > new Date(a.dueAt) && <Badge tone="warning">تسليم متأخر</Badge>}
+              <span className="text-body-sm text-on-surface-variant">سُلّمت {fmtRelative(mine.submittedAt)}</span>
             </div>
+            {quiz && <QuizAnswers a={a} answers={mine.answers} />}
             {mine.body && <p className="mt-2 text-body-lg whitespace-pre-wrap">{mine.body}</p>}
             <Attachments files={mine.attachments} />
             {!graded && (
-              <Button variant="outlined" className="mt-4" onClick={() => setEditing(true)}>
-                عدّل الإجابة
+              <Button variant="outlined" className="mt-4" onClick={() => { setBody(mine.body); setFiles(mine.attachments); setAnswers(mine.answers); setEditing(true); }}>
+                تعديل الإجابة
               </Button>
             )}
           </Card>
         ) : (
           <div className="flex flex-col gap-4 pb-24 lg:pb-0">
-            <TextArea label="إجابتك" value={body} onChange={(e) => setBody(e.target.value)} rows={6} placeholder="اكتب الحل هنا، أو صوّر الكشكول وارفعه." />
+            {quiz && <><Banner tone="info">تظهر الدرجة بعد التسليم مباشرة. راجع اختياراتك؛ لا يمكن تعديلها بعد التصحيح.</Banner><p role="status" className="text-body-md">أجبت عن {a.questions.filter(q => answers[q.id] != null).length} من {a.questions.length} أسئلة</p><ProgressBar value={a.questions.filter(q => answers[q.id] != null).length / a.questions.length} /><QuizAnswers a={a} answers={answers} onChange={setAnswers} disabled={submit.isPending} /></>}
+            <TextArea label={quiz ? 'ملاحظة للمدرس (اختياري)' : 'إجابتك'} value={body} onChange={(e) => setBody(e.target.value)} rows={6} placeholder="اكتب إجابتك هنا، أو أرفق صورة واضحة للحل." />
             <div>
               <p className="mb-2 text-label-lg">صور الحل</p>
               <div className="grid grid-cols-3 gap-2">
                 {files.map((f) => (
                   <div key={f.id} className="relative overflow-hidden rounded-md bg-surface-container">
                     {f.mime.startsWith('image/') ? <img src={f.url} alt="" className="aspect-square w-full object-cover" /> : <div className="grid aspect-square place-items-center p-2 text-center text-body-sm">{f.filename}</div>}
-                    <IconButton label="شيل" size="sm" variant="stage" className="absolute top-1 left-1" onClick={() => setFiles(files.filter((x) => x.id !== f.id))}>
+                    <IconButton label="إزالة" size="sm" variant="stage" className="absolute top-1 left-1" onClick={() => setFiles(files.filter((x) => x.id !== f.id))}>
                       <X />
                     </IconButton>
                   </div>
@@ -236,17 +244,18 @@ function Submit({ a }: { a: AssignmentDetailDTO }) {
                 {files.length < 10 && (
                   <button
                     type="button"
+                    disabled={uploading || submit.isPending}
                     onClick={() => input.current?.click()}
                     className="state-layer flex aspect-square flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed border-outline-variant text-on-surface-variant"
                   >
                     {uploading ? <Spinner /> : <ImagePlus className="size-7" />}
-                    <span className="text-label-md">{uploading ? 'بيرفع…' : 'ضيف صورة'}</span>
+                    <span className="text-label-md">{uploading ? 'جارٍ الرفع…' : 'إضافة ملف'}</span>
                   </button>
                 )}
               </div>
-              <input ref={input} type="file" accept="image/*,application/pdf" capture="environment" multiple hidden onChange={(e) => void onPick(e.target.files)} />
+              <input ref={input} disabled={uploading || submit.isPending} type="file" accept="image/*,application/pdf" capture="environment" multiple hidden onChange={(e) => void onPick(e.target.files)} />
               <p className="mt-2 inline-flex items-center gap-1 text-body-sm text-on-surface-variant">
-                <Camera className="size-4" /> على الموبايل، الكاميرا بتفتح على طول.
+                <Camera className="size-4" /> يمكنك إرفاق صور الحل أو ملف PDF (حتى 12 ميغابايت للملف).
               </p>
             </div>
           </div>
@@ -254,8 +263,9 @@ function Submit({ a }: { a: AssignmentDetailDTO }) {
       </Page>
       {editing && (
         <ActionBar>
-          <Button size="lg" block loading={submit.isPending} disabled={uploading || (!body.trim() && files.length === 0)} onClick={() => submit.mutate()}>
-            <Send className="-scale-x-100" /> سلّم الواجب
+          {mine && <Button variant="text" disabled={submit.isPending} onClick={() => setEditing(false)}>إلغاء التعديل</Button>}
+          <Button size="lg" block loading={submit.isPending} disabled={uploading || (quiz ? a.questions.some(q => answers[q.id] == null) : (!body.trim() && files.length === 0))} onClick={() => submit.mutate()}>
+            <Send className="-scale-x-100" /> تسليم الواجب
           </Button>
         </ActionBar>
       )}
@@ -268,15 +278,17 @@ function GradeQueue({ a }: { a: AssignmentDetailDTO }) {
   const [open, setOpen] = useState<SubmissionDTO | null>(null);
   const [score, setScore] = useState('');
   const [feedback, setFeedback] = useState('');
+  const [completed, setCompleted] = useState<Set<string>>(new Set());
   const grade = useMutation({
     mutationFn: () => api<SubmissionDTO>(`/submissions/${open!.id}/grade`, { body: { score: Number(score), feedback } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['assignment', a.id] });
       qc.invalidateQueries({ queryKey: ['assignments'] });
       qc.invalidateQueries({ queryKey: ['teacher-dashboard'] });
-      toast('اتصحّح، والطالب وولي أمره وصلهم الدرجة');
+      toast('حُفظت الدرجة وأُرسل إشعار بالنتيجة');
+      setCompleted(prev => new Set([...prev, open!.id]));
       // Straight to the next one waiting.
-      const nextUp = a.submissions.find((s) => s.id !== open!.id && s.gradedAt == null);
+      const nextUp = a.submissions.find((s) => s.id !== open!.id && !completed.has(s.id) && s.gradedAt == null);
       if (nextUp) openFor(nextUp);
       else setOpen(null);
     },
@@ -299,13 +311,13 @@ function GradeQueue({ a }: { a: AssignmentDetailDTO }) {
               سلّم <span className="font-num text-title-sm">{c.submitted}</span> من <span className="font-num">{c.students}</span>
             </span>
             <span>
-              اتصحّح <span className="font-num text-title-sm">{c.graded}</span>
+              صُحّح <span className="font-num text-title-sm">{c.graded}</span>
             </span>
           </div>
           <ProgressBar className="mt-3" value={c.students ? c.submitted / c.students : 0} tone="tertiary" />
         </Card>
         {a.submissions.length === 0 ? (
-          <EmptyState icon={<NotebookPen />} title="محدش سلّم لسه" body="أول ما طالب يسلّم هيوصلك إشعار." />
+          <EmptyState icon={<NotebookPen />} title="لم تُرسل إجابات بعد" body="يصلك إشعار عند تسليم الطلاب لإجاباتهم." />
         ) : (
           <List>
             {a.submissions.map((s) => (
@@ -323,7 +335,7 @@ function GradeQueue({ a }: { a: AssignmentDetailDTO }) {
                       </span>
                     </Badge>
                   ) : (
-                    <Badge tone="warning">صحّح</Badge>
+                    <Badge tone="warning">{a.dueAt && new Date(s.submittedAt) > new Date(a.dueAt) ? 'متأخر · بانتظار التصحيح' : 'بانتظار التصحيح'}</Badge>
                   )
                 }
                 chevron
@@ -338,13 +350,14 @@ function GradeQueue({ a }: { a: AssignmentDetailDTO }) {
         title={open?.student?.name ?? ''}
         description={open ? `سلّم ${fmtRelative(open.submittedAt)}` : undefined}
         footer={
-          <Button block size="lg" loading={grade.isPending} disabled={score === '' || Number(score) > a.maxScore} onClick={() => grade.mutate()}>
-            احفظ الدرجة
+          <Button block size="lg" loading={grade.isPending} disabled={score.trim() === '' || !Number.isInteger(Number(score)) || Number(score) < 0 || Number(score) > a.maxScore} onClick={() => grade.mutate()}>
+            حفظ الدرجة
           </Button>
         }
       >
         {open && (
           <div className="flex flex-col gap-4">
+            {a.questions.length > 0 && <><Badge tone="primary">{open.gradingMethod === 'automatic' ? 'نتيجة تلقائية — يمكنك مراجعتها' : 'مراجعة المدرس'}</Badge><QuizAnswers a={a} answers={open.answers} /></>}
             {open.body && <p className="rounded-md bg-surface-container p-4 text-body-lg whitespace-pre-wrap">{open.body}</p>}
             <Attachments files={open.attachments} />
             <div className="flex flex-wrap gap-2">
@@ -354,11 +367,15 @@ function GradeQueue({ a }: { a: AssignmentDetailDTO }) {
                 </button>
               ))}
             </div>
-            <TextField label={`الدرجة (من ${a.maxScore})`} type="number" inputMode="numeric" ltr value={score} onChange={(e) => setScore(e.target.value)} />
-            <TextArea label="تعليقك" value={feedback} onChange={(e) => setFeedback(e.target.value)} rows={3} placeholder="شغل ممتاز، راجع المسألة التالتة." />
+            <TextField label={`الدرجة (من ${a.maxScore})`} type="number" min={0} max={a.maxScore} step={1} inputMode="numeric" ltr value={score} onChange={(e) => setScore(e.target.value)} />
+            <TextArea label="تعليقك" value={feedback} onChange={(e) => setFeedback(e.target.value)} rows={3} placeholder="أضف ملاحظات واضحة تساعد الطالب على تحسين إجابته." />
           </div>
         )}
       </Sheet>
     </>
   );
+}
+
+function QuizAnswers({ a, answers, onChange, disabled = false }: { a: AssignmentDTO; answers: Record<string, number>; onChange?: (answers: Record<string, number>) => void; disabled?: boolean }) {
+  return <div className="flex flex-col gap-4">{a.questions.map((q, i) => <fieldset key={q.id} disabled={disabled} className="rounded-xl border border-outline-variant p-4"><legend className="px-1 text-title-md">{i + 1}. {q.prompt} <span className="text-body-sm">({q.points} درجات)</span></legend><div className="mt-2 flex flex-col gap-2">{q.options.map((option, index) => <label key={index} className={`flex min-h-12 items-center gap-3 rounded-md border p-3 text-body-md ${answers[q.id] === index ? 'border-primary bg-primary-container text-on-primary-container' : 'border-outline-variant'} ${onChange ? 'cursor-pointer' : ''}`}><input type="radio" name={`${a.id}-${q.id}`} value={index} checked={answers[q.id] === index} disabled={!onChange || disabled} onChange={() => onChange?.({ ...answers, [q.id]: index })} className="size-4 accent-primary" /><span className="flex-1">{option}</span>{q.correctIndex === index && <Badge tone="success">الصحيحة</Badge>}</label>)}</div></fieldset>)}</div>;
 }

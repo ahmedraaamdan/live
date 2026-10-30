@@ -1,0 +1,21 @@
+services:
+  livekit:
+    image: livekit/livekit-server@sha256:25cd902de7cacbd5f1f779f6a6ac1eae20ba8f56b0935934ce6b0ab80d1e3d20
+    command: ["--config", "/etc/livekit.yaml"]
+    restart: unless-stopped
+    network_mode: host
+    user: "10001:10001"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    cpus: 1.0
+    mem_limit: 768m
+    memswap_limit: 768m
+    pids_limit: 256
+    tmpfs: ["/tmp:size=64m,mode=1777"]
+    volumes: ["./livekit.yaml:/etc/livekit.yaml:ro"]
+    ulimits:
+      nofile: {soft: 65535, hard: 65535}
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}

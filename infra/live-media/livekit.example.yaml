@@ -1,0 +1,21 @@
+# Example only. The real key is generated on the server and never committed.
+port: 7880
+log_level: warn
+rtc:
+  tcp_port: 7881
+  udp_port: 7882
+  use_external_ip: false
+  node_ip: YOUR_PUBLIC_IP
+room:
+  auto_create: false
+  max_participants: 26
+  empty_timeout: 300
+  departure_timeout: 120
+turn:
+  enabled: true
+  udp_port: 3478
+  tls_port: 0
+  relay_range_start: 40000
+  relay_range_end: 40100
+keys:
+  GENERATED_KEY: GENERATED_SECRET

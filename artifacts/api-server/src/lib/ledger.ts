@@ -32,15 +32,18 @@ export async function releaseLectureFunds(lectureId: string) {
 }
 
 /** Undo a booking's credits: void what's still pending, reverse what was released. */
-export async function reverseBooking(tx: Tx, bookingId: string, memo: string) {
+export async function reverseBooking(tx: Tx, bookingId: string, memo: string, paymentId?: string) {
   const entries = await tx
     .select()
     .from(walletEntriesTable)
-    .where(and(eq(walletEntriesTable.bookingId, bookingId), inArray(walletEntriesTable.kind, ["sale", "commission"])));
+    .where(and(eq(walletEntriesTable.bookingId, bookingId), inArray(walletEntriesTable.kind, ["sale", "commission"]), paymentId ? eq(walletEntriesTable.paymentId, paymentId) : undefined))
+    .orderBy(walletEntriesTable.id).for("update");
   for (const e of entries) {
     if (e.status === "pending") {
       await tx.update(walletEntriesTable).set({ status: "void" }).where(eq(walletEntriesTable.id, e.id));
     } else if (e.status === "available") {
+      const previous = await tx.query.walletEntriesTable.findFirst({ where: and(eq(walletEntriesTable.bookingId, bookingId), eq(walletEntriesTable.paymentId, e.paymentId!), eq(walletEntriesTable.owner, e.owner), eq(walletEntriesTable.kind, "refund")) });
+      if (previous) continue;
       await tx.insert(walletEntriesTable).values({
         owner: e.owner,
         teacherId: e.teacherId,

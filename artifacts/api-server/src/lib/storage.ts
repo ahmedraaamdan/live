@@ -12,7 +12,7 @@ export async function saveFile(id: string, data: Buffer): Promise<string> {
   const key = `${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, "0")}/${id}`;
   const full = path.join(env.uploadDir, key);
   await mkdir(path.dirname(full), { recursive: true });
-  await writeFile(full, data);
+  await writeFile(full, data, { mode: 0o600 });
   return key;
 }
 

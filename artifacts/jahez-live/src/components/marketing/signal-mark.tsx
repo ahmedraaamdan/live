@@ -22,9 +22,7 @@ export function Logo() {
   return (
     <span className="brand-lockup" aria-label="Gahez Live — جاهز">
       <GahezMark />
-      <span className="brand-word" dir="ltr">
-        Gahez
-      </span>
+      <span className="brand-word" dir="ltr">Gahez</span>
       <span className="brand-badge" dir="ltr">
         Live
       </span>

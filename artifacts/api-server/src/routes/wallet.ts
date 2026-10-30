@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { desc, eq } from "drizzle-orm";
-import { db, lecturesTable, payoutsTable, walletEntriesTable } from "@workspace/db";
+import { db, lecturesTable, payoutsTable, usersTable, walletEntriesTable } from "@workspace/db";
 import { payoutRequestSchema, type WalletDTO } from "@workspace/live-core";
 import { requireRole } from "../lib/auth";
 import { toPayout } from "../lib/dto";
@@ -49,8 +49,8 @@ router.post("/wallet/payouts", async (req, res) => {
   const user = requireRole(req, "teacher");
   const input = parse(payoutRequestSchema, req.body);
   await db.transaction(async (tx) => {
-    // Serialise a teacher's requests so two taps can't both pass the check.
-    await tx.select().from(payoutsTable).where(eq(payoutsTable.teacherId, user.id)).for("update");
+    // Lock a row that always exists, including before the first payout request.
+    await tx.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.id, user.id)).for("update");
     const { availableCents } = await teacherBalances(user.id, tx);
     if (input.amountCents > availableCents) throw badRequest("المبلغ أكبر من رصيدك المتاح");
     const [payout] = await tx

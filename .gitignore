@@ -50,3 +50,6 @@ Thumbs.db
 
 # Server-only secrets for the app (see .env.app.example)
 .env.app
+
+*.tar.gz
+*.dump

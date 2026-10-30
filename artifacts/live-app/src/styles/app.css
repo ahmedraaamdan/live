@@ -21,10 +21,10 @@
   --breakpoint-lg: 52.5rem;
   --breakpoint-xl: 75rem;
 
-  --font-sans: "Cairo Variable", "Cairo", system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif;
+  --font-sans: "Readex Pro", system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif;
   /* Numbers: prices, timers, stats, codes. Tabular so columns line up. */
   /* Arabic in a numbers slot ("مجانية") falls back to Cairo, never a monospace font. */
-  --font-num: "Space Grotesk Variable", "Space Grotesk", "Cairo Variable", "Cairo", system-ui, sans-serif;
+  --font-num: "Space Grotesk Variable", "Space Grotesk", "Readex Pro", system-ui, sans-serif;
 
   /*
    * Type scale (M3 roles, sized up for Arabic: Cairo's glyphs read smaller
@@ -364,3 +364,22 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* A permanent scroll lane prevents viewport/rail shifts between short and
+   long screens. Native scrollbars retain their normal scroll behavior. */
+html { overflow-y:scroll; scrollbar-gutter:stable; scrollbar-width:thin; scrollbar-color:var(--primary) var(--background); }
+::-webkit-scrollbar { width:8px; height:8px; }
+::-webkit-scrollbar-track { background:var(--background); }
+::-webkit-scrollbar-thumb { background:var(--primary); border:2px solid var(--background); border-radius:10px; }
+::-webkit-scrollbar-thumb:hover { background:var(--ref-rose-700); }
+::-webkit-scrollbar-corner { background:var(--background); }
+.gl-page-loading { min-height:calc(100dvh - var(--nav-height)); }
+.gl-loading-top { height:calc(64px + var(--safe-top)); max-width:var(--content-max); margin:auto; display:flex; align-items:center; justify-content:space-between; padding:var(--safe-top) 24px 0; }
+.gl-loading-top > span { width:116px; height:17px; border-radius:6px; background:var(--surface-container); }
+.gl-loading-top > i { width:24px; height:24px; display:grid; place-items:center; color:var(--primary); }
+.gl-loading-content { max-width:900px; margin:0 auto; padding:24px 24px 48px; }
+.gl-loading-title { width:43%; height:27px; border-radius:7px; background:var(--surface-container); }
+.gl-loading-subtitle { width:63%; height:13px; margin-top:15px; border-radius:5px; background:var(--surface-container-low); }
+.gl-loading-card { height:150px; margin-top:30px; border-radius:20px; background:var(--surface-container-low); border:1px solid var(--outline-variant); }
+.gl-loading-pair { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-top:20px; }.gl-loading-pair > div { height:106px; border-radius:16px; background:var(--surface-container-low); border:1px solid var(--outline-variant); }
+@media(max-width:599px) { .gl-loading-content { padding:20px; }.gl-loading-top { padding-inline:20px; }.gl-loading-card { height:138px; }.gl-loading-pair { gap:12px; } }

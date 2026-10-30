@@ -20,7 +20,7 @@ export function fmtDuration(min: number): string {
   if (min < 60) return `${min} دقيقة`;
   const h = Math.floor(min / 60);
   const m = min % 60;
-  const hours = h === 1 ? 'ساعة' : h === 2 ? 'ساعتين' : `${h} ساعات`;
+  const hours = h === 1 ? 'ساعة' : h === 2 ? 'ساعتان' : `${h} ساعات`;
   return m ? `${hours} و${m} د` : hours;
 }
 
@@ -30,22 +30,22 @@ export function fmtMinutes(seconds: number): string {
   return fmtDuration(m);
 }
 
-/** "كمان 3 ساعات", "بكرة 7:00 م", "من 5 دقيقة". */
+/** "بعد 3 ساعات", "غدًا 7:00 م", "من 5 دقيقة". */
 export function fmtRelative(d: string | Date, now = Date.now()): string {
   const t = new Date(d).getTime();
   const diffMin = Math.round((t - now) / 60_000);
   const abs = Math.abs(diffMin);
   const future = diffMin >= 0;
-  if (abs < 1) return 'دلوقتي';
-  if (abs < 60) return future ? `كمان ${abs} دقيقة` : `من ${abs} دقيقة`;
+  if (abs < 1) return 'الآن';
+  if (abs < 60) return future ? `بعد ${abs} دقيقة` : `منذ ${abs} دقيقة`;
   const hours = Math.round(abs / 60);
   if (hours < 24) {
-    const h = hours === 1 ? 'ساعة' : hours === 2 ? 'ساعتين' : `${hours} ساعات`;
-    return future ? `كمان ${h}` : `من ${h}`;
+    const h = hours === 1 ? 'ساعة' : hours === 2 ? 'ساعتان' : `${hours} ساعات`;
+    return future ? `بعد ${h}` : `منذ ${h}`;
   }
   const days = Math.round(hours / 24);
-  if (future && days === 1) return `بكرة ${fmtTime(d)}`;
-  if (!future && days === 1) return `امبارح ${fmtTime(d)}`;
+  if (future && days === 1) return `غدًا ${fmtTime(d)}`;
+  if (!future && days === 1) return `أمس ${fmtTime(d)}`;
   return fmtDateTime(d);
 }
 

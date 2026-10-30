@@ -37,8 +37,10 @@ export interface TeacherMini extends PersonMini {
 }
 
 export interface MeDTO {
+  isSuperAdmin?: boolean;
+  impersonation?: { actorId: string; actorName: string } | null;
   user: UserDTO;
-  teacher: { bio: string; headline: string; subject: string | null } | null;
+  teacher: { bio: string; headline: string; subject: string | null; experience?: string; socialLinks?: ProfileLink[]; certificates?: ProfileLink[] } | null;
   student: { grade: string | null; parentEmail: string | null; linkCode: string; parents: PersonMini[] } | null;
   unreadNotifications: number;
 }
@@ -57,6 +59,7 @@ export interface RecordingDTO {
 }
 
 export interface LectureDTO {
+  coverUrl?: string | null;
   id: string;
   code: string;
   title: string;
@@ -115,6 +118,9 @@ export interface BookingDTO {
 }
 
 export interface PaymentDTO {
+  refundPending?: boolean;
+  voucher?: string | null;
+  requiresReview?: boolean;
   id: string;
   status: PaymentStatus;
   amountCents: number;
@@ -161,7 +167,18 @@ export interface UploadDTO {
   size: number;
 }
 
+export interface QuizQuestionDTO {
+  id: string;
+  prompt: string;
+  options: string[];
+  points: number;
+  /** Answer key is returned only to the owner, never to students. */
+  correctIndex?: number;
+}
+
 export interface SubmissionDTO {
+  answers: Record<string, number>;
+  gradingMethod: "manual" | "automatic";
   id: string;
   assignmentId: string;
   body: string;
@@ -174,6 +191,7 @@ export interface SubmissionDTO {
 }
 
 export interface AssignmentDTO {
+  questions: QuizQuestionDTO[];
   id: string;
   lectureId: string;
   lectureTitle: string;
@@ -279,6 +297,7 @@ export interface AdminOverviewDTO {
   counts: { teachers: number; students: number; parents: number; lectures: number; bookings: number };
   recentPayments: Array<PaymentDTO & { payer: PersonMini; teacher: PersonMini }>;
   pendingPayouts: PayoutDTO[];
+  pendingReviews: AdminOverviewDTO["recentPayments"];
 }
 
 export interface AdminUserDTO extends UserDTO {
@@ -319,8 +338,40 @@ export interface ApiErrorBody {
 }
 
 export interface PublicConfigDTO {
-  paymentProvider: "mock" | "paymob";
+  paymentProvider: "mock" | "paymob" | "easykash";
   liveConfigured: boolean;
+  paymentConfigured: boolean;
+  recordingConfigured: boolean;
+  liveParticipantLimit: number | null;
+  liveRoomLimit: number | null;
   feeBps: number;
   appUrl: string;
 }
+
+export interface ProfileLink { label: string; url: string; kind?: "image" | "document" | "link" }
+export interface TeacherProfileDTO {
+  teacher: TeacherMini & { verified: boolean; bio: string; experience: string; socialLinks: ProfileLink[]; certificates: ProfileLink[] };
+  rating: { likes: number; dislikes: number; total: number; positivePercent: number | null; raters: number };
+  stats: { completedLessons: number; students: number };
+}
+export interface TeacherLecturesDTO { items: LectureDTO[]; nextOffset: number | null }
+export interface HomeworkTemplateDTO {
+  id: string; title: string; instructions: string; questions: Array<{ id: string; prompt: string; options: string[]; correctIndex: number; points: number }>;
+  maxScore: number; createdAt: string; updatedAt: string;
+}
+
+export interface HomeworkTemplateSummaryDTO { id: string; title: string; questionCount: number; maxScore: number; updatedAt: string }
+
+export type LoginResult = AuthResult | { requiresMfa: true; challenge: string };
+export interface VerificationDocumentDTO { id: string; filename: string; mime: string; size: number }
+export interface AccountSecurityDTO { google: { email: string } | null; facebook: { name: string; email: string | null } | null; mfaEnabled: boolean; recoveryCodesRemaining: number; googleConfigured: boolean; facebookConfigured: boolean; canManageSecurity: boolean }
+export interface TeacherVerificationDTO {
+  status: "not_submitted" | "pending" | "approved" | "rejected" | "needs_changes";
+  security: AccountSecurityDTO;
+  details: { fullName: string; phone: string; subject: string; governorate: string; qualification: string; experienceYears: number; membershipNumber: string; frontDocumentId: string; backDocumentId: string } | null;
+  note: string; submittedAt: string | null; reviewedAt: string | null;
+}
+export interface VerificationQueueItem { teacher: PersonMini & { email: string }; status: TeacherVerificationDTO["status"]; fullName: string; subject: string; submittedAt: string }
+export interface VerificationAdminDetail extends TeacherVerificationDTO { teacher: PersonMini & { email: string }; history: Array<{ action: string; note: string; createdAt: string }> }
+
+export interface VerificationQueueDTO { items: VerificationQueueItem[]; nextOffset: number | null; counts: { pending: number; approved: number; rejected: number; needs_changes: number } }

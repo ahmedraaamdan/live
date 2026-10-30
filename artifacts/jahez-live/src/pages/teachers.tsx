@@ -14,7 +14,7 @@ export default function Teachers() {
     title: routes.teachers.title,
     description: routes.teachers.description,
     path: routes.teachers.path,
-    jsonLd: breadcrumbJsonLd([{ label: 'الرئيسية', path: '/' }, { label: 'المدرسين' }]),
+    jsonLd: breadcrumbJsonLd([{ label: 'الرئيسية', path: '/' }, { label: 'المدرسون' }]),
   });
 
   const [subject, setSubject] = useState('الكل');
@@ -44,9 +44,9 @@ export default function Teachers() {
       <main>
         <section className="classes-hero">
           <div className="container-wide">
-            <p className="section-kicker fade-up">المدرسين</p>
-            <h1 className="classes-hero-title fade-up">اختار المدرس اللي يناسبك.</h1>
-            <p className="classes-hero-copy fade-up delay-1">كل مدرس عنده تقييمات من الطلاب اللي حضروا حصصه، وعدد حصص ومتابعين. قارن قبل ما تحجز.</p>
+            <p className="section-kicker fade-up">المدرسون</p>
+            <h1 className="classes-hero-title fade-up">اختر المدرس المناسب لك.</h1>
+            <p className="classes-hero-copy fade-up delay-1">تعرّف إلى تخصص كل مدرس وحصصه وتقييمات طلابه، ثم اختر من يناسب احتياجك.</p>
           </div>
         </section>
 
@@ -59,8 +59,9 @@ export default function Teachers() {
                 </button>
               ))}
             </div>
+            <p className="studio-demo-note">نماذج توضيحية لملفات المدرسين وتقييماتهم قبل الإطلاق.</p>
             {filtered.length === 0 ? (
-              <EmptyState title="مفيش مدرسين في المادة دي دلوقتي" copy="جرّب مادة تانية." />
+              <EmptyState title="لا يوجد مدرسون لهذه المادة حاليًا." copy="اختر مادة أخرى لعرض المدرسين المتاحين." />
             ) : (
               <div className="teacher-directory-grid">
                 {filtered.map((teacher) => (
@@ -74,15 +75,15 @@ export default function Teachers() {
         <SeoContentSection
           blocks={[
             {
-              heading: 'إزاي تقارن بين المدرسين؟',
+              heading: 'كيف تقارن بين المدرسين؟',
               paragraphs: [
-                'كل مدرس على جاهز Live له تقييم من الطلاب اللي حضروا حصصه فعلاً، وعدد متابعين، وعدد حصص. قارن بين أكتر من مدرس في نفس المادة قبل ما تحجز.',
+                'راجع تخصص كل مدرس والحصص التي يقدمها وتقييمات الطلاب. تساعدك هذه التفاصيل على المقارنة بين الخيارات في المادة نفسها.',
               ],
             },
             {
-              heading: 'يعني إيه "مدرس موثّق"؟',
+              heading: 'ماذا يعني توثيق حساب المدرس؟',
               paragraphs: [
-                'علامة التوثيق بتظهر على حسابات المدرسين اللي جاهز Live أكد بياناتهم. عدم وجود العلامة مش معناه إن المدرس مش كويس؛ التوثيق مجرد طبقة تأكيد إضافية.',
+                'تعني علامة التوثيق أن جاهز Live راجع بيانات الحساب. وهي لا تعني ضمان نتيجة دراسية محددة؛ اختر المدرس بناءً على تخصصه وحصصه ومدى مناسبتها لك.',
               ],
             },
           ]}

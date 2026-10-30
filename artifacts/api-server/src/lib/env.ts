@@ -21,7 +21,8 @@ const list = (key: string) =>
 
 const isProd = process.env.NODE_ENV === "production";
 
-const paymentProvider = str("PAYMENT_PROVIDER", isProd ? "paymob" : "mock") as "mock" | "paymob";
+const paymentProvider = str("PAYMENT_PROVIDER", isProd ? "paymob" : "mock") as "mock" | "paymob" | "easykash";
+if (!["mock", "paymob", "easykash"].includes(paymentProvider)) throw new Error("Unsupported PAYMENT_PROVIDER");
 if (isProd && paymentProvider === "mock") {
   throw new Error("PAYMENT_PROVIDER=mock is not allowed in production.");
 }
@@ -41,6 +42,7 @@ export const env = {
     "http://localhost",
     "http://localhost:5174",
   ],
+  superAdminEmails: list("SUPER_ADMIN_EMAILS").map((e) => e.toLowerCase()),
   adminEmails: list("ADMIN_EMAILS").map((e) => e.toLowerCase()),
   feeBps: num("PLATFORM_FEE_BPS", 1000),
   payoutHoldHours: num("PAYOUT_HOLD_HOURS", 24),
@@ -53,6 +55,7 @@ export const env = {
 
   payment: {
     provider: paymentProvider,
+    easykash: { apiKey: str("EASYKASH_API_KEY"), hmacSecret: str("EASYKASH_HMAC_SECRET"), baseUrl: isProd ? "https://back.easykash.net" : str("EASYKASH_BASE_URL", "https://back.easykash.net") },
     paymob: {
       baseUrl: str("PAYMOB_BASE_URL", "https://accept.paymob.com").replace(/\/$/, ""),
       secretKey: str("PAYMOB_SECRET_KEY"),
@@ -64,6 +67,8 @@ export const env = {
   },
 
   livekit: {
+    maxParticipants: num("LIVE_MAX_PARTICIPANTS", 0),
+    maxRooms: num("LIVE_MAX_ROOMS", 0),
     url: str("LIVEKIT_URL"),
     apiKey: str("LIVEKIT_API_KEY"),
     apiSecret: str("LIVEKIT_API_SECRET"),
@@ -80,6 +85,13 @@ export const env = {
     publicBase: str("RECORDING_PUBLIC_BASE").replace(/\/$/, ""),
   },
 
+  security: {
+    mfaEncryptionKey: str("MFA_ENCRYPTION_KEY"),
+    googleClientId: str("GOOGLE_CLIENT_ID"), googleClientSecret: str("GOOGLE_CLIENT_SECRET"),
+    facebookAppId: str("META_APP_ID"), facebookAppSecret: str("META_APP_SECRET"),
+    facebookVersion: str("META_GRAPH_VERSION", "v23.0"),
+    brokerUrl: str("SOCIAL_BROKER_URL"),
+  },
   mail: {
     host: str("SMTP_HOST"),
     port: num("SMTP_PORT", 465),
@@ -93,3 +105,5 @@ export const liveConfigured = Boolean(env.livekit.url && env.livekit.apiKey && e
 export const recordingConfigured =
   liveConfigured && Boolean(env.recordings.bucket && env.recordings.accessKey && env.recordings.secret);
 export const mailConfigured = Boolean(env.mail.host && env.mail.user && env.mail.pass);
+
+export const paymentConfigured = env.payment.provider === "mock" || (env.payment.provider === "easykash" ? Boolean(env.payment.easykash.apiKey && env.payment.easykash.hmacSecret) : Boolean(env.payment.paymob.secretKey && env.payment.paymob.publicKey && env.payment.paymob.hmacSecret && env.payment.paymob.integrationIds.length));

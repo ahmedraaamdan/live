@@ -9,7 +9,7 @@ import { cn } from '@/lib/cn';
  * on a tonal surface, `outlined` for dense lists. Interactive cards get
  * the state layer and press feedback.
  */
-const cardVariants = cva('rounded-lg text-on-surface', {
+const cardVariants = cva('gl-card rounded-lg text-on-surface', {
   variants: {
     variant: {
       elevated: 'bg-surface-container-lowest shadow-e1',
@@ -26,13 +26,13 @@ const cardVariants = cva('rounded-lg text-on-surface', {
 export interface CardProps extends HTMLAttributes<HTMLDivElement>, VariantProps<typeof cardVariants> {}
 
 export function Card({ className, variant, pad, interactive, ...props }: CardProps) {
-  return <div className={cn(cardVariants({ variant, pad, interactive }), className)} {...props} />;
+  return <div data-variant={variant ?? 'elevated'} className={cn(cardVariants({ variant, pad, interactive }), className)} {...props} />;
 }
 
 /** A card that navigates. */
 export function LinkCard({ href, className, variant, pad, children }: { href: string; className?: string; children: ReactNode } & VariantProps<typeof cardVariants>) {
   return (
-    <Link href={href} className={cn(cardVariants({ variant, pad, interactive: true }), className)}>
+    <Link href={href} data-variant={variant ?? 'elevated'} className={cn(cardVariants({ variant, pad, interactive: true }), className)}>
       {children}
     </Link>
   );
@@ -41,7 +41,7 @@ export function LinkCard({ href, className, variant, pad, children }: { href: st
 /** Section heading with an optional trailing action ("عرض الكل"). */
 export function SectionHeader({ title, action, className }: { title: ReactNode; action?: ReactNode; className?: string }) {
   return (
-    <div className={cn('mb-3 flex items-center justify-between gap-4', className)}>
+    <div className={cn('gl-section-heading mb-3 flex items-center justify-between gap-4', className)}>
       <h2 className="text-title-lg">{title}</h2>
       {action}
     </div>
@@ -88,7 +88,7 @@ export function ListItem({
       {chevron && <ChevronLeft className="size-5 shrink-0 text-on-surface-variant" aria-hidden="true" />}
     </>
   );
-  const cls = cn('flex min-h-16 w-full items-center gap-4 px-4 py-3 text-start', (href || onClick) && 'state-layer cursor-pointer', className);
+  const cls = cn('gl-list-item flex min-h-16 w-full items-center gap-4 px-4 py-3 text-start', (href || onClick) && 'state-layer cursor-pointer', className);
   if (href)
     return (
       <Link href={href} className={cls}>
@@ -105,7 +105,7 @@ export function ListItem({
 }
 
 export function List({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn('divide-y divide-outline-variant overflow-hidden rounded-lg bg-surface-container-lowest shadow-e1', className)}>{children}</div>;
+  return <div className={cn('gl-list divide-y divide-outline-variant overflow-hidden rounded-lg bg-surface-container-lowest shadow-e1', className)}>{children}</div>;
 }
 
 export function Divider({ className }: { className?: string }) {

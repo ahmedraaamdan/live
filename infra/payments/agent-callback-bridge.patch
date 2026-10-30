@@ -1,0 +1,46 @@
+--- a/apps/web/src/app/api/payments/easykash/route.ts
++++ b/apps/web/src/app/api/payments/easykash/route.ts
+@@ -24,6 +24,25 @@
+     }
+   } catch {
+     return NextResponse.json({ error: 'bad body' }, { status: 400 });
++  }
++
++  // One merchant account: Live invoice references are verified by Live's
++  // documented SHA-512 handler. Existing Agent invoices keep their own path.
++  const productReference = String(body['customerReference'] ?? body['customer_reference'] ?? '');
++  if (productReference.startsWith('glive_')) {
++    const encoded = JSON.stringify(body);
++    if (Buffer.byteLength(encoded) > 16_384) return NextResponse.json({ error: 'callback too large' }, { status: 413 });
++    try {
++      const response = await fetch('http://live-app:8080/api/webhooks/easykash', {
++        method: 'POST', headers: { 'Content-Type': 'application/json' },
++        body: encoded, cache: 'no-store', signal: AbortSignal.timeout(10_000),
++      });
++      const result = await response.json().catch(() => ({ error: 'invalid callback response' }));
++      return NextResponse.json(result, { status: response.status });
++    } catch {
++      logger.warn('Live callback receiver is temporarily unavailable');
++      return NextResponse.json({ error: 'callback unavailable' }, { status: 503 });
++    }
+   }
+ 
+   if (!verifyCallbackSignature(body)) {
+--- a/packages/core/src/billing/easykash.ts
++++ b/packages/core/src/billing/easykash.ts
+@@ -160,6 +160,15 @@
+   const received = String(body['signatureHash'] ?? body['signature'] ?? '');
+   if (!received) return false;
+ 
++  // Current Direct Pay callbacks use the documented seven-field SHA-512 MAC.
++  // Preserve existing 64-character legacy callbacks below for compatibility.
++  if (/^[a-f0-9]{128}$/i.test(received)) {
++    const fields = ['ProductCode', 'Amount', 'ProductType', 'PaymentMethod', 'status', 'easykashRef', 'customerReference'];
++    if (fields.some((key) => typeof body[key] !== 'string' && typeof body[key] !== 'number')) return false;
++    const expected = createHmac('sha512', hmacSecret()).update(fields.map((key) => String(body[key])).join('')).digest();
++    return timingSafeEqual(expected, Buffer.from(received, 'hex'));
++  }
++
+   const signed = [
+     body['Amount'] ?? body['amount'] ?? '',
+     body['PaymentMethod'] ?? body['paymentMethod'] ?? '',

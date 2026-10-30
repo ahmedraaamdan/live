@@ -16,10 +16,10 @@ const socialLinks = [
 // The other Gahez products. Every product's footer lists the rest, so a
 // visitor who arrives at one can find the family.
 const PRODUCTS = [
-  { name: 'Gahez Agent', line: 'وكيل AI يرد على عملاءك على واتساب وماسنجر وإنستجرام', href: 'https://agent.gahez.space/' },
+  { name: 'Gahez Agent', line: 'مساعد ذكي للرد على عملائك عبر واتساب وماسنجر وإنستجرام', href: 'https://agent.gahez.space/' },
   { name: 'Gahez أكاديمي', line: 'نظام لإدارة الأكاديميات والمراكز التعليمية', href: 'https://academy.gahez.space/' },
-  { name: 'Gahez أدوات', line: 'أدوات مجانية بالعربي', href: 'https://tools.gahez.space/' },
-  { name: 'Gahez Sticky', line: 'ملاحظات تظهر مباشرة على شاشة صاحبك', href: 'https://sticky.gahez.space/' },
+  { name: 'Gahez أدوات', line: 'أدوات مجانية باللغة العربية', href: 'https://tools.gahez.space/' },
+  { name: 'Gahez Sticky', line: 'ملاحظات تشاركها مباشرة على شاشة صديقك', href: 'https://sticky.gahez.space/' },
 ];
 
 function FooterColumn({ heading, group }: { heading: string; group: 'platform' | 'help' | 'legal' }) {
@@ -46,7 +46,7 @@ export function Footer() {
       <div className="container-wide site-footer-top">
         <div className="footer-brand-col">
           <Logo />
-          <p className="footer-tagline">حصص مباشرة أونلاين مع مدرسين حقيقيين.</p>
+          <p className="footer-tagline">مركزك التعليمي، أينما كنت. حصص ودورات مباشرة عبر الإنترنت.</p>
           {socialLinks.length > 0 && (
             <div className="footer-social">
               {socialLinks.map(({ key, href, icon: Icon, label }) => (

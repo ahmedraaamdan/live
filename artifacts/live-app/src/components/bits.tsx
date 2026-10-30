@@ -76,7 +76,7 @@ export function ShareLectureSheet({ open, onOpenChange, code, title }: { open: b
   const url = publicUrl(`/l/${code}`);
   const text = `احجز مكانك في حصة "${title}" على Gahez Live 👇\n${url}`;
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} title="ابعت لينك الحجز" description="الطلاب يفتحوا اللينك، يحجزوا ويدفعوا في أقل من دقيقة.">
+    <Sheet open={open} onOpenChange={onOpenChange} title="مشاركة رابط الحجز" description="شارك الرابط ليطّلع الطلاب على تفاصيل الحصة ويكملوا الحجز.">
       <div className="mb-5 flex items-center gap-3 rounded-md bg-surface-container-high p-3">
         <code className="min-w-0 flex-1 truncate font-num text-body-md" dir="ltr">
           {url}
@@ -100,7 +100,7 @@ export function ShareLectureSheet({ open, onOpenChange, code, title }: { open: b
       </div>
       <div className="flex flex-col gap-3">
         <Button size="lg" block onClick={() => window.open(whatsappUrl(text), '_blank')}>
-          <MessageCircle /> ابعت على واتساب
+          <MessageCircle /> مشاركة عبر واتساب
         </Button>
         <Button
           size="lg"

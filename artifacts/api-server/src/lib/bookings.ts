@@ -3,7 +3,7 @@
  * cancelled. Called by the Paymob webhook, the mock gateway and free
  * bookings alike, and safe to call twice for the same payment.
  */
-import { and, eq, inArray } from "drizzle-orm";
+import { and, count, eq, gte, inArray, or, sql } from "drizzle-orm";
 import {
   bookingsTable,
   db,
@@ -19,7 +19,7 @@ import { sendBookingConfirmed } from "./emails";
 import { recordSale, reverseBooking } from "./ledger";
 import { logger } from "./logger";
 import { notify } from "./notify";
-import { provider } from "./payments";
+import { paymentProviderFor } from "./payments";
 
 export async function parentsOf(studentId: string) {
   const profile = await db.query.studentProfilesTable.findFirst({ where: eq(studentProfilesTable.userId, studentId) });
@@ -59,11 +59,17 @@ export async function onBookingConfirmed(bookingId: string) {
 }
 
 export async function confirmPayment(paymentId: string, opts: { txnId?: string; method?: PaymentMethod; raw?: unknown }) {
+  // Follow the booking path's lock order: lecture, payment, booking.
+  const candidate = await db.query.paymentsTable.findFirst({ where: eq(paymentsTable.id, paymentId) });
+  if (!candidate) return;
+  const seat = await db.query.bookingsTable.findFirst({ where: eq(bookingsTable.id, candidate.bookingId) });
+  if (!seat) return;
   const outcome = await db.transaction(async (tx) => {
+    const [lecture] = await tx.select().from(lecturesTable).where(eq(lecturesTable.id, seat.lectureId)).for("update");
     const [payment] = await tx.select().from(paymentsTable).where(eq(paymentsTable.id, paymentId)).for("update");
     if (!payment || payment.status === "succeeded" || payment.status === "refunded") return null;
     const [booking] = await tx.select().from(bookingsTable).where(eq(bookingsTable.id, payment.bookingId)).for("update");
-    const [lecture] = await tx.select().from(lecturesTable).where(eq(lecturesTable.id, booking!.lectureId));
+
     const [paid] = await tx
       .update(paymentsTable)
       .set({ status: "succeeded", providerTxnId: opts.txnId ?? payment.providerTxnId, method: opts.method ?? payment.method, raw: opts.raw ?? payment.raw, updatedAt: new Date() })
@@ -71,9 +77,21 @@ export async function confirmPayment(paymentId: string, opts: { txnId?: string; 
       .returning();
     // Paid twice (two tabs, a retry): keep the first, give this one back.
     if (booking!.status === "confirmed") return { duplicate: paid! };
+    if (lecture!.status === "cancelled") {
+      await tx.update(bookingsTable).set({ status: "cancelled" }).where(eq(bookingsTable.id, booking!.id));
+      return { duplicate: paid! };
+    }
+    // A payment may arrive after its seat hold expired and another student booked.
+    if (lecture!.capacity) {
+      const [others] = await tx.select({ n: count() }).from(bookingsTable).where(and(eq(bookingsTable.lectureId, lecture!.id), sql`${bookingsTable.id} <> ${booking!.id}`, or(eq(bookingsTable.status, "confirmed"), and(eq(bookingsTable.status, "pending_payment"), gte(bookingsTable.createdAt, new Date(Date.now() - 60 * 60_000))))));
+      if (Number(others?.n ?? 0) >= lecture!.capacity) {
+        await tx.update(bookingsTable).set({ status: "cancelled" }).where(eq(bookingsTable.id, booking!.id));
+        return { duplicate: paid! };
+      }
+    }
     const [confirmed] = await tx
       .update(bookingsTable)
-      .set({ status: "confirmed", confirmedAt: new Date(), pricePaidCents: payment.amountCents })
+      .set({ status: "confirmed", confirmedAt: new Date(), confirmedPaymentId: payment.id, pricePaidCents: payment.amountCents })
       .where(eq(bookingsTable.id, booking!.id))
       .returning();
     await recordSale(tx, { lecture: lecture!, booking: confirmed!, payment: paid! });
@@ -101,11 +119,22 @@ export async function failPayment(paymentId: string, raw?: unknown) {
 
 async function refundPayment(payment: Payment, reason: string) {
   try {
-    await provider.refund(payment);
-    await db.update(paymentsTable).set({ status: "refunded", updatedAt: new Date() }).where(eq(paymentsTable.id, payment.id));
+    await db.transaction(async tx => {
+      const [current] = await tx.select().from(paymentsTable).where(eq(paymentsTable.id, payment.id)).for("update");
+      if (!current || current.status !== "succeeded") return;
+      await paymentProviderFor(current.provider).refund(current);
+      await tx.update(paymentsTable).set({ status: "refunded", updatedAt: new Date() }).where(eq(paymentsTable.id, payment.id));
+    });
   } catch (err) {
     // Stays "succeeded"; the admin overview lists it for a manual refund.
     logger.error({ err, paymentId: payment.id, reason }, "Refund failed, needs a manual refund");
+    const current = await db.query.paymentsTable.findFirst({ where: eq(paymentsTable.id, payment.id) });
+    const previous = (current?.raw ?? {}) as Record<string, unknown>;
+    await db.update(paymentsTable).set({ raw: { ...previous, gahezRefundPending: true, gahezRefundReason: reason } }).where(eq(paymentsTable.id, payment.id));
+    if (!previous.gahezRefundPending) {
+      const admins = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.role, "admin"));
+      await notify(admins.map(a => a.id), { kind: "refund", title: "استرداد يحتاج إلى مراجعة", body: `عملية ${payment.id}`, link: "/admin" });
+    }
   }
 }
 
@@ -123,7 +152,8 @@ export async function refundLecture(lectureId: string) {
     for (const p of payments) await refundPayment(p, "lecture cancelled");
     await db.transaction(async (tx) => {
       await reverseBooking(tx, b.id, "إلغاء الحصة");
-      await tx.update(bookingsTable).set({ status: payments.length ? "refunded" : "cancelled" }).where(eq(bookingsTable.id, b.id));
+      const settled = payments.length ? await tx.select({ id: paymentsTable.id }).from(paymentsTable).where(and(inArray(paymentsTable.id, payments.map(p => p.id)), eq(paymentsTable.status, "refunded"))) : [];
+      await tx.update(bookingsTable).set({ status: payments.length && settled.length === payments.length ? "refunded" : "cancelled" }).where(eq(bookingsTable.id, b.id));
       await tx
         .update(paymentsTable)
         .set({ status: "failed", updatedAt: new Date() })

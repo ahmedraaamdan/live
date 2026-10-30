@@ -11,7 +11,7 @@ export const siteConfig = {
   siteUrl: 'https://live.gahez.space',
   brandName: 'جاهز Live',
 
-  /** The app (sign in, sign up, classes): the "دخول" and "اعمل حساب" links go here. */
+  /** The app (sign in, sign up, classes): the "دخول" and "إنشاء حساب" links go here. */
   appUrl: 'https://app.live.gahez.space',
 
   /** Support channels — leave empty until real ones exist; UI hides the ones that are empty. */

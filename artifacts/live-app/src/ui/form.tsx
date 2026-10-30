@@ -8,7 +8,7 @@ import { cn } from '@/lib/cn';
  * with a message under it on error.
  */
 const fieldBase =
-  'w-full rounded-md border border-transparent bg-surface-container-high px-4 text-body-lg text-on-surface placeholder:text-on-surface-variant/70 transition-[border-color,background-color] duration-150 outline-none focus:border-secondary focus:bg-surface-container-lowest aria-[invalid=true]:border-error disabled:opacity-50';
+  'gl-input w-full rounded-md border border-transparent bg-surface-container-high px-4 text-body-lg text-on-surface placeholder:text-on-surface-variant/70 transition-[border-color,background-color] duration-150 outline-none focus:border-secondary focus:bg-surface-container-lowest aria-[invalid=true]:border-error disabled:opacity-50';
 
 export function Field({ label, hint, error, children, id, className }: { label?: ReactNode; hint?: ReactNode; error?: string | null; children: ReactNode; id: string; className?: string }) {
   return (
@@ -115,7 +115,7 @@ export function Segmented<T extends string>({
   ariaLabel?: string;
 }) {
   return (
-    <div role="radiogroup" aria-label={ariaLabel} className={cn('flex rounded-full bg-surface-container-high p-1', className)}>
+    <div role="radiogroup" aria-label={ariaLabel} className={cn('gl-segmented flex rounded-full bg-surface-container-high p-1', className)}>
       {options.map((o) => {
         const on = o.value === value;
         return (
@@ -148,7 +148,7 @@ export function Chip({ selected, onClick, children, icon, className }: { selecte
       aria-pressed={selected}
       onClick={onClick}
       className={cn(
-        'state-layer press inline-flex h-9 shrink-0 items-center gap-1.5 rounded-sm border px-3.5 text-label-lg transition-colors duration-150 [&_svg]:size-4',
+        'gl-chip state-layer press inline-flex h-9 shrink-0 items-center gap-1.5 rounded-sm border px-3.5 text-label-lg transition-colors duration-150 [&_svg]:size-4',
         selected ? 'border-transparent bg-secondary-container text-on-secondary-container' : 'border-outline-variant text-on-surface-variant',
         className,
       )}

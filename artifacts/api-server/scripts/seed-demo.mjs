@@ -1,11 +1,14 @@
 // Fills a development server with a believable demo, through the public API
 // (so it exercises the same code the app does). Run against a dev server
-// started with ADMIN_EMAILS=admin@gahez.space and the mock gateway:
+// started with the mock gateway:
 //
 //   node scripts/seed-demo.mjs            (API defaults to http://localhost:8080/api)
 //
 // Every demo account uses the password below. Development data only.
 const API = process.env.API ?? "http://localhost:8080/api";
+if (!["localhost", "127.0.0.1", "[::1]"].includes(new URL(API).hostname)) throw new Error("Run test data only against an isolated local server");
+const config = await fetch(API + "/config").then(r => r.json());
+if (config.paymentProvider !== "mock") throw new Error("Test data requires the mock payment provider");
 const PASSWORD = "demo12345";
 
 async function call(token, method, path, body) {
@@ -114,7 +117,7 @@ Done. Password for every demo account: ${PASSWORD}
   teacher  teacher@demo.gahez
   student  student@demo.gahez   (link code ${code})
   parent   parent@demo.gahez
-  admin    admin@gahez.space    (needs ADMIN_EMAILS=admin@gahez.space on the server)
+  admin    admin@gahez.space    (parent account; administrator provisioning is separate)
 `);
 void admin;
 void parent;

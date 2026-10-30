@@ -1,3 +1,4 @@
+import { reconcileEasykashPending } from "./easykash-reconcile";
 /**
  * Once a minute: reminders an hour before class, releasing teachers' money
  * after the hold, freeing seats held by abandoned checkouts, and ending
@@ -83,14 +84,19 @@ async function endForgottenLectures() {
 
 export function startScheduler() {
   if (process.env.SCHEDULER === "off") return;
+  let running = false;
   const tick = async () => {
-    for (const job of [sendReminders, releaseFunds, expireCheckouts, endForgottenLectures]) {
+    if (running) return;
+    running = true;
+    try {
+    for (const job of [reconcileEasykashPending, sendReminders, releaseFunds, expireCheckouts, endForgottenLectures]) {
       try {
         await job();
       } catch (err) {
         logger.error({ err, job: job.name }, "Scheduler job failed");
       }
     }
+    } finally { running = false; }
   };
   setTimeout(tick, 5_000);
   setInterval(tick, 60_000);

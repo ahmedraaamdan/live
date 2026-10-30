@@ -1,3 +1,4 @@
+import { isSuperAdmin } from "./auth";
 /** Database rows → the response shapes in @workspace/live-core. */
 import { and, count, desc, eq, inArray, sql, sum } from "drizzle-orm";
 import {
@@ -40,7 +41,7 @@ export function toUser(u: User): UserDTO {
 
 export const toMini = (u: Pick<User, "id" | "name" | "avatarUrl">): PersonMini => ({ id: u.id, name: u.name, avatarUrl: u.avatarUrl });
 
-export async function loadMe(user: User): Promise<MeDTO> {
+export async function loadMe(user: User, impersonation?: { actor: User }): Promise<MeDTO> {
   const [teacher, student, unread] = await Promise.all([
     user.role === "teacher" ? db.query.teacherProfilesTable.findFirst({ where: eq(teacherProfilesTable.userId, user.id) }) : undefined,
     user.role === "student" ? db.query.studentProfilesTable.findFirst({ where: eq(studentProfilesTable.userId, user.id) }) : undefined,
@@ -59,8 +60,10 @@ export async function loadMe(user: User): Promise<MeDTO> {
     parents = rows.map(toMini);
   }
   return {
+    isSuperAdmin: !impersonation && isSuperAdmin(user),
+    impersonation: impersonation ? { actorId: impersonation.actor.id, actorName: impersonation.actor.name } : null,
     user: toUser(user),
-    teacher: teacher ? { bio: teacher.bio, headline: teacher.headline, subject: teacher.subject } : null,
+    teacher: teacher ? { bio: teacher.bio, headline: teacher.headline, subject: teacher.subject, experience: teacher.experience, socialLinks: teacher.socialLinks, certificates: teacher.certificates } : null,
     student: student ? { grade: student.grade, parentEmail: student.parentEmail, linkCode: student.linkCode, parents } : null,
     unreadNotifications: Number(unread[0]?.n ?? 0),
   };
@@ -193,6 +196,7 @@ export async function lectureDTOs(lectures: Lecture[], viewer: User | null, opts
       subject: l.subject,
       grade: l.grade,
       description: l.description,
+      coverUrl: l.coverUrl,
       startsAt: l.startsAt.toISOString(),
       durationMin: l.durationMin,
       priceCents: l.priceCents,

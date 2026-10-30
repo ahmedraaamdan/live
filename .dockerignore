@@ -4,3 +4,10 @@
 attached_assets
 *.log
 .env*
+
+**/.env*
+**/.data
+tmp
+*.tar.gz
+.codex
+.agents

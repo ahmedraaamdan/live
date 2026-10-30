@@ -1,4 +1,4 @@
-import { boolean, index, pgEnum, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, index, jsonb, pgEnum, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 export const roleEnum = pgEnum("role", ["student", "teacher", "parent", "admin"]);
 
@@ -15,6 +15,15 @@ export const usersTable = pgTable("users", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/** Durable support-access audit; IDs are retained even if an account is removed. */
+export const accountSwitchesTable = pgTable("account_switches", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  actorId: uuid("actor_id").notNull(),
+  targetId: uuid("target_id").notNull(),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+});
+
 /** Opaque bearer tokens; only the SHA-256 of a token is stored. */
 export const sessionsTable = pgTable(
   "sessions",
@@ -23,6 +32,8 @@ export const sessionsTable = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => usersTable.id, { onDelete: "cascade" }),
+    actorTokenHash: text("actor_token_hash"),
+    switchId: uuid("switch_id").references(() => accountSwitchesTable.id),
     userAgent: text("user_agent"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
@@ -46,6 +57,9 @@ export const teacherProfilesTable = pgTable("teacher_profiles", {
   headline: text("headline").notNull().default(""),
   bio: text("bio").notNull().default(""),
   subject: text("subject"),
+  experience: text("experience").notNull().default(""),
+  socialLinks: jsonb("social_links").$type<Array<{ label: string; url: string; kind?: "image" | "document" | "link" }>>().notNull().default([]),
+  certificates: jsonb("certificates").$type<Array<{ label: string; url: string; kind?: "image" | "document" | "link" }>>().notNull().default([]),
 });
 
 export const studentProfilesTable = pgTable("student_profiles", {

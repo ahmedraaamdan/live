@@ -186,3 +186,12 @@
     animation: none !important;
   }
 }
+
+/* The question-to-answer interaction fills one unit at a time. */
+@keyframes studio-cell-understand { from { opacity: .3; transform: scale(.65); } to { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: no-preference) {
+ .lab-square.is-solved > span { animation: studio-cell-understand .45s var(--ease-signal) both; animation-delay: calc(var(--cell-index) * 35ms); }
+}
+
+@keyframes studio-route-enter { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: no-preference) { .studio-route { animation: studio-route-enter .4s var(--ease-signal); } }

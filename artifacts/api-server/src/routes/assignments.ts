@@ -7,6 +7,7 @@ import {
   lecturesTable,
   submissionsTable,
   usersTable,
+  uploadsTable,
   type Assignment,
   type Submission,
   type User,
@@ -19,7 +20,7 @@ import {
   type AssignmentDetailDTO,
   type SubmissionDTO,
 } from "@workspace/live-core";
-import { assertAccess, assertOwner, bookedStudentIds, getLecture, isParentOf } from "../lib/access";
+import { assertAccess, assertOwner, bookedStudentIds, getLecture, isParentOf, hasConfirmedBooking } from "../lib/access";
 import { requireRole, requireUser } from "../lib/auth";
 import { parentsOf } from "../lib/bookings";
 import { toMini, uploadsById } from "../lib/dto";
@@ -37,6 +38,8 @@ async function submissionDTOs(subs: Submission[], withStudent: boolean): Promise
     id: s.id,
     assignmentId: s.assignmentId,
     body: s.body,
+    answers: s.answers,
+    gradingMethod: s.gradingMethod,
     attachments: s.attachmentIds.map((id) => uploads.get(id)).filter((u) => u !== undefined),
     submittedAt: s.submittedAt.toISOString(),
     score: s.score,
@@ -46,9 +49,10 @@ async function submissionDTOs(subs: Submission[], withStudent: boolean): Promise
   }));
 }
 
-function base(a: Assignment, lectureTitle: string): Omit<AssignmentDTO, "counts" | "mySubmission"> {
+function base(a: Assignment, lectureTitle: string, owner = false): Omit<AssignmentDTO, "counts" | "mySubmission"> {
   return {
     id: a.id,
+    questions: a.questions.map(({ correctIndex, ...q }) => owner ? { ...q, correctIndex } : q),
     lectureId: a.lectureId,
     lectureTitle,
     title: a.title,
@@ -103,7 +107,7 @@ async function teacherAssignments(teacherId: string, lectureId?: string): Promis
   const m = (xs: Array<{ id: string; n: number }>) => new Map(xs.map((x) => [x.id, Number(x.n)]));
   const [sub, gr, st] = [m(submitted), m(graded), m(seats)];
   return rows.map(({ a, title }) => ({
-    ...base(a, title),
+    ...base(a, title, true),
     counts: { submitted: sub.get(a.id) ?? 0, graded: gr.get(a.id) ?? 0, students: st.get(a.lectureId) ?? 0 },
     mySubmission: null,
   }));
@@ -134,6 +138,7 @@ router.post("/lectures/:id/assignments", async (req, res) => {
       instructions: input.instructions,
       dueAt: input.dueAt ? new Date(input.dueAt) : null,
       maxScore: input.maxScore,
+      questions: input.questions,
     })
     .returning();
   const ids = await bookedStudentIds(lecture.id);
@@ -165,7 +170,7 @@ router.get("/assignments/:id", async (req, res) => {
   let studentId = user.id;
   if (user.role === "parent") {
     studentId = String(req.query.studentId ?? "");
-    if (!(await isParentOf(user.id, studentId))) throw forbidden();
+    if (!(await isParentOf(user.id, studentId)) || !(await hasConfirmedBooking([studentId], lecture.id))) throw forbidden();
   } else {
     await assertAccess(user, lecture);
   }
@@ -185,20 +190,30 @@ router.post("/assignments/:id/submit", async (req, res) => {
   if (!a) throw notFound("الواجب ده مش موجود");
   await assertAccess(user, await getLecture(a.lectureId));
   const input = parse(submissionInputSchema, req.body);
-  if (!input.body && input.attachmentIds.length === 0) throw badRequest("اكتب إجابتك أو ارفع صورة الحل");
-  const existing = await db.query.submissionsTable.findFirst({
-    where: and(eq(submissionsTable.assignmentId, id), eq(submissionsTable.studentId, user.id)),
+  if (input.attachmentIds.length) {
+    const owned = await db.select({ id: uploadsTable.id }).from(uploadsTable).where(and(inArray(uploadsTable.id, input.attachmentIds), eq(uploadsTable.ownerId, user.id)));
+    if (new Set(input.attachmentIds).size !== input.attachmentIds.length || owned.length !== input.attachmentIds.length) throw badRequest("أرفق الملفات التي رفعتها من حسابك فقط");
+  }
+  const automatic = a.questions.length > 0;
+  let score: number | null = null;
+  if (automatic) {
+    if (Object.keys(input.answers).length !== a.questions.length || a.questions.some(q => !Number.isInteger(input.answers[q.id]) || input.answers[q.id]! >= q.options.length)) throw badRequest("أجب عن جميع أسئلة الاختبار قبل التسليم");
+    score = a.questions.reduce((n, q) => n + (input.answers[q.id] === q.correctIndex ? q.points : 0), 0);
+  } else {
+    if (Object.keys(input.answers).length) throw badRequest("هذا الواجب لا يحتوي على أسئلة اختيارية");
+    if (!input.body && input.attachmentIds.length === 0) throw badRequest("اكتب إجابتك أو أرفق ملف الحل");
+  }
+  const { s, first } = await db.transaction(async tx => {
+    // Serialize submit/regrade for this assignment so a concurrent edit cannot replace graded work.
+    await tx.select({ id: assignmentsTable.id }).from(assignmentsTable).where(eq(assignmentsTable.id, id)).for("update");
+    const existing = await tx.query.submissionsTable.findFirst({ where: and(eq(submissionsTable.assignmentId, id), eq(submissionsTable.studentId, user.id)) });
+    if (existing?.gradedAt) throw badRequest("تم تصحيح هذا الواجب ولا يمكن تعديل الإجابة");
+    const values = { body: input.body, attachmentIds: input.attachmentIds, answers: input.answers, score, gradingMethod: automatic ? "automatic" as const : "manual" as const, feedback: automatic ? "صُحّح تلقائيًا وفق مفتاح الإجابة الذي حدده المدرس. يمكن للمدرس مراجعة الدرجة." : null, gradedAt: automatic ? new Date() : null, submittedAt: new Date() };
+    const [saved] = await tx.insert(submissionsTable).values({ assignmentId: id, studentId: user.id, ...values }).onConflictDoUpdate({ target: [submissionsTable.assignmentId, submissionsTable.studentId], set: values }).returning();
+    return { s: saved!, first: !existing };
   });
-  if (existing?.gradedAt) throw badRequest("الواجب اتصحّح خلاص، مينفعش تعدّله");
-  const [s] = await db
-    .insert(submissionsTable)
-    .values({ assignmentId: id, studentId: user.id, body: input.body, attachmentIds: input.attachmentIds })
-    .onConflictDoUpdate({
-      target: [submissionsTable.assignmentId, submissionsTable.studentId],
-      set: { body: input.body, attachmentIds: input.attachmentIds, submittedAt: new Date() },
-    })
-    .returning();
-  if (!existing) await notify([a.teacherId], { kind: "submission", title: `${user.name} سلّم الواجب`, body: a.title, link: `/t/assignments/${a.id}` });
+  if (first) await notify([a.teacherId], { kind: "submission", title: `${user.name} سلّم الواجب`, body: a.title, link: `/t/assignments/${a.id}` });
+  if (automatic) await announceGrade(a, user, score!, s.feedback ?? "");
   const [dto] = await submissionDTOs([s!], false);
   res.json(dto);
 });
@@ -212,15 +227,23 @@ router.post("/submissions/:id/grade", async (req, res) => {
   assertOwner(user, await getLecture(a!.lectureId));
   const { score, feedback } = parse(gradeInputSchema, req.body);
   if (score > a!.maxScore) throw badRequest(`أقصى درجة ${a!.maxScore}`);
-  const [graded] = await db.update(submissionsTable).set({ score, feedback, gradedAt: new Date() }).where(eq(submissionsTable.id, id)).returning();
+  const graded = await db.transaction(async tx => {
+    await tx.select({ id: assignmentsTable.id }).from(assignmentsTable).where(eq(assignmentsTable.id, a!.id)).for("update");
+    const [row] = await tx.update(submissionsTable).set({ score, feedback, gradingMethod: "manual", gradedAt: new Date() }).where(eq(submissionsTable.id, id)).returning();
+    return row!;
+  });
 
   const student = await db.query.usersTable.findFirst({ where: eq(usersTable.id, sub.studentId) });
-  const parents = await parentsOf(sub.studentId);
-  await notify([sub.studentId], { kind: "graded", title: "واجبك اتصحّح ✅", body: `${a!.title}: ${score}/${a!.maxScore}`, link: `/s/assignments/${a!.id}` });
-  await notify(parents.ids, { kind: "graded", title: `درجة جديدة لـ${student!.name}`, body: `${a!.title}: ${score}/${a!.maxScore}`, link: `/p/children/${sub.studentId}` });
-  void sendGraded({ student: student!, parentEmails: parents.emails, assignmentTitle: a!.title, score, maxScore: a!.maxScore, feedback, assignmentId: a!.id });
+  await announceGrade(a!, student!, score, feedback);
   const [dto] = await submissionDTOs([graded!], true);
   res.json(dto);
 });
+
+async function announceGrade(a: Assignment, student: User, score: number, feedback: string) {
+  const parents = await parentsOf(student.id);
+  await notify([student.id], { kind: "graded", title: "نتيجة واجبك جاهزة", body: `${a.title}: ${score}/${a.maxScore}`, link: `/s/assignments/${a.id}` });
+  await notify(parents.ids, { kind: "graded", title: `درجة جديدة لـ${student.name}`, body: `${a.title}: ${score}/${a.maxScore}`, link: `/p/children/${student.id}` });
+  void sendGraded({ student, parentEmails: parents.emails, assignmentTitle: a.title, score, maxScore: a.maxScore, feedback, assignmentId: a.id });
+}
 
 export default router;

@@ -1,3 +1,4 @@
+import { assertVerifiedTeacher } from "../lib/teacher-verification";
 import { Router } from "express";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import {
@@ -54,20 +55,31 @@ function toMessage(m: LectureMessage, author: Pick<User, "id" | "name" | "avatar
 
 router.post("/lectures/:id/live/start", async (req, res) => {
   const user = requireRole(req, "teacher");
+  if (env.isProd && !liveConfigured) throw badRequest("البث المباشر غير متاح حاليًا؛ يجب ربط خدمة البث أولًا.", "live_unavailable");
   const lecture = await getLecture(uuidParam(req.params.id));
   assertOwner(user, lecture);
   if (lecture.status === "live") return void res.json(await lectureDTO(lecture, user));
+  await assertVerifiedTeacher(user);
   if (lecture.status !== "scheduled") throw badRequest("الحصة دي مش متاحة للبث");
   if (lecture.startsAt.getTime() - Date.now() > LIVE_OPEN_MINUTES_BEFORE * 60_000) {
     throw badRequest(`تقدر تبدأ البث قبل الميعاد بـ${LIVE_OPEN_MINUTES_BEFORE} دقيقة بس`);
   }
 
-  const [live] = await db
-    .update(lecturesTable)
-    .set({ status: "live", liveStartedAt: new Date(), updatedAt: new Date() })
-    .where(eq(lecturesTable.id, lecture.id))
-    .returning();
-  await openRoom(live!);
+  const live = await db.transaction(async tx => {
+    if (env.livekit.maxRooms > 0) {
+      await tx.execute(sql`select pg_advisory_xact_lock(772102)`);
+      const active = await tx.select({ id: lecturesTable.id }).from(lecturesTable).where(eq(lecturesTable.status, "live"));
+      if (active.some(l => l.id === lecture.id)) return null;
+      if (active.length >= env.livekit.maxRooms) throw badRequest("التجربة الحالية تسمح بحصة مباشرة واحدة في الوقت نفسه. أنهِ الحصة المفتوحة أولًا.");
+    }
+    const [current] = await tx.select().from(lecturesTable).where(eq(lecturesTable.id, lecture.id)).for("update");
+    if (current!.status === "live") return null;
+    if (current!.status !== "scheduled") throw badRequest("تغيرت حالة الحصة ولم تعد متاحة للبث");
+    try { await openRoom(current!); } catch { throw badRequest("تعذر الاتصال بغرفة البث. لم تبدأ الحصة؛ حاول مجددًا."); }
+    const [row] = await tx.update(lecturesTable).set({ status: "live", liveStartedAt: new Date(), updatedAt: new Date() }).where(eq(lecturesTable.id, lecture.id)).returning();
+    return row!;
+  });
+  if (!live) return void res.json(await lectureDTO(await getLecture(lecture.id), user));
   const egressId = await startRecording(live!);
   if (egressId) await db.insert(recordingsTable).values({ lectureId: live!.id, provider: "livekit", egressId, status: "recording" });
 
@@ -113,7 +125,8 @@ export async function endLecture(lectureId: string) {
 router.post("/lectures/:id/live/token", async (req, res) => {
   const user = requireUser(req);
   const lecture = await getLecture(uuidParam(req.params.id));
-  const host = user.id === lecture.teacherId;
+  const host = user.role === "teacher" && user.id === lecture.teacherId;
+  if (host && lecture.status !== "live") await assertVerifiedTeacher(user);
   if (!host) {
     if (user.role !== "student") throw forbidden("البث للطلاب الحاجزين بس");
     await assertAccess(user, lecture);
@@ -137,20 +150,23 @@ router.post("/lectures/:id/heartbeat", async (req, res) => {
   const lecture = await getLecture(uuidParam(req.params.id));
   await assertAccess(user, lecture);
   const { mode } = parse(heartbeatSchema, req.body);
-  // Live time only counts while the lecture is actually live.
-  const live = mode === "live" && lecture.status === "live";
-  const step = HEARTBEAT_SECONDS;
-  await db
-    .insert(attendanceTable)
-    .values({ lectureId: lecture.id, studentId: user.id, liveSeconds: live ? step : 0, replaySeconds: live ? 0 : step })
-    .onConflictDoUpdate({
-      target: [attendanceTable.lectureId, attendanceTable.studentId],
-      set: {
-        liveSeconds: live ? sql`${attendanceTable.liveSeconds} + ${step}` : attendanceTable.liveSeconds,
-        replaySeconds: live ? attendanceTable.replaySeconds : sql`${attendanceTable.replaySeconds} + ${step}`,
-        lastSeenAt: new Date(),
-      },
-    });
+  const live = mode === "live";
+  if (live && lecture.status !== "live") throw badRequest("الحصة ليست مباشرة الآن");
+  if (!live) {
+    const recording = await db.query.recordingsTable.findFirst({ where: and(eq(recordingsTable.lectureId, lecture.id), eq(recordingsTable.status, "ready")) });
+    if (!recording?.url) throw badRequest("لا يوجد تسجيل متاح لهذه الحصة");
+  }
+  // Credit elapsed server time, capped to one heartbeat interval. Repeated requests
+  // and multiple tabs cannot inflate attendance or turn an inactive live into replay time.
+  const elapsed = sql`least(${HEARTBEAT_SECONDS}, greatest(0, floor(extract(epoch from (now() - ${attendanceTable.lastSeenAt})))))::int`;
+  await db.insert(attendanceTable).values({ lectureId: lecture.id, studentId: user.id, liveSeconds: 0, replaySeconds: 0 }).onConflictDoUpdate({
+    target: [attendanceTable.lectureId, attendanceTable.studentId],
+    set: {
+      liveSeconds: live ? sql`${attendanceTable.liveSeconds} + ${elapsed}` : attendanceTable.liveSeconds,
+      replaySeconds: live ? attendanceTable.replaySeconds : sql`${attendanceTable.replaySeconds} + ${elapsed}`,
+      lastSeenAt: sql`now()`,
+    },
+  });
   res.json({ ok: true });
 });
 
@@ -183,7 +199,8 @@ router.post("/lectures/:id/messages", async (req, res) => {
   await assertAccess(user, lecture);
   if (user.role === "parent") throw forbidden("أولياء الأمور بيتابعوا بس");
   const input = parse(messageInputSchema, req.body);
-  const host = user.id === lecture.teacherId;
+  const host = user.role === "teacher" && user.id === lecture.teacherId;
+  if (host && lecture.status !== "live") await assertVerifiedTeacher(user);
   // Students ask or comment; only the teacher answers.
   const kind = host ? (input.parentId ? "answer" : "comment") : input.kind === "answer" ? "question" : input.kind;
   const [m] = await db

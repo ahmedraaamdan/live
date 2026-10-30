@@ -30,8 +30,8 @@ export function AppDownloadSection() {
     <section className="app-promo-section">
       <div className="container-wide app-promo-grid">
         <div className="fade-up">
-          <SectionHeader kicker="التطبيق" title="حصصك معاك في كل مكان." />
-          <p className="app-promo-copy">اكتشف الحصص، تابع المدرسين، واحصل على تنبيهات أول ما الحصة تبدأ.</p>
+          <SectionHeader kicker="التطبيق" title="حصصك في متناولك." />
+          <p className="app-promo-copy">تصفح الحصص، وتابع مدرسيك، وتلقّ تنبيهات بمواعيدها.</p>
           <div className="app-promo-buttons">
             <StoreButton href={siteConfig.androidStoreUrl} label="حمّل التطبيق على" sub="Android" />
             <StoreButton href={siteConfig.iosStoreUrl} label="حمّل التطبيق على" sub="iPhone" />

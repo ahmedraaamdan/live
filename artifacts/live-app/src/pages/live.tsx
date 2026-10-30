@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import '@/styles/live-room.css';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   ArrowRight,
   CircleStop,
@@ -8,6 +9,8 @@ import {
   MicOff,
   MessagesSquare,
   MonitorUp,
+  Maximize2,
+  Minimize2,
   Radio,
   Share2,
   Video,
@@ -86,7 +89,7 @@ interface RoomProps {
 
 function TrackView({ track, className, mirror }: { track: LocalVideoTrack | RemoteVideoTrack | null; className?: string; mirror?: boolean }) {
   const ref = useRef<HTMLVideoElement>(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = ref.current;
     if (!el || !track) return;
     track.attach(el);
@@ -241,7 +244,7 @@ function Studio({ l, messages, viewers, upsert, board }: RoomProps) {
     if (!boardOn || !boardCanvas || roomStatus !== 'connected') return;
     let undo: (() => void) | undefined;
     let cancelled = false;
-    void publishCanvas(boardCanvas).then((u) => (cancelled ? u() : (undo = u)));
+    void publishCanvas(boardCanvas).then((u) => (cancelled ? u() : (undo = u))).catch(() => { if (!cancelled) toast('تعذر نشر فيديو السبورة. تظل السبورة التفاعلية متاحة للطلاب.'); });
     return () => {
       cancelled = true;
       undo?.();
@@ -260,7 +263,7 @@ function Studio({ l, messages, viewers, upsert, board }: RoomProps) {
           <p className="mt-2 text-body-lg text-on-stage/70">
             <span className="font-num">{questions.length}</span> سؤال · {questions.filter((q) => !q.answered).length > 0 ? `${questions.filter((q) => !q.answered).length} لسه من غير رد` : 'كل الأسئلة اتجاوبت'}
           </p>
-          <p className="mt-1 text-body-md text-on-stage/60">التسجيل بيتجهّز، والطلاب هيوصلهم إشعار أول ما يبقى جاهز.</p>
+          <p className="mt-1 text-body-md text-on-stage/60">يمكنك الآن مراجعة الأسئلة وإضافة الواجب من صفحة الحصة.</p>
           <div className="mt-8 flex flex-col gap-3">
             <Button size="lg" block onClick={() => navigate(`/lectures/${l.id}`, { replace: true })}>
               نزّل واجب ورد على الأسئلة
@@ -274,7 +277,8 @@ function Studio({ l, messages, viewers, upsert, board }: RoomProps) {
     );
   }
 
-  const mainTrack = room.screen ?? room.camera;
+  const screenTrack = room.screenIsBoard && !boardOn ? null : room.screen;
+  const mainTrack = screenTrack ?? room.camera;
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-stage lg:flex-row">
       {celebrate && <Confetti />}
@@ -284,7 +288,7 @@ function Studio({ l, messages, viewers, upsert, board }: RoomProps) {
           viewers={viewers}
           onBack={() => navigate(`/lectures/${l.id}`)}
           extra={
-            <IconButton label="ابعت اللينك" variant="stage" onClick={() => setShare(true)}>
+            <IconButton label="مشاركة الرابط" variant="stage" onClick={() => setShare(true)}>
               <Share2 />
             </IconButton>
           }
@@ -295,7 +299,7 @@ function Studio({ l, messages, viewers, upsert, board }: RoomProps) {
               <Whiteboard state={board.state} editable onOps={board.send} onCanvas={setBoardCanvas} className="flex-1" />
             </div>
           ) : live && configured && mainTrack ? (
-            <TrackView track={mainTrack} mirror={!room.screen} />
+            <TrackView track={mainTrack} mirror={!screenTrack} />
           ) : preview.stream ? (
             <StreamView stream={preview.stream} />
           ) : (
@@ -303,7 +307,7 @@ function Studio({ l, messages, viewers, upsert, board }: RoomProps) {
               {preview.error ? <p className="max-w-xs text-center text-body-md">{preview.error}</p> : <Spinner className="size-8" />}
             </div>
           )}
-          {!boardOn && live && configured && room.screen && room.camera && (
+          {!boardOn && live && configured && screenTrack && room.camera && (
             <div className="absolute end-3 bottom-24 h-28 w-40 overflow-hidden rounded-md shadow-e4 ring-2 ring-white/20 md:h-36 md:w-56">
               <TrackView track={room.camera} mirror />
             </div>
@@ -325,7 +329,7 @@ function Studio({ l, messages, viewers, upsert, board }: RoomProps) {
                 <p className="text-body-lg text-on-stage/80">{l.seatsTaken} طالب حاجز</p>
                 {tooEarly ? (
                   <p className="mt-2 text-title-lg">
-                    زرار البث بيفتح قبل الميعاد بـ{LIVE_OPEN_MINUTES_BEFORE} دقيقة · <Countdown to={l.startsAt} />
+                    يتاح زر البث قبل الموعد بـ{LIVE_OPEN_MINUTES_BEFORE} دقيقة · <Countdown to={l.startsAt} />
                   </p>
                 ) : (
                   <p className="mt-2 text-headline-sm">جاهز؟ الطلاب مستنيينك 🎬</p>
@@ -374,15 +378,15 @@ function Studio({ l, messages, viewers, upsert, board }: RoomProps) {
       <Sheet
         open={confirmEnd}
         onOpenChange={setConfirmEnd}
-        title="تنهي البث؟"
-        description="الطلاب هيخرجوا والتسجيل هيتحفظ. مينفعش ترجع تفتح نفس البث تاني."
+        title="إنهاء البث؟"
+        description="سينتهي البث لدى الطلاب. لا يمكن إعادة فتح الحصة نفسها بعد إنهائها."
         footer={
           <>
             <Button variant="danger" block loading={end.isPending} onClick={() => end.mutate()}>
-              أيوه، انهي البث
+              إنهاء البث
             </Button>
             <Button variant="outlined" block onClick={() => setConfirmEnd(false)}>
-              كمّل
+              متابعة الحصة
             </Button>
           </>
         }
@@ -396,9 +400,31 @@ function Studio({ l, messages, viewers, upsert, board }: RoomProps) {
 // ---------------------------------------------------------------- student
 
 function Viewer({ l, messages, viewers, upsert, board }: RoomProps) {
+  const qc = useQueryClient();
   const [, navigate] = useLocation();
   const live = l.status === 'live';
   const [panel, setPanel] = useState<'qa' | 'none'>('qa');
+  const [focusMode, setFocusMode] = useState(false);
+  const viewer = useRef<HTMLDivElement>(null);
+  const nativeFullscreen = useRef(false);
+  const toggleFullscreen = async () => {
+    const orientation = screen.orientation as ScreenOrientation & { lock?: (value: string) => Promise<void> };
+    if (focusMode) {
+      if (document.fullscreenElement === viewer.current) await document.exitFullscreen().catch(() => undefined);
+      orientation?.unlock?.(); nativeFullscreen.current = false; setFocusMode(false); return;
+    }
+    setFocusMode(true);
+    try {
+      if (viewer.current?.requestFullscreen) { await viewer.current.requestFullscreen(); nativeFullscreen.current = true; }
+      if (orientation?.lock) await orientation.lock('landscape');
+      else if (matchMedia('(pointer: coarse)').matches) toast('يمكنك تدوير الهاتف أفقيًا لتوسيع الصورة.');
+    } catch { if (matchMedia('(pointer: coarse)').matches) toast('أدر الهاتف أفقيًا إذا لم يسمح المتصفح بالتدوير التلقائي.'); }
+  };
+  useEffect(() => {
+    const changed = () => { if (nativeFullscreen.current && !document.fullscreenElement) { nativeFullscreen.current = false; setFocusMode(false); screen.orientation?.unlock?.(); } };
+    document.addEventListener('fullscreenchange', changed);
+    return () => { document.removeEventListener('fullscreenchange', changed); if (nativeFullscreen.current) { void document.exitFullscreen().catch(() => undefined); screen.orientation?.unlock?.(); } };
+  }, []);
   const token = useQuery({
     queryKey: ['live-token', l.id, live],
     queryFn: () => api<LiveTokenDTO>(`/lectures/${l.id}/live/token`, { method: 'POST' }),
@@ -413,12 +439,15 @@ function Viewer({ l, messages, viewers, upsert, board }: RoomProps) {
   useEffect(() => {
     if (!live) return;
     const beat = () => {
-      if (document.visibilityState === 'visible') void api(`/lectures/${l.id}/heartbeat`, { body: { mode: 'live' } }).catch(() => undefined);
+      if (document.visibilityState === 'visible') void api(`/lectures/${l.id}/heartbeat`, { body: { mode: 'live' } }).then(() => {
+        void qc.invalidateQueries({ queryKey: ['lecture', l.id] });
+      }).catch(() => undefined);
     };
     beat();
     const t = setInterval(beat, HEARTBEAT_SECONDS * 1000);
-    return () => clearInterval(t);
-  }, [live, l.id]);
+    document.addEventListener('visibilitychange', beat);
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', beat); };
+  }, [live, l.id, qc]);
 
   if (token.error)
     return (
@@ -451,21 +480,23 @@ function Viewer({ l, messages, viewers, upsert, board }: RoomProps) {
       </div>
     );
 
-  const mainTrack = room.screen ?? room.camera;
+  const screenTrack = room.screenIsBoard && !board.state.on ? null : room.screen;
+  const mainTrack = screenTrack ?? room.camera;
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-stage lg:flex-row">
-      <div className="relative flex min-h-0 min-w-0 flex-col lg:flex-1">
+    <div ref={viewer} className={cn("live-viewer flex h-dvh flex-col overflow-hidden bg-stage lg:flex-row", focusMode && "live-viewer-focus")}>
+      <div className={cn("live-viewer-main relative flex min-h-0 min-w-0 flex-col lg:flex-1", focusMode && "flex-1")}>
         <TopOverlay
           l={l}
           viewers={viewers}
-          onBack={() => navigate(`/lectures/${l.id}`)}
+          onBack={() => focusMode ? void toggleFullscreen() : navigate(`/lectures/${l.id}`)}
           extra={
-            <IconButton label="الأسئلة" variant="stage" className="lg:hidden" onClick={() => setPanel(panel === 'qa' ? 'none' : 'qa')}>
-              <MessagesSquare />
-            </IconButton>
+            <>
+              <IconButton label={focusMode ? 'تصغير الفيديو' : 'تكبير الفيديو'} variant="stage" onClick={() => void toggleFullscreen()}>{focusMode ? <Minimize2 /> : <Maximize2 />}</IconButton>
+              {!focusMode && <IconButton label="الأسئلة" variant="stage" className="lg:hidden" onClick={() => setPanel(panel === 'qa' ? 'none' : 'qa')}><MessagesSquare /></IconButton>}
+            </>
           }
         />
-        <div className={cn('relative w-full bg-black', panel === 'qa' && !board.state.on ? 'aspect-video lg:aspect-auto lg:min-h-0 lg:flex-1' : 'min-h-0 flex-1', panel === 'qa' && board.state.on && 'max-lg:h-[52dvh] max-lg:flex-none')}>
+        <div className={cn('live-viewer-video relative w-full bg-black', focusMode ? 'min-h-0 flex-1' : panel === 'qa' && !board.state.on ? 'aspect-video lg:aspect-auto lg:min-h-0 lg:flex-1' : 'min-h-0 flex-1', panel === 'qa' && board.state.on && 'max-lg:h-[52dvh] max-lg:flex-none')}>
           {live && board.state.on ? (
             <div className="flex size-full flex-col pt-[calc(var(--safe-top)+4rem)]">
               <Whiteboard state={board.state} remoteDraft={board.draft} pointer={board.pointer} className="flex-1" />
@@ -498,7 +529,7 @@ function Viewer({ l, messages, viewers, upsert, board }: RoomProps) {
               </div>
             </div>
           )}
-          {live && configured && !board.state.on && room.screen && room.camera && (
+          {live && configured && !board.state.on && screenTrack && room.camera && (
             <div className="absolute end-3 bottom-3 h-24 w-36 overflow-hidden rounded-md shadow-e4 ring-2 ring-white/20 md:h-32 md:w-48">
               <TrackView track={room.camera} />
             </div>
@@ -514,13 +545,13 @@ function Viewer({ l, messages, viewers, upsert, board }: RoomProps) {
             </div>
           )}
         </div>
-        {live && (
+        {live && !focusMode && (
           <div className="hidden items-center gap-3 border-t border-white/10 px-4 py-3 lg:flex">
             <VoteBar lecture={l} dark />
           </div>
         )}
       </div>
-      {panel === 'qa' && (
+      {!focusMode && panel === 'qa' && (
         <div className="flex min-h-0 flex-1 flex-col lg:w-[380px] lg:flex-none lg:shrink-0 lg:border-s lg:border-white/10">
           <QaPanel
             l={l}

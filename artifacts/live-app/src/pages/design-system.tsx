@@ -124,8 +124,8 @@ export function DesignSystem() {
                 ['display-sm', 'الحصة الحلوة بقت لايف'],
                 ['headline-lg', 'الكهربية التيارية'],
                 ['headline-md', 'حجزك اتأكد!'],
-                ['headline-sm', 'الحصة الجاية'],
-                ['title-lg', 'واجبات مستنياك'],
+                ['headline-sm', 'الحصة القادمة'],
+                ['title-lg', 'واجبات بانتظارك'],
                 ['title-md', 'أ. محمد سامي'],
                 ['title-sm', 'سؤال من يوسف'],
                 ['body-lg', 'مدرسك بيشرح لايف، وانت بتسأل وهو بيرد.'],
@@ -206,8 +206,8 @@ export function DesignSystem() {
           <div className="grid gap-5 md:grid-cols-2">
             <TextField label="الإيميل" placeholder="name@example.com" ltr hint="هنبعتلك عليه تأكيد الحجز" />
             <TextField label="الباسورد" type="password" error="الباسورد لازم يكون 8 حروف على الأقل" />
-            <Select label="الصف" placeholder="اختار" options={[{ value: 's3', label: 'تالتة ثانوي' }]} defaultValue="" />
-            <TextArea label="هتشرح إيه؟" rows={2} />
+            <Select label="الصف" placeholder="اختر" options={[{ value: 's3', label: 'تالتة ثانوي' }]} defaultValue="" />
+            <TextArea label="ماذا ستشرح في الحصة؟" rows={2} />
           </div>
           <div className="mt-5 flex flex-col gap-4">
             <Segmented
@@ -216,7 +216,7 @@ export function DesignSystem() {
               onChange={setSeg}
               options={[
                 { value: 'a', label: 'الجاية' },
-                { value: 'b', label: 'اللي فاتت' },
+                { value: 'b', label: 'السابقة' },
                 { value: 'c', label: 'المسودات' },
               ]}
             />
@@ -228,7 +228,7 @@ export function DesignSystem() {
               <Chip icon={<CalendarPlus />}>النهارده</Chip>
             </div>
             <div className="max-w-md">
-              <Switch checked={sw} onChange={setSw} label="افتح الحجز" description="اللينك شغال والطلاب يقدروا يحجزوا" />
+              <Switch checked={sw} onChange={setSw} label="افتح الحجز" description="الرابط متاح ويمكن للطلاب الحجز" />
             </div>
           </div>
         </Section>
@@ -270,10 +270,10 @@ export function DesignSystem() {
 
         <Section n="07" title="الأسطح والقوائم">
           <StatGrid>
-            <Stat icon={<Wallet />} tone="success" label="دخلك الشهر ده" value="12,450 ج.م" />
+            <Stat icon={<Wallet />} tone="success" label="دخلك هذا الشهر" value="12,450 ج.م" />
             <Stat icon={<Heart />} tone="primary" label="تقييم" value="94%" hint="من 320 تقييم" />
             <Stat label="طلاب" value="128" />
-            <Stat label="حصص جاية" value="6" tone="tertiary" icon={<CalendarPlus />} />
+            <Stat label="حصص قادمة" value="6" tone="tertiary" icon={<CalendarPlus />} />
           </StatGrid>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <List>
@@ -311,7 +311,7 @@ export function DesignSystem() {
           <div className="grid gap-4 md:grid-cols-2">
             <LectureCard lecture={SAMPLE} showTeacher />
             <Card>
-              <EmptyState icon={<CalendarPlus />} title="جدولك فاضي" body="اعمل أول حصة وابعت اللينك لطلابك." action={<Button>اعمل حصة</Button>} />
+              <EmptyState icon={<CalendarPlus />} title="جدولك بانتظار أول حصة" body="اعمل أول حصة ومشاركة الرابط لطلابك." action={<Button>إنشاء حصة</Button>} />
             </Card>
           </div>
         </Section>

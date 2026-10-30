@@ -5,9 +5,9 @@ const KEY = 'gl.theme';
 export function getTheme(): ThemeChoice {
   try {
     const v = localStorage.getItem(KEY);
-    return v === 'light' || v === 'dark' ? v : 'system';
+    return v === 'light' || v === 'dark' || v === 'system' ? v : 'light';
   } catch {
-    return 'system';
+    return 'light';
   }
 }
 
@@ -16,8 +16,7 @@ export function setTheme(choice: ThemeChoice) {
   if (choice === 'system') delete root.dataset.theme;
   else root.dataset.theme = choice;
   try {
-    if (choice === 'system') localStorage.removeItem(KEY);
-    else localStorage.setItem(KEY, choice);
+    localStorage.setItem(KEY, choice);
   } catch {
     // Not persisted in private mode; still applied for this visit.
   }

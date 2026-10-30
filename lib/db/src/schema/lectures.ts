@@ -29,6 +29,7 @@ export const lecturesTable = pgTable(
     subject: text("subject").notNull(),
     grade: text("grade").notNull(),
     description: text("description").notNull().default(""),
+    coverUrl: text("cover_url"),
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
     durationMin: integer("duration_min").notNull(),
     priceCents: integer("price_cents").notNull(),
@@ -63,6 +64,8 @@ export const bookingsTable = pgTable(
     pricePaidCents: integer("price_paid_cents").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+    /** Identifies the payment that granted this seat, so refunding a duplicate cannot revoke it. */
+    confirmedPaymentId: uuid("confirmed_payment_id"),
   },
   (t) => [uniqueIndex("bookings_lecture_student_idx").on(t.lectureId, t.studentId), index("bookings_student_idx").on(t.studentId)],
 );

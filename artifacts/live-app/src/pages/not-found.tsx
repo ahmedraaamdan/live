@@ -8,7 +8,7 @@ export function NotFound() {
     <div className="grid min-h-dvh place-items-center px-5">
       <EmptyState
         icon={<Compass />}
-        title="الصفحة دي مش موجودة"
+        title="هذه الصفحة غير موجودة"
         body="ممكن اللينك اتغير أو اتكتب غلط."
         action={
           <Button size="lg" onClick={() => navigate('/', { replace: true })}>

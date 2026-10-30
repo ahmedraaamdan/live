@@ -1,3 +1,4 @@
+import { QueryError } from '@/components/query-error';
 import { useState } from 'react';
 import { CalendarCheck, Clock, NotebookPen, Plus, Star, UserPlus } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -51,6 +52,7 @@ export function ParentHome() {
     <>
       <TopBar title={`أهلاً ${me.user.name.split(' ')[0]}`} large subtitle="متابعة أولادك أول بأول" actions={<NotificationsButton />} />
       <Page>
+        {q.isError && <QueryError error={q.error} retry={q.refetch} />}
         {q.isPending && <div className="skeleton h-56 rounded-xl" />}
         {q.data?.length === 0 && (
           <EmptyState
@@ -83,7 +85,7 @@ export function ParentHome() {
                 <div className="mt-5 flex items-center gap-3 rounded-md bg-surface-container p-3">
                   <CalendarCheck className="size-5 text-secondary" />
                   <span className="min-w-0 flex-1 truncate text-body-md">
-                    الحصة الجاية: <span className="text-title-sm">{c.next.title}</span>
+                    الحصة القادمة: <span className="text-title-sm">{c.next.title}</span>
                   </span>
                   <span className="shrink-0 text-body-sm text-on-surface-variant">{fmtDateTime(c.next.startsAt)}</span>
                 </div>
@@ -92,7 +94,7 @@ export function ParentHome() {
           ))}
           {q.data && q.data.length > 0 && (
             <Button variant="outlined" onClick={() => setOpen(true)} className="self-start">
-              <Plus /> اربط حساب تاني
+              <Plus /> ربط حساب آخر
             </Button>
           )}
         </div>
@@ -175,7 +177,7 @@ export function ChildDetail({ id }: { id: string }) {
         />
         {tab === 'lectures' &&
           (c.lectures.length === 0 ? (
-            <EmptyState icon={<CalendarCheck />} title="مفيش حصص محجوزة" />
+            <EmptyState icon={<CalendarCheck />} title="لا توجد حصص محجوزة" />
           ) : (
             <List>
               {c.lectures.map(({ lecture: l, attendedSeconds }) => {
@@ -203,7 +205,7 @@ export function ChildDetail({ id }: { id: string }) {
           ))}
         {tab === 'homework' &&
           (c.assignments.length === 0 ? (
-            <EmptyState icon={<NotebookPen />} title="مفيش واجبات لسه" />
+            <EmptyState icon={<NotebookPen />} title="لا توجد واجبات بعد" />
           ) : (
             <List>
               {c.assignments.map((a) => (
@@ -232,7 +234,7 @@ export function ChildDetail({ id }: { id: string }) {
           ))}
         {tab === 'payments' &&
           (c.payments.length === 0 ? (
-            <EmptyState icon={<Star />} title="مفيش مدفوعات" />
+            <EmptyState icon={<Star />} title="لا توجد مدفوعات" />
           ) : (
             <List>
               {c.payments.map((p) => (

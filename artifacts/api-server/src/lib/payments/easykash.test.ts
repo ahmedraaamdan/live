@@ -1,0 +1,20 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { easykashAmountCents, easykashPaymentId, easykashReference, verifyEasykashCallback, easykashProvider, easykashMethod } from "./easykash";
+import type { CheckoutInput } from "./provider";
+// Public example from EasyKash documentation, not merchant credentials.
+const publicSecret = "da9fe30575517d987762a859842b5631";
+const example = { ProductCode:"EDV4471",Amount:"11.00",ProductType:"Direct Pay",PaymentMethod:"Cash Through Fawry",status:"PAID",easykashRef:"2911105009",customerReference:"TEST11111",signatureHash:"0bd9ce502950ffa358314c170dace42e7ba3e0c776f5a32eb15c3d496bc9c294835036dd90d4f287233b800c9bde2f6591b6b8a1f675b6bfe64fd799da29d1d0" };
+test('matches the official SHA512 fixture',()=>assert.equal(verifyEasykashCallback(example,publicSecret),true));
+test('rejects modified signed fields',()=>{for(const key of ['Amount','status','customerReference','ProductCode','easykashRef'])assert.equal(verifyEasykashCallback({...example,[key]:'tampered'},publicSecret),false);});
+test('rejects absent, malformed, and legacy signatures',()=>{for(const signatureHash of ['', 'g'.repeat(128),'a'.repeat(64)])assert.equal(verifyEasykashCallback({...example,signatureHash},publicSecret),false);});
+test('reads exact piastres without permissive number coercion',()=>{assert.equal(easykashAmountCents('10.05'),1005);assert.equal(easykashAmountCents('10'),1000);assert.equal(easykashAmountCents('0.01'),1);});
+test('rejects malformed, negative, non-finite or overprecise amounts',()=>{for(const value of [null,undefined,'','NaN','1e3','1,000.00','-1','0.001','10 EGP','Infinity'])assert.equal(easykashAmountCents(value),null);});
+test('rejects unsafe numeric amounts',()=>assert.equal(easykashAmountCents('999999999999999999999'),null));
+test('references belong to Live only',()=>{const id='123e4567-e89b-42d3-a456-426614174000';assert.equal(easykashPaymentId(easykashReference(id)),id);assert.equal(easykashPaymentId('agent_'+id),null);assert.equal(easykashPaymentId(id),null);});
+test('maps cash without labelling it as a bank card',()=>{assert.equal(easykashMethod('Cash Through Fawry'),'cash');assert.equal(easykashMethod('Mobile Wallet'),'wallet');assert.equal(easykashMethod('unknown'),undefined);});
+const input = { payment:{id:'123e4567-e89b-42d3-a456-426614174000',amountCents:1005},lecture:{title:'حصة اختبار'},payer:{name:'طالب اختبار',email:'student@test.invalid',phone:'01000000000'} } as unknown as CheckoutInput;
+test('checkout uses a product namespace and exact EGP conversion',async t=>{let request:Record<string,unknown>={};t.mock.method(globalThis,'fetch',async(_url:unknown,options:RequestInit)=>{request=JSON.parse(String(options.body));return new Response(JSON.stringify({redirectUrl:'https://www.easykash.net/DirectPayV1/demo'}),{status:200});});const result=await easykashProvider.createCheckout(input);assert.equal(request.amount,10.05);assert.equal(request.currency,'EGP');assert.equal(request.customerReference,'glive_'+input.payment.id);assert.equal(request.cashExpiry,1);assert.match(result.checkoutUrl,/easykash.net/);});
+test('rejects a non-EasyKash redirect',async t=>{t.mock.method(globalThis,'fetch',async()=>new Response(JSON.stringify({redirectUrl:'https://evil.test/'}),{status:200}));await assert.rejects(()=>easykashProvider.createCheckout(input),/Unexpected/);});
+test('requires a genuine customer phone before opening a checkout',async()=>{await assert.rejects(()=>easykashProvider.createCheckout({...input,payer:{...input.payer,phone:''}}),/phone/);});
+test('never pretends a manual refund was automatic',async()=>{await assert.rejects(()=>easykashProvider.refund(input.payment),/merchant-dashboard/);});

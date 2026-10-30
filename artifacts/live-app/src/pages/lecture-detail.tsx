@@ -1,3 +1,10 @@
+import { HomeworkTemplates } from '@/components/homework-templates';
+import { fromCairoInput, toCairoInput } from '@/lib/calendar';
+import { useCapabilities } from '@/lib/capabilities';
+import { LessonArtwork } from '@/components/lesson-artwork';
+import '@/styles/lesson.css';
+import { QuizEditor, newQuestion } from '@/components/quiz-editor';
+import type { QuizQuestion } from '@workspace/live-core';
 import { useEffect, useRef, useState } from 'react';
 import {
   CalendarClock,
@@ -15,7 +22,7 @@ import {
   Users,
   Wallet,
 } from 'lucide-react';
-import { useLocation } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   HEARTBEAT_SECONDS,
@@ -82,7 +89,8 @@ export function LectureDetail({ id }: { id: string }) {
 
 function LectureHeader({ l, showTeacher }: { l: LectureDTO; showTeacher?: boolean }) {
   return (
-    <div className="mb-6">
+    <div className="lesson-detail-header">
+      <div className="lesson-detail-copy">
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone="primary">{subjectLabel(l.subject)}</Badge>
         <Badge>{gradeLabel(l.grade)}</Badge>
@@ -99,15 +107,16 @@ function LectureHeader({ l, showTeacher }: { l: LectureDTO; showTeacher?: boolea
         <span className="font-num text-title-sm text-on-surface">{l.priceCents ? money(l.priceCents) : 'مجانية'}</span>
       </div>
       {showTeacher && (
-        <div className="mt-4 flex items-center gap-3">
+        <Link href={`/teachers/${l.teacher.id}`} className="teacher-link mt-4 flex items-center gap-3" aria-label={`ملف المدرس ${l.teacher.name}`}>
           <Avatar name={l.teacher.name} src={l.teacher.avatarUrl} />
           <div>
             <p className="text-title-md">{l.teacher.name}</p>
             {l.teacher.headline && <p className="text-body-sm text-on-surface-variant">{l.teacher.headline}</p>}
           </div>
-        </div>
+        </Link>
       )}
-      {l.description && <p className="mt-4 text-body-lg whitespace-pre-wrap text-on-surface-variant">{l.description}</p>}
+      {l.description && <p className="lesson-detail-description">{l.description}</p>}
+      </div><LessonArtwork subject={l.subject} label={subjectLabel(l.subject)} coverUrl={l.coverUrl} />
     </div>
   );
 }
@@ -128,7 +137,7 @@ function TeacherLecture({ l }: { l: LectureDTO }) {
       qc.setQueryData(['lecture', l.id], x);
       qc.invalidateQueries({ queryKey: ['lectures'] });
       setConfirmCancel(false);
-      toast('اتلغت الحصة، والفلوس هترجع للطلاب');
+      toast('أُلغيت الحصة. يمكنك متابعة طلبات الاسترداد من سجل المدفوعات.');
     },
     onError: (e) => toast(errorMessage(e)),
   });
@@ -176,7 +185,7 @@ function TeacherLecture({ l }: { l: LectureDTO }) {
               <Countdown to={l.startsAt} className="text-headline-md" />
             </div>
             <Button variant="tonal" onClick={() => setShare(true)}>
-              <Share2 /> ابعت اللينك
+              <Share2 /> مشاركة الرابط
             </Button>
           </Card>
         )}
@@ -232,7 +241,7 @@ function StudentsTab({ l }: { l: LectureDTO }) {
   const byStudent = new Map((attendance.data ?? []).map((a) => [a.student.id, a]));
   const maxSecs = l.durationMin * 60;
   if (bookings.isPending) return <div className="skeleton h-40" />;
-  if (!bookings.data?.length) return <EmptyState icon={<Users />} title="لسه محدش حجز" body="ابعت لينك الحجز لطلابك على واتساب، وأول ما حد يدفع هيظهر هنا." />;
+  if (!bookings.data?.length) return <EmptyState icon={<Users />} title="لم تصل حجوزات بعد" body="مشاركة رابط الحجز لطلابك على واتساب، وأول ما حد يدفع هيظهر هنا." />;
   return (
     <List>
       {bookings.data.map((b) => {
@@ -278,7 +287,7 @@ export function QaHistory({ l, host }: { l: LectureDTO; host?: boolean }) {
   if (q.isPending) return <div className="skeleton h-40" />;
   const { top, answers } = threadMessages(q.data ?? []);
   const open = top.filter((m) => m.kind === 'question' && !m.answered).length;
-  if (top.length === 0) return <EmptyState icon={<MessagesSquare />} title="مفيش أسئلة لسه" body="أسئلة الطلاب وتعليقاتهم أثناء البث بتتحفظ هنا." />;
+  if (top.length === 0) return <EmptyState icon={<MessagesSquare />} title="لا توجد أسئلة بعد" body="أسئلة الطلاب وتعليقاتهم أثناء البث بتتحفظ هنا." />;
   return (
     <>
       {host && open > 0 && (
@@ -298,7 +307,7 @@ export function QaHistory({ l, host }: { l: LectureDTO; host?: boolean }) {
         description={replyTo?.body}
         footer={
           <Button block disabled={!reply.trim()} loading={send.isPending} onClick={() => send.mutate()}>
-            ابعت الرد
+            إرسال الرد
           </Button>
         }
       >
@@ -313,7 +322,9 @@ function HomeworkTab({ l }: { l: LectureDTO }) {
   const [, navigate] = useLocation();
   const q = useQuery({ queryKey: ['assignments', l.id], queryFn: () => api<AssignmentDTO[]>(`/assignments?lectureId=${l.id}`) });
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ title: '', instructions: '', dueAt: toLocalInput(new Date(Date.now() + 3 * 86_400_000)), maxScore: '10' });
+  const [mode, setMode] = useState<'manual' | 'quiz'>('manual');
+  const [questions, setQuestions] = useState<QuizQuestion[]>([newQuestion()]);
+  const [form, setForm] = useState({ title: '', instructions: '', dueAt: toCairoInput(new Date(Date.now() + 3 * 86_400_000)), maxScore: '10' });
   const [error, setError] = useState<string | null>(null);
   const create = useMutation({
     mutationFn: (body: unknown) => api<AssignmentDTO>(`/lectures/${l.id}/assignments`, { body }),
@@ -321,12 +332,16 @@ function HomeworkTab({ l }: { l: LectureDTO }) {
       qc.invalidateQueries({ queryKey: ['assignments'] });
       setOpen(false);
       setForm({ ...form, title: '', instructions: '' });
-      toast('نزل الواجب، والطلاب وصلهم إيميل');
+      setQuestions([newQuestion()]);
+      setMode('manual');
+      toast('نُشر الواجب وأُرسل إشعار إلى الطلاب');
     },
     onError: (e) => setError(errorMessage(e)),
   });
   const submit = () => {
-    const body = { title: form.title, instructions: form.instructions, dueAt: form.dueAt ? new Date(form.dueAt).toISOString() : null, maxScore: Number(form.maxScore) };
+    const due = form.dueAt ? fromCairoInput(form.dueAt) : null;
+    if (form.dueAt && !due) return setError('أدخل موعدًا صحيحًا');
+    const body = { title: form.title, instructions: form.instructions, dueAt: due?.toISOString() ?? null, maxScore: mode === 'quiz' ? questions.reduce((n, q) => n + q.points, 0) : Number(form.maxScore), questions: mode === 'quiz' ? questions : [] };
     const v = assignmentInputSchema.safeParse(body);
     if (!v.success) return setError(v.error.issues[0]?.message ?? null);
     setError(null);
@@ -339,7 +354,9 @@ function HomeworkTab({ l }: { l: LectureDTO }) {
           <Plus /> واجب جديد
         </Button>
       </div>
-      {q.data?.length === 0 && <EmptyState icon={<NotebookPen />} title="مفيش واجب على الحصة دي" body="نزّل واجب، وكل طالب حاجز هيوصله إيميل وإشعار." />}
+      {q.isPending && <div className="skeleton h-32 rounded-lg" />}
+      {q.isError && <Banner tone="error">{errorMessage(q.error)} <Button variant="text" onClick={() => void q.refetch()}>إعادة المحاولة</Button></Banner>}
+      {q.data?.length === 0 && <EmptyState icon={<NotebookPen />} title="لا يوجد واجب لهذه الحصة" body="نزّل واجب، وكل طالب حاجز هيوصله إيميل وإشعار." />}
       {q.data && q.data.length > 0 && (
         <List>
           {q.data.map((a) => (
@@ -364,18 +381,21 @@ function HomeworkTab({ l }: { l: LectureDTO }) {
         title="واجب جديد"
         footer={
           <Button block loading={create.isPending} onClick={submit}>
-            نزّل الواجب
+            نشر الواجب
           </Button>
         }
       >
         <div className="flex flex-col gap-4">
           {error && <Banner tone="error">{error}</Banner>}
+          <HomeworkTemplates draft={() => ({ title: form.title, instructions: form.instructions, maxScore: mode === 'quiz' ? questions.reduce((n, q) => n + q.points, 0) : Number(form.maxScore), questions: mode === 'quiz' ? questions : [] })} apply={template => { setForm(current => ({ ...current, title: template.title, instructions: template.instructions, maxScore: String(template.maxScore) })); setQuestions(template.questions.length ? template.questions.map(question => ({ ...question, id: crypto.randomUUID(), options: [...question.options] })) : [newQuestion()]); setMode(template.questions.length ? 'quiz' : 'manual'); setError(null); }} />
+          <Segmented value={mode} onChange={setMode} options={[{ value: 'manual', label: 'واجب كتابي' }, { value: 'quiz', label: 'تصحيح تلقائي' }]} />
           <TextField label="العنوان" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="مسائل على قانون أوم" />
           <TextArea label="المطلوب" value={form.instructions} onChange={(e) => setForm({ ...form, instructions: e.target.value })} rows={4} placeholder="حل المسائل من 1 لـ 5 في الكتاب، وصوّر الحل." />
           <div className="grid grid-cols-2 gap-4">
-            <TextField label="آخر ميعاد" type="datetime-local" ltr value={form.dueAt} onChange={(e) => setForm({ ...form, dueAt: e.target.value })} />
-            <TextField label="الدرجة النهائية" type="number" inputMode="numeric" ltr value={form.maxScore} onChange={(e) => setForm({ ...form, maxScore: e.target.value })} />
+            <TextField label="آخر موعد بتوقيت القاهرة" type="datetime-local" ltr value={form.dueAt} onChange={(e) => setForm({ ...form, dueAt: e.target.value })} />
+            <TextField label="الدرجة النهائية" type="number" min={1} max={1000} disabled={mode === 'quiz'} inputMode="numeric" ltr value={mode === 'quiz' ? questions.reduce((n, q) => n + q.points, 0) : form.maxScore} onChange={(e) => setForm({ ...form, maxScore: e.target.value })} />
           </div>
+          {mode === 'quiz' && <QuizEditor questions={questions} onChange={setQuestions} />}
           <button type="button" className="sr-only" onClick={() => navigate('/t/assignments')}>
             كل الواجبات
           </button>
@@ -386,6 +406,7 @@ function HomeworkTab({ l }: { l: LectureDTO }) {
 }
 
 function RecordingTab({ l }: { l: LectureDTO }) {
+  const capabilities = useCapabilities();
   const qc = useQueryClient();
   const [url, setUrl] = useState('');
   const attach = useMutation({
@@ -404,8 +425,8 @@ function RecordingTab({ l }: { l: LectureDTO }) {
       ) : (
         <EmptyState
           icon={<Film />}
-          title={l.status === 'ended' ? 'التسجيل لسه مجهزش' : 'البث بيتسجّل لوحده'}
-          body={l.status === 'ended' ? 'التسجيل بياخد دقايق بعد ما البث يخلص. ولو التسجيل مش شغال، حط لينك التسجيل تحت.' : 'أول ما تخلّص البث، التسجيل هيبقى متاح للطلاب الحاجزين بس.'}
+          title={capabilities.data?.recordingConfigured ? 'لم يُتح تسجيل لهذه الحصة بعد' : 'التسجيل الآلي غير مفعّل'}
+          body="يمكنك إضافة رابط تسجيل تملكه أدناه لإتاحته للطلاب الحاجزين."
         />
       )}
       <BoardReview lectureId={l.id} />
@@ -456,7 +477,7 @@ export function RecordingPlayer({ l, track }: { l: LectureDTO; track?: boolean }
         <Film />
       </span>
       <p className="flex-1 text-title-md">التسجيل متاح</p>
-      <Button onClick={() => window.open(rec.url!, '_blank')}>شوف التسجيل</Button>
+      <Button onClick={() => window.open(rec.url!, '_blank')}>مشاهدة التسجيل</Button>
     </Card>
   );
 }
@@ -484,20 +505,20 @@ function StudentLecture({ l }: { l: LectureDTO }) {
           </Card>
         )}
         {!booked && student && l.status !== 'cancelled' && !ended && (
-          <Banner tone="info" title="لسه محجزتش الحصة دي" action={<Button onClick={() => navigate(`/l/${l.code}`)}>احجز مكانك</Button>} />
+          <Banner tone="info" title="لم تحجز هذه الحصة بعد" action={<Button onClick={() => navigate(`/l/${l.code}`)}>احجز مكانك</Button>} />
         )}
-        {l.status === 'cancelled' && <Banner tone="warning" title="الحصة دي اتلغت">{l.priceCents ? 'فلوسك بترجع على نفس وسيلة الدفع.' : null}</Banner>}
+        {l.status === 'cancelled' && <Banner tone="warning" title="أُلغيت هذه الحصة">{l.priceCents ? 'يمكنك متابعة حالة الاسترداد من سجل المدفوعات.' : null}</Banner>}
         {booked && l.status === 'scheduled' && !ended && (
-          <Card variant="ink" pad="lg" className="mb-6 rounded-xl text-center">
-            <p className="text-body-md text-white/70">الحصة بتبدأ بعد</p>
+          <Card variant="filled" pad="lg" className="lesson-schedule mb-6 text-center">
+            <p className="text-body-md text-on-surface-variant">نلتقي في الحصة بعد</p>
             <Countdown to={l.startsAt} className="mt-1 block text-display-sm" />
-            <p className="mt-2 text-body-sm text-white/60">هنفكّرك قبلها بساعة، وهيوصلك إشعار أول ما المدرس يبدأ.</p>
+            <p className="mt-2 text-body-sm text-on-surface-variant">ستجد رابط الانضمام هنا عند بدء المدرس للبث.</p>
           </Card>
         )}
-        {booked && (l.recording || ended) && l.status !== 'live' && (
+        {booked && l.recording && l.status !== 'live' && (
           <section className="mb-6">
             <h2 className="mb-3 text-title-lg">التسجيل</h2>
-            {l.recording ? <RecordingPlayer l={l} track={student} /> : <Banner tone="info">التسجيل هيبقى متاح هنا بعد الحصة بشوية.</Banner>}
+            {l.recording ? <RecordingPlayer l={l} track={student} /> : <Banner tone="info">لم يُتح تسجيل لهذه الحصة.</Banner>}
           </section>
         )}
         {booked && (ended || l.status === 'live') && <BoardReview lectureId={l.id} />}
@@ -516,7 +537,7 @@ function StudentLecture({ l }: { l: LectureDTO }) {
                     </span>
                   }
                   title={a.title}
-                  subtitle={a.dueAt ? `التسليم ${fmtRelative(a.dueAt)}` : 'من غير ميعاد'}
+                  subtitle={a.dueAt ? `التسليم ${fmtRelative(a.dueAt)}` : 'دون موعد محدد'}
                   trailing={
                     a.mySubmission?.score != null ? (
                       <Badge tone="success">
@@ -545,7 +566,7 @@ function StudentLecture({ l }: { l: LectureDTO }) {
       {booked && student && l.status === 'live' && (
         <ActionBar>
           <Button variant="live" size="lg" block onClick={() => navigate(`/live/${l.id}`)}>
-            <Radio /> ادخل البث دلوقتي
+            <Radio /> انضم إلى البث الآن
           </Button>
         </ActionBar>
       )}

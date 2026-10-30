@@ -3,7 +3,7 @@ import { ClientOnly } from '@/components/client-only';
 import type { ReactNode } from 'react';
 
 export function EmptyState({
-  title = 'لم نجد هذه الفكرة بعد',
+  title = 'لا توجد نتائج مطابقة',
   copy = 'جرّب كلمة أخرى أو استكشف كل المواد.',
   action,
   mascot = false,

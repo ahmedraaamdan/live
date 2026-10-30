@@ -6,10 +6,10 @@ export default function NotFound() {
     <div className="not-found-shell fade-up" dir="rtl">
       <span className="not-found-icon"><Compass size={26} /></span>
       <p className="not-found-eyebrow">404</p>
-      <h1 className="not-found-title">الصفحة دي مش هنا</h1>
-      <p className="not-found-copy">يمكن الرابط اتغيّر أو الصفحة لسه ما اتعملتش. ارجع للرئيسية وابدأ من هناك.</p>
+      <h1 className="not-found-title">هذه الصفحة غير موجودة</h1>
+      <p className="not-found-copy">قد يكون الرابط قد تغيّر أو لم تعد الصفحة متاحة. يمكنك متابعة التصفح من الرئيسية.</p>
       <Link href="/" className="button-primary" data-testid="link-notfound-home">
-        <House size={16} /> الرجوع للرئيسية
+        <House size={16} /> العودة إلى الرئيسية
       </Link>
     </div>
   );

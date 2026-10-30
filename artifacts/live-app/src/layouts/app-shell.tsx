@@ -1,3 +1,5 @@
+import { StudyWallpaper } from '@/components/study-illustration';
+import '@/styles/mobile-app.css';
 import type { ReactNode } from 'react';
 import {
   Bell,
@@ -68,9 +70,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const unread = me.unreadNotifications;
 
   return (
-    <div className="min-h-dvh lg:ps-[var(--rail-width)]">
+    <div className="gl-shell min-h-dvh lg:ps-[var(--rail-width)]">
+      <StudyWallpaper />
       {/* Rail: expanded windows */}
-      <nav aria-label="التنقل" className="fixed inset-y-0 start-0 z-40 hidden w-[var(--rail-width)] flex-col items-center gap-2 border-e border-outline-variant bg-surface-container-low py-6 lg:flex">
+      <nav aria-label="التنقل" className="gl-nav-rail fixed inset-y-0 start-0 z-40 hidden w-[var(--rail-width)] flex-col items-center gap-2 border-e border-outline-variant bg-surface-container-low py-6 lg:flex">
         <Link href="/" className="mb-6 grid size-12 place-items-center rounded-md bg-primary text-on-primary" aria-label="Gahez Live">
           <GahezMark className="h-5" />
         </Link>
@@ -88,12 +91,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         })}
       </nav>
 
-      {children}
+      <div className="gl-app-content">{children}</div>
 
       {/* Navigation bar: compact and medium windows */}
       <nav
         aria-label="التنقل"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-outline-variant bg-surface-container-low/95 pb-safe backdrop-blur-xl lg:hidden"
+        className="gl-nav-bottom fixed inset-x-0 bottom-0 z-40 border-t border-outline-variant bg-surface-container-low/95 pb-safe backdrop-blur-xl lg:hidden"
       >
         <div className="mx-auto flex h-[var(--nav-height)] max-w-xl items-stretch">
           {items.map((item) => {

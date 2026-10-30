@@ -86,8 +86,6 @@ export default function Classes() {
 
   const liveNow = filtered.filter((c) => c.status === 'live');
   const upcoming = filtered.filter((c) => c.status === 'upcoming');
-  const topRated = [...filtered].sort((a, b) => Number(b.rating) - Number(a.rating)).slice(0, 3);
-  const mostViewed = [...filtered.filter((c) => c.viewers)].sort((a, b) => Number(b.viewers) - Number(a.viewers)).slice(0, 3);
 
   const toggleFollow = (id: string, name: string) =>
     setFollowedTeachers((current) => {
@@ -106,8 +104,8 @@ export default function Classes() {
         <section className="classes-hero">
           <div className="container-wide">
             <p className="section-kicker fade-up">تصفح الحصص</p>
-            <h1 className="classes-hero-title fade-up">الحصص الأونلاين</h1>
-            <p className="classes-hero-copy fade-up delay-1">دور على المادة اللي محتاجها، اختار المدرس، وشوف الميعاد والسعر قبل ما تحجز.</p>
+            <h1 className="classes-hero-title fade-up">الحصص المباشرة عبر الإنترنت</h1>
+            <p className="classes-hero-copy fade-up delay-1">ابحث عن المادة التي تحتاجها، وقارن المدرسين والمواعيد والأسعار قبل الحجز.</p>
           </div>
         </section>
 
@@ -120,12 +118,12 @@ export default function Classes() {
                   type="search"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="ابحث عن مادة، معلم، أو فكرة..."
+                  placeholder="ابحث عن مادة، مدرس، أو موضوع..."
                   aria-label="ابحث عن حصة"
                   data-testid="input-search-classes"
                 />
               </div>
-              <select className="filter-select" value={grade} onChange={(e) => setGrade(e.target.value)} aria-label="فلترة حسب الصف الدراسي" data-testid="select-grade-filter">
+              <select className="filter-select" value={grade} onChange={(e) => setGrade(e.target.value)} aria-label="تصفية حسب الصف الدراسي" data-testid="select-grade-filter">
                 {grades.map((g) => <option key={g} value={g}>{g}</option>)}
               </select>
             </div>
@@ -136,20 +134,19 @@ export default function Classes() {
                 </button>
               ))}
             </div>
+            <p className="studio-demo-note">نماذج توضيحية للحصص والمدرسين. التسجيل متاح قبل الإطلاق.</p>
 
             {filtered.length === 0 ? (
               <EmptyState
                 mascot
-                title="مفيش حصص مطابقة دلوقتي."
-                copy="جرّب تغيّر البحث أو الفلاتر."
+                title="لا توجد حصص تطابق بحثك."
+                copy="جرّب كلمات أخرى أو غيّر خيارات التصفية."
                 action={<button className="button-secondary" onClick={() => { setQuery(''); setSubject('الكل'); setGrade('كل المراحل'); }} data-testid="button-clear-filters">إظهار كل الحصص</button>}
               />
             ) : (
               <div className="class-rows">
-                <ClassRow title="شغالة دلوقتي" items={liveNow} followed={followedTeachers} onFollow={toggleFollow} onAction={handleAction} emptyLabel="مفيش حصص مباشرة دلوقتي بالفلتر ده." />
-                <ClassRow title="الحصص الجاية" items={upcoming} followed={followedTeachers} onFollow={toggleFollow} onAction={handleAction} emptyLabel="مفيش حصص قادمة بالفلتر ده." />
-                <ClassRow title="الأعلى تقييماً" items={topRated} followed={followedTeachers} onFollow={toggleFollow} onAction={handleAction} emptyLabel="" />
-                <ClassRow title="الأكثر مشاهدة" items={mostViewed} followed={followedTeachers} onFollow={toggleFollow} onAction={handleAction} emptyLabel="" />
+                <ClassRow title="مباشرة الآن" items={liveNow} followed={followedTeachers} onFollow={toggleFollow} onAction={handleAction} emptyLabel="لا توجد حصص مباشرة تطابق هذه الخيارات." />
+                <ClassRow title="الحصص القادمة" items={upcoming} followed={followedTeachers} onFollow={toggleFollow} onAction={handleAction} emptyLabel="لا توجد حصص قادمة تطابق هذه الخيارات." />
               </div>
             )}
           </div>
@@ -158,21 +155,21 @@ export default function Classes() {
         <SeoContentSection
           blocks={[
             {
-              heading: 'إيه هي الحصص الأونلاين؟',
+              heading: 'كيف تتعلم في حصة مباشرة؟',
               paragraphs: [
-                'الحصص الأونلاين على جاهز Live هي حصص تعليمية مباشرة (لايف) بيقدمها مدرسين حقيقيين، بتتفرج عليها من موبايلك أو الكمبيوتر في نفس ميعادها. مش فيديو مسجل بتشغّله وقت ما تحب — المدرس فعليًا بيشرح دلوقتي، وتقدر تسأله وتتفاعل معاه.',
+                'تجتمع مع المدرس في موعد محدد عبر هاتفك أو حاسوبك. تتابع الشرح، وتطرح أسئلتك أثناء الحصة، وتناقش ما تحتاج إلى توضيحه.',
               ],
             },
             {
-              heading: 'إزاي تختار المدرس المناسب؟',
+              heading: 'كيف تختار مدرسك؟',
               paragraphs: [
-                'قبل ما تحجز، شوف تقييم المدرس وعدد الطلاب اللي قيّموه، وعدد الحصص اللي عملها قبل كده. المدرسين الموثّقين عليهم علامة توثيق واضحة على البروفايل.',
+                'ابدأ بتخصص المدرس وموضوع الحصة، ثم راجع تقييمات الطلاب والموعد والسعر. اختر ما يوافق احتياجك وجدولك.',
               ],
             },
             {
-              heading: 'إيه الفرق بين الحصة المباشرة والـ Premiere؟',
+              heading: 'ما الفرق بين الحصص المباشرة والقادمة؟',
               paragraphs: [
-                '"مباشر الآن" يعني الحصة شغالة فعلاً دلوقتي وتقدر تدخلها على طول. "Premiere" يعني المدرس أعلن عن الحصة قبل ميعادها بأيام عشان تحجز مقعدك بدري وتستنى الميعاد.',
+                'الحصة المباشرة بدأت بالفعل، أما الحصة القادمة فلها موعد لاحق يمكنك الحجز له مسبقًا. راجع حالة الحصة وموعدها قبل الحجز.',
               ],
             },
           ]}

@@ -1,0 +1,55 @@
+import http from 'node:http';
+import { createHmac } from 'node:crypto';
+const API=process.env.API??'http://localhost:8082/api';
+if(!['localhost','127.0.0.1'].includes(new URL(API).hostname))throw Error('Isolated localhost only');
+const config=await fetch(API+'/config').then(r=>r.json());
+if(config.paymentProvider!=='easykash'||!config.paymentConfigured)throw Error('Expected isolated fake EasyKash configuration');
+const secret='audit-easykash-only';const payments=new Map();let inquiries=0,checks=0;
+function check(label,value){if(!value)throw Error(label);checks++;console.log('✓ '+label);}
+const gateway=http.createServer(async(req,res)=>{let raw='';for await(const chunk of req)raw+=chunk;const body=JSON.parse(raw||'{}');res.setHeader('content-type','application/json');if(req.headers.authorization!=='audit-easykash-key'){res.writeHead(401);return res.end('{}');}if(req.url==='/api/directpayv1/pay'){if(body.mobile==='01000000001'){res.writeHead(460);return res.end(JSON.stringify([{field:'mobile',message:'invalid'}]));}if(!body.customerReference.startsWith('glive_')){res.writeHead(400);return res.end('{}');}payments.set(body.customerReference,{ProductCode:'TEST',ProductType:'Direct Pay',Amount:Number(body.amount).toFixed(2),PaymentMethod:'Cash Through Fawry',customerReference:body.customerReference,status:'NEW',easykashRef:'EK-'+body.customerReference,voucher:'123456789'});return res.end(JSON.stringify({redirectUrl:'https://www.easykash.net/DirectPayV1/test'}));}if(req.url==='/api/cash-api/inquire'){inquiries++;return res.end(JSON.stringify(payments.get(body.customerReference)??{}));}res.writeHead(404);res.end('{}');});
+await new Promise(resolve=>gateway.listen(9090,'0.0.0.0',resolve));
+async function call(path,body,token,method){const r=await fetch(API+path,{method:method??(body?'POST':'GET'),headers:{'content-type':'application/json',...(token?{authorization:`Bearer ${token}`}:{})},body:body?JSON.stringify(body):undefined});return {status:r.status,data:await r.json()};}
+const signed=body=>({...body,signatureHash:createHmac('sha512',secret).update(['ProductCode','Amount','ProductType','PaymentMethod','status','easykashRef','customerReference'].map(k=>String(body[k])).join('')).digest('hex')});
+try{
+const stamp=Date.now();const t=(await call('/auth/signup',{role:'teacher',name:'مدرس اختبار',email:`t${stamp}@test.com`,password:'password123',subject:'physics'})).data;const s=(await call('/auth/signup',{role:'student',name:'طالب اختبار',email:`s${stamp}@test.com`,password:'password123',grade:'s3'})).data;
+const lecture={title:'اختبار دفع إيزي كاش',subject:'physics',grade:'s3',startsAt:new Date(Date.now()+600000).toISOString(),durationMin:60,priceCents:10000,capacity:10};
+const l=(await call('/lectures',lecture,t.token)).data;
+check('phone required before opening payment',(await call(`/lectures/${l.id}/book`,{},s.token)).data.code==='phone_required');
+check('missing phone does not reserve a seat',(await call(`/lectures/${l.id}`,null,s.token)).data.booking===null);
+await call('/me',{phone:'01000000001'},s.token,'PATCH');
+check('gateway phone validation is actionable',(await call(`/lectures/${l.id}/book`,{},s.token)).data.code==='mobile_invalid');
+check('failed gateway checkout releases the held seat',(await call(`/lectures/${l.id}`,null,s.token)).data.booking.status==='cancelled');
+await call('/me',{phone:'01000000000'},s.token,'PATCH');
+const a=(await call(`/lectures/${l.id}/book`,{},s.token)).data;const b=(await call(`/lectures/${l.id}/book`,{},s.token)).data;
+check('uses namespaced EasyKash checkout',a.payment.provider==='easykash'&&payments.has('glive_'+a.payment.id));
+const pending=(await call(`/payments/${a.payment.id}?status=success`,null,s.token)).data;
+check('redirect query cannot confirm payment',pending.status==='pending');
+check('cash voucher is read from authenticated inquiry',pending.voucher==='123456789');
+const body={...payments.get('glive_'+a.payment.id),status:'PAID'};
+check('rejects unsigned callback',(await call('/webhooks/easykash',body)).status===403);
+await call('/webhooks/easykash',signed({...body,Amount:'50.00'}));
+const underpaid=(await call(`/payments/${a.payment.id}`,null,s.token)).data;
+check('underpayment requires review and never grants access',underpaid.status==='pending'&&underpaid.requiresReview&&(await call(`/lectures/${l.id}`,null,s.token)).data.booking.status==='pending_payment');
+await call('/webhooks/easykash',signed(body));await call('/webhooks/easykash',signed(body));
+check('verified callback confirms booking once',(await call(`/lectures/${l.id}`,null,s.token)).data.booking.status==='confirmed');
+check('duplicate callback cannot duplicate teacher credit',(await call('/wallet',null,t.token)).data.pendingCents===9000);
+const duplicate={...payments.get('glive_'+b.payment.id),status:'PAID'};await call('/webhooks/easykash',signed(duplicate));
+check('duplicate paid invoice is flagged for manual refund',(await call(`/payments/${b.payment.id}`,null,s.token)).data.refundPending===true);
+await call('/webhooks/easykash',signed({...duplicate,status:'REFUNDED'}));
+check('refunding duplicate preserves original booked seat',(await call(`/lectures/${l.id}`,null,s.token)).data.booking.status==='confirmed'&&(await call('/wallet',null,t.token)).data.pendingCents===9000);
+await call('/webhooks/easykash',signed({...duplicate,status:'REFUNDED'}));
+check('repeated refund cannot debit original credit',(await call('/wallet',null,t.token)).data.pendingCents===9000);
+const l2=(await call('/lectures',{...lecture,title:'اختبار التأكيد بالاستعلام'},t.token)).data;const p2=(await call(`/lectures/${l2.id}/book`,{},s.token)).data;
+payments.get('glive_'+p2.payment.id).status='PAID';
+check('authenticated inquiry confirms without shared callback change',(await call(`/payments/${p2.payment.id}`,null,s.token)).data.status==='succeeded');
+check('inquiry credits the second booking correctly',(await call('/wallet',null,t.token)).data.pendingCents===18000);
+const before=inquiries;check('another user cannot trigger an invoice inquiry',(await call(`/payments/${p2.payment.id}`,null,t.token)).status===403&&inquiries===before);
+check('another product namespace is refused',(await call('/webhooks/easykash',signed({...body,customerReference:'agent_other'}))).status===400);
+await call(`/lectures/${l2.id}/cancel`,{},t.token);
+const cancellation=(await call(`/payments/${p2.payment.id}`,null,s.token)).data;
+check('manual refund is pending rather than falsely completed',cancellation.status==='succeeded'&&cancellation.refundPending===true&&(await call(`/lectures/${l2.id}`,null,s.token)).data.booking.status==='cancelled');
+await call('/webhooks/easykash',signed({...payments.get('glive_'+p2.payment.id),status:'REFUNDED'}));
+check('provider-confirmed refund becomes refunded',(await call(`/payments/${p2.payment.id}`,null,s.token)).data.status==='refunded');
+check('refunded second booking does not affect first',(await call('/wallet',null,t.token)).data.pendingCents===9000&&(await call(`/lectures/${l.id}`,null,s.token)).data.booking.status==='confirmed');
+console.log(`${checks} EasyKash integration checks passed`);
+}finally{await new Promise(resolve=>gateway.close(resolve));}

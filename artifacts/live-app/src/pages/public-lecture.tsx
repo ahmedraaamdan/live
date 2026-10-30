@@ -1,4 +1,5 @@
-import { CalendarClock, Clock, CreditCard, Radio, ShieldCheck, Smartphone, ThumbsUp, Users } from 'lucide-react';
+import { useCapabilities } from '@/lib/capabilities';
+import { BookOpen, CalendarClock, Check, Clock, CreditCard, Radio, ShieldCheck, ThumbsUp, Users } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { gradeLabel, subjectLabel, type BookResult, type LectureDTO } from '@workspace/live-core';
@@ -9,12 +10,15 @@ import { api, errorMessage } from '@/lib/api';
 import { fmtDay, fmtDuration, fmtTime, money } from '@/lib/format';
 import { openCheckout } from '@/lib/platform';
 import { useSession } from '@/lib/session';
-import { ActionBar, Avatar, Badge, Banner, Button, Card, IconButton, LiveBadge, Logo, PageSpinner, toast } from '@/ui';
-import { ArrowRight } from 'lucide-react';
+import { Avatar, Banner, Button, LiveBadge, Logo, PageSpinner, toast } from '@/ui';
+import { ArrowRight, ArrowLeft } from 'lucide-react';
+import { LessonArtwork } from '@/components/lesson-artwork';
+import '@/styles/lesson.css';
 
 /** The page behind the link a teacher shares. Works signed out; booking asks to sign in. */
 export function PublicLecture({ params }: { params: { code: string } }) {
   const code = params.code.toUpperCase();
+  const capabilities = useCapabilities();
   const { me } = useSession();
   const [, navigate] = useLocation();
   const q = useQuery({ queryKey: ['public-lecture', code, me?.user.id], queryFn: () => api<LectureDTO>(`/l/${code}`) });
@@ -32,7 +36,7 @@ export function PublicLecture({ params }: { params: { code: string } }) {
     return (
       <div className="mx-auto max-w-md px-5 pt-20 text-center">
         <Logo className="mb-8" />
-        <Banner tone="error" title="اللينك ده مش شغال">
+        <Banner tone="error" title="هذا الرابط غير متاح">
           {errorMessage(q.error)}
         </Banner>
         <Button className="mt-6" variant="outlined" onClick={() => navigate('/')}>
@@ -54,25 +58,27 @@ export function PublicLecture({ params }: { params: { code: string } }) {
     cta =
       l.status === 'live' ? (
         <Button variant="live" size="lg" block onClick={() => navigate(`/live/${l.id}`)}>
-          <Radio /> ادخل البث
+          <Radio /> انضم إلى البث
         </Button>
       ) : (
         <Button size="lg" block onClick={() => navigate(`/lectures/${l.id}`)}>
-          انت حاجز · افتح الحصة
+          حجزك مؤكّد · افتح الحصة
         </Button>
       );
   } else if (closed) {
     cta = (
       <Button size="lg" block disabled>
-        {l.status === 'cancelled' ? 'الحصة اتلغت' : 'الحصة خلصت'}
+        {l.status === 'cancelled' ? 'أُلغيت الحصة' : 'انتهت الحصة'}
       </Button>
     );
   } else if (full) {
     cta = (
       <Button size="lg" block disabled>
-        الأماكن خلصت
+        اكتمل العدد
       </Button>
     );
+  } else if (l.priceCents > 0 && capabilities.data?.paymentConfigured === false) {
+    cta = <Banner tone="warning" className="w-full">الحجز المدفوع غير متاح مؤقتًا. لم يُنشأ حجز أو تُحجز أموال.</Banner>;
   } else if (!me) {
     cta = (
       <Button size="lg" block onClick={() => navigate(`/signup?role=student&next=${encodeURIComponent(`/l/${code}`)}`)}>
@@ -82,113 +88,58 @@ export function PublicLecture({ params }: { params: { code: string } }) {
   } else if (student) {
     cta = (
       <Button size="lg" block loading={book.isPending} onClick={() => book.mutate(l.id)}>
-        {l.priceCents ? `احجز وادفع ${money(l.priceCents)}` : 'احجز مجانًا'}
+        {l.priceCents ? `احجز مقعدك · ${money(l.priceCents)}` : 'احجز مجانًا'}
       </Button>
     );
   } else {
-    cta = <Banner tone="info" className="w-full">الحجز من حساب طالب بس.</Banner>;
+    cta = <Banner tone="info" className="w-full">يمكن حجز الحصة من حساب طالب.</Banner>;
   }
 
   return (
-    <div className="min-h-dvh bg-background pb-32 lg:pb-12">
-      <div className={`relative overflow-hidden px-5 pt-[calc(var(--safe-top)+1rem)] pb-10 text-white ${l.status === 'live' ? 'bg-gradient-live' : 'bg-gradient-ink'}`}>
-        <div className="pointer-events-none absolute -bottom-24 -left-10 size-64 rounded-full bg-gradient-brand opacity-30 blur-3xl" aria-hidden="true" />
-        <div className="relative mx-auto max-w-3xl">
-          <div className="flex items-center justify-between">
-            <IconButton label="رجوع" className="text-white" onClick={() => (window.history.length > 1 ? window.history.back() : navigate('/'))}>
-              <ArrowRight />
-            </IconButton>
-            <Link href="/" className="text-white">
-              <Logo />
-            </Link>
-          </div>
-          <div className="mt-6 flex flex-wrap items-center gap-2">
-            {l.status === 'live' && <LiveBadge className="bg-white text-live" />}
-            <Badge className="bg-white/15 text-white">{subjectLabel(l.subject)}</Badge>
-            <Badge className="bg-white/15 text-white">{gradeLabel(l.grade)}</Badge>
-            {pct != null && (
-              <Badge className="bg-white/15 text-white">
-                <ThumbsUp /> <span className="font-num">{pct}%</span>
-              </Badge>
-            )}
-          </div>
-          <h1 className="mt-3 text-headline-lg md:text-display-sm">{l.title}</h1>
-          <div className="mt-5 flex items-center gap-3">
-            <Avatar name={l.teacher.name} src={l.teacher.avatarUrl} size="lg" ring />
-            <div>
-              <p className="text-title-lg">{l.teacher.name}</p>
-              {l.teacher.headline && <p className="text-body-md text-white/70">{l.teacher.headline}</p>}
+    <div className="lesson-page">
+      <header className="lesson-nav">
+        <Link href="/" aria-label="جاهز Live — الرئيسية"><Logo /></Link>
+        <button className="lesson-back" onClick={() => window.history.length > 1 ? window.history.back() : navigate('/')}><ArrowRight size={18} /> العودة</button>
+      </header>
+      <div className="lesson-wrap">
+        <nav className="lesson-breadcrumb" aria-label="مسار الصفحة"><Link href="/">جاهز Live</Link><span>/</span><span>{subjectLabel(l.subject)}</span><span>/</span><span>تفاصيل الحصة</span></nav>
+        <div className="lesson-layout">
+          <main className="lesson-main">
+            <div className="lesson-heading">
+              <div className="lesson-tags"><span>{subjectLabel(l.subject)}</span><span>{gradeLabel(l.grade)}</span>{l.status === 'live' && <LiveBadge />}</div>
+              <h1>{l.title}</h1>
+              <div className="lesson-byline"><Avatar name={l.teacher.name} src={l.teacher.avatarUrl} /><div><span>مع المدرس</span><strong dir="auto">{l.teacher.name}</strong></div>{pct != null && <span className="lesson-approval"><ThumbsUp size={15} /> {pct}% من التقييمات إيجابية</span>}</div>
             </div>
-          </div>
+            <LessonArtwork subject={l.subject} label={subjectLabel(l.subject)} coverUrl={l.coverUrl} />
+            <section className="lesson-about">
+              <span className="lesson-kicker">قبل أن نبدأ</span><h2>ما الذي ينتظرك في الحصة؟</h2>
+              {l.description ? <p className="lesson-description">{l.description}</p> : <p className="lesson-description">حصة مباشرة في {subjectLabel(l.subject)} مع {l.teacher.name}. راجع الموعد وتفاصيل الحجز، ثم انضم من حسابك عند بدء البث.</p>}
+              <div className="lesson-benefits"><div><Radio /><strong>شرح مباشر</strong><p>تابع الشرح وقت حدوثه.</p></div><div><BookOpen /><strong>أسئلتك لها مكان</strong><p>أرسل سؤالك للمدرس أثناء الحصة.</p></div><div><ShieldCheck /><strong>كل شيء في حسابك</strong><p>الحجز ورابط الانضمام في مكان واحد.</p></div></div>
+            </section>
+            <Link href={`/teachers/${l.teacher.id}`} className="lesson-teacher teacher-link" aria-label={`ملف المدرس ${l.teacher.name}`}><Avatar name={l.teacher.name} src={l.teacher.avatarUrl} size="lg" /><div><span className="lesson-kicker">مدرس الحصة</span><h2 dir="auto">{l.teacher.name}</h2><p>{l.teacher.headline || `مدرس ${subjectLabel(l.subject)} · ${gradeLabel(l.grade)}`}</p><span className="text-primary text-body-sm">الملف والتقييم ←</span></div></Link>
+          </main>
+          <aside className="lesson-booking" aria-label="تفاصيل الحجز">
+            <div className="lesson-booking-top"><span><Radio size={16} /> حصة مباشرة أونلاين</span><span className="lesson-ticket-mark" aria-hidden="true">G</span></div>
+            <div className="lesson-price"><strong>{l.priceCents ? money(l.priceCents) : 'مجانية'}</strong><span>للحصة الواحدة</span></div>
+            <div className="lesson-facts">
+              <Fact icon={<CalendarClock />} label="موعدنا" value={fmtDay(l.startsAt)} detail={fmtTime(l.startsAt)} />
+              <Fact icon={<Clock />} label="مدة الحصة" value={fmtDuration(l.durationMin)} />
+              <Fact icon={<Users />} label="المقاعد المتاحة" value={l.capacity ? `${Math.max(0, l.capacity - l.seatsTaken)} من ${l.capacity}` : 'الحجز متاح'} />
+            </div>
+            {!closed && l.status !== 'live' && <div className="lesson-countdown"><span>نلتقي بعد</span><Countdown to={l.startsAt} /></div>}
+            <div className="lesson-cta">{cta}</div>
+            {!closed && !booked && <p className="lesson-booking-note"><ShieldCheck size={15} /> {l.priceCents ? 'يتأكد مقعدك بعد إتمام الدفع.' : 'احجز مقعدك وانضم من حسابك.'}</p>}
+            <div className="lesson-includes"><span><Check /> رابط البث داخل حسابك</span><span><Check /> متابعة من الهاتف أو الحاسوب</span>{capabilities.data?.recordingConfigured && <span><Check /> التسجيل عند إتاحته من المدرس</span>}</div>
+            {l.priceCents > 0 && !closed && capabilities.data?.paymentConfigured && <p className="lesson-payment"><CreditCard size={16} /> ادفع عبر وسائل بوابة الدفع المتاحة</p>}
+          </aside>
         </div>
+        <footer className="lesson-footer"><Logo /><span>مساحة للتعلّم. ووقت للفهم.</span><Link href="/">اكتشف جاهز <ArrowLeft size={16} /></Link></footer>
       </div>
-
-      <div className="mx-auto -mt-6 max-w-3xl px-4">
-        <Card className="grid grid-cols-2 gap-4 md:grid-cols-4" pad="lg">
-          <Fact icon={<CalendarClock />} label={fmtDay(l.startsAt)} value={fmtTime(l.startsAt)} />
-          <Fact icon={<Clock />} label="المدة" value={fmtDuration(l.durationMin)} />
-          <Fact icon={<Users />} label="الأماكن" value={l.capacity ? `${Math.max(0, l.capacity - l.seatsTaken)} فاضي` : 'مفتوح'} />
-          <Fact icon={<CreditCard />} label="السعر" value={l.priceCents ? money(l.priceCents) : 'مجانية'} />
-        </Card>
-
-        {!closed && l.status !== 'live' && (
-          <Card variant="filled" className="mt-4 flex items-center justify-between">
-            <span className="text-body-md text-on-surface-variant">بتبدأ بعد</span>
-            <Countdown to={l.startsAt} className="text-headline-sm" />
-          </Card>
-        )}
-
-        {l.description && (
-          <section className="mt-6">
-            <h2 className="mb-2 text-title-lg">عن الحصة</h2>
-            <p className="text-body-lg whitespace-pre-wrap text-on-surface-variant">{l.description}</p>
-          </section>
-        )}
-
-        <section className="mt-6 grid gap-3 md:grid-cols-2">
-          <Perk icon={<Radio />} title="لايف وتسأل على طول" body="اكتب سؤالك أثناء الشرح والمدرس يرد عليك." />
-          <Perk icon={<ShieldCheck />} title="التسجيل ليك" body="فاتك جزء؟ التسجيل متاح بعد الحصة للحاجزين بس." />
-        </section>
-
-        {l.priceCents > 0 && !closed && (
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-body-sm text-on-surface-variant">
-            <span className="inline-flex items-center gap-1.5">
-              <CreditCard className="size-4" /> كارت
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <Smartphone className="size-4" /> فودافون كاش ومحافظ
-            </span>
-            <span className="font-num">Apple Pay</span>
-            <span className="font-num">Google Pay</span>
-          </div>
-        )}
-        <div className="hidden lg:block">
-          <div className="mt-8">{cta}</div>
-        </div>
-      </div>
-      <ActionBar className="lg:hidden">{cta}</ActionBar>
+      <div className="lesson-mobile-booking"><div><strong>{l.priceCents ? money(l.priceCents) : 'مجانية'}</strong><span>{fmtTime(l.startsAt)} · {fmtDay(l.startsAt)}</span></div><div>{cta}</div></div>
     </div>
   );
 }
 
-function Fact({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="text-secondary [&_svg]:size-5">{icon}</span>
-      <span className="text-body-sm text-on-surface-variant">{label}</span>
-      <span className="font-num text-title-md">{value}</span>
-    </div>
-  );
-}
-
-function Perk({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
-  return (
-    <Card variant="outlined" className="flex gap-3" pad="sm">
-      <span className="grid size-10 shrink-0 place-items-center rounded-md bg-primary-container text-on-primary-container [&_svg]:size-5">{icon}</span>
-      <div>
-        <p className="text-title-sm">{title}</p>
-        <p className="text-body-sm text-on-surface-variant">{body}</p>
-      </div>
-    </Card>
-  );
+function Fact({ icon, label, value, detail }: { icon: React.ReactNode; label: string; value: string; detail?: string }) {
+  return <div className="lesson-fact"><span className="lesson-fact-icon">{icon}</span><div><span>{label}</span><strong>{value}</strong></div>{detail && <b>{detail}</b>}</div>;
 }

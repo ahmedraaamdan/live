@@ -36,7 +36,7 @@ const JSON_LD_ID = 'route-jsonld';
 
 /** Site-wide share card, public/og.png. Keep in step with scripts/generate-seo-html.mjs. */
 export const DEFAULT_OG_IMAGE = `${siteConfig.siteUrl}/og.png`;
-const DEFAULT_OG_IMAGE_ALT = 'جاهز Live — حصص أونلاين مباشرة مع مدرسين حقيقيين';
+const DEFAULT_OG_IMAGE_ALT = 'جاهز Live — مركزك التعليمي، أينما كنت.';
 
 /**
  * Sets document.title, meta description, canonical, and Open Graph/Twitter

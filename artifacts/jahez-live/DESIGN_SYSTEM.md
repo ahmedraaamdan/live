@@ -1,3 +1,14 @@
+> **Studio redesign, October 2026.** The current public-site design uses Live red
+> `#E11D48`, neutral paper surfaces, an editorial Arabic hierarchy, and a lime
+> highlight restricted to classroom illustrations. `src/styles/studio.css`
+> supplies the public page layouts; `tokens.css` remains the palette source.
+> Motion is implemented in `studio-motion.tsx` with Framer Motion and in
+> `animations.css`. The hero classroom is a working illustrative demo, and
+> `data/classes.ts` remains sample data explicitly labeled in the interface.
+> Buttons use 8px corners, cards 12–20px, and avatar/follow controls circles.
+> System light/dark appearance, a visitor theme toggle, reduced motion, local
+> WOFF2 fonts, and keyboard-operated demo tabs are supported.
+>
 > **Superseded palette (2026-09-19).** Gahez Live now carries the Gahez identity
 > shared with gahez.space, Agent and Tools: the G lockup, blue `#2563EB` into cyan
 > `#22D3EE`, navy text, soft shadows and even radii. The token *names* below are
@@ -212,3 +223,7 @@ a bespoke one.
    — not inline in the page — so the next page can reuse it too.
 7. Update `/style-guide` if you added a token or utility, so it stays the
    living reference instead of drifting out of date.
+
+
+## Current direction — 30 October 2026
+The current reference-inspired design uses Live red, warm paper, Lalezar headings, Readex Pro body, original G + Gahez + Live lockup, black outlines and offset shadows. See src/styles/playful.css for current overrides. Generated hero and fictional teacher illustrations are in public/images. Light is the default; explicit theme choices are respected. Content-protection UI is a casual-copy deterrent, not DRM.

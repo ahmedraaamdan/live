@@ -17,6 +17,8 @@ export function Checkout({ id }: { id: string }) {
   const [, navigate] = useLocation();
   const qc = useQueryClient();
   const [since] = useState(Date.now());
+  const [timedOut, setTimedOut] = useState(false);
+  useEffect(() => { const timer = setTimeout(() => setTimedOut(true), 120_000); return () => clearTimeout(timer); }, []);
   const q = useQuery({
     queryKey: ['payment', id],
     queryFn: () => api<PaymentDTO>(`/payments/${id}`),
@@ -24,7 +26,7 @@ export function Checkout({ id }: { id: string }) {
   });
   const p = q.data;
   useEffect(() => {
-    if (p?.status === 'succeeded') {
+    if (p?.status === 'succeeded' && !p.refundPending && !p.requiresReview) {
       qc.invalidateQueries({ queryKey: ['student-home'] });
       qc.invalidateQueries({ queryKey: ['lecture', p.lectureId] });
       qc.invalidateQueries({ queryKey: ['me'] });
@@ -32,8 +34,9 @@ export function Checkout({ id }: { id: string }) {
   }, [p?.status, p?.lectureId, qc]);
 
   if (q.isPending) return <PageSpinner />;
-  if (!p) return <Banner tone="error">{errorMessage(q.error)}</Banner>;
+  if (!p) return <div className="mx-auto mt-10 max-w-md p-5"><Banner tone="error">{errorMessage(q.error)}</Banner><Button className="mt-4" onClick={() => void q.refetch()}>إعادة المحاولة</Button></div>;
 
+  if (p.refundPending || p.requiresReview) return <div className="mx-auto max-w-md p-6 pt-20"><Logo className="mb-8" /><Banner tone="warning" title={p.refundPending ? 'الاسترداد قيد المراجعة' : 'المعاملة قيد المراجعة'}>{p.refundPending ? 'نراجع طلب الاسترداد مع بوابة الدفع. لا يُعد مكتملًا حتى يؤكده المزود.' : 'نراجع المبلغ المدفوع مع بوابة الدفع. لا تكرر العملية حتى تتضح النتيجة.'} يمكنك التواصل مع الدعم برقم العملية: {p.id}</Banner><Button className="mt-5" variant="tonal" block loading={q.isFetching} onClick={() => void q.refetch()}>تحديث حالة المعاملة</Button><Button className="mt-3" block onClick={() => navigate('/s/lectures')}>العودة إلى حصصي</Button></div>;
   return (
     <div className="grid min-h-dvh place-items-center bg-background px-5 pt-safe pb-safe">
       {p.status === 'succeeded' && <Confetti />}
@@ -44,8 +47,9 @@ export function Checkout({ id }: { id: string }) {
             <div className="mx-auto grid size-20 place-items-center rounded-full bg-secondary-container text-on-secondary-container">
               <Spinner className="size-9" />
             </div>
-            <h1 className="mt-6 text-headline-md">بنأكد الدفع…</h1>
-            <p className="mt-2 text-body-md text-on-surface-variant">ثواني وهيتأكد حجزك. متقفلش الصفحة.</p>
+            <h1 className="mt-6 text-headline-md">{p.voucher ? 'أكمل الدفع بالكود' : 'جارٍ تأكيد الدفع…'}</h1>
+            {p.voucher && <Card className="mt-4"><p className="text-body-md">كود فوري / أمان</p><p className="my-3 font-num text-headline-md" dir="ltr" data-allow-copy>{p.voucher}</p><Button variant="tonal" onClick={() => void navigator.clipboard?.writeText(p.voucher!)}>نسخ كود الدفع</Button><p className="mt-3 text-body-sm">المبلغ: {money(p.amountCents)}. يتأكد الحجز بعد إتمام الدفع وتأكيد بوابة الدفع.</p></Card>}
+            <p className="mt-2 text-body-md text-on-surface-variant">نتحقق من حالة العملية لدى بوابة الدفع.</p>
           </>
         )}
         {p.status === 'succeeded' && (
@@ -53,8 +57,8 @@ export function Checkout({ id }: { id: string }) {
             <div className="mx-auto grid size-24 animate-pop place-items-center rounded-full bg-success-container text-on-success-container">
               <CheckCircle2 className="size-12" />
             </div>
-            <h1 className="mt-6 text-headline-lg">حجزك اتأكد! 🎉</h1>
-            <p className="mt-2 text-body-lg text-on-surface-variant">مكانك في «{p.lectureTitle}» محجوز. وصلك إيميل بالتفاصيل، ووصل لولي أمرك كمان.</p>
+            <h1 className="mt-6 text-headline-lg">تم تأكيد حجزك!</h1>
+            <p className="mt-2 text-body-lg text-on-surface-variant">مقعدك في «{p.lectureTitle}» محجوز. يمكنك مراجعة تفاصيل الحجز من صفحة الحصة.</p>
             <Card variant="filled" className="mt-6 flex items-center justify-between text-start">
               <span className="text-body-md text-on-surface-variant">{p.method ? PAYMENT_METHOD_LABELS[p.method] : 'المبلغ'}</span>
               <span className="font-num text-title-lg">{money(p.amountCents)}</span>
@@ -69,16 +73,17 @@ export function Checkout({ id }: { id: string }) {
             <div className="mx-auto grid size-24 place-items-center rounded-full bg-error-container text-on-error-container">
               <XCircle className="size-12" />
             </div>
-            <h1 className="mt-6 text-headline-md">{p.status === 'refunded' ? 'المبلغ اترجع' : 'الدفع ماتمّش'}</h1>
-            <p className="mt-2 text-body-md text-on-surface-variant">مخصمناش منك حاجة. جرّب تاني أو استخدم وسيلة دفع تانية.</p>
+            <h1 className="mt-6 text-headline-md">{p.status === 'refunded' ? 'تم رد المبلغ' : 'لم يكتمل الدفع'}</h1>
+            <p className="mt-2 text-body-md text-on-surface-variant">{p.status === 'refunded' ? 'سُجل رد المبلغ. يعتمد وقت ظهوره في حسابك على وسيلة الدفع.' : 'لم تؤكد بوابة الدفع إتمام العملية. تحقّق من حسابك قبل بدء محاولة جديدة.'}</p>
             <Button size="lg" block className="mt-6" onClick={() => navigate(`/lectures/${p.lectureId}`, { replace: true })}>
-              جرّب تاني
+              حاول مجددًا
             </Button>
           </>
         )}
-        {p.status === 'pending' && Date.now() - since > 120_000 && (
+        {p.status === 'pending' && timedOut && (
           <Banner tone="warning" className="mt-6 text-start">
-            الدفع واخد وقت أكتر من العادي. لو اتخصم منك، الحجز هيتأكد لوحده أول ما البنك يرد.
+            تأخر تأكيد الدفع. إذا خُصم المبلغ، انتظر تحديث الحالة ولا تكرر الدفع. يمكنك العودة إلى حسابك ومراجعة الحجز.
+            <div className="mt-3 flex flex-wrap gap-2"><Button variant="tonal" loading={q.isFetching} onClick={() => void q.refetch()}>تحديث حالة الدفع</Button><Button variant="text" onClick={() => navigate('/s/lectures')}>العودة إلى حصصي</Button></div>
           </Banner>
         )}
       </div>

@@ -1,4 +1,5 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { AccountSwitchTools } from '@/components/account-switch';
+import { useLayoutEffect, useState, type ReactNode } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { cn } from '@/lib/cn';
@@ -27,8 +28,9 @@ export function TopBar({
 }) {
   const [, navigate] = useLocation();
   const [scrolled, setScrolled] = useState(false);
+  const CollapsedTitle = large ? 'div' : 'h1';
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > (large ? 40 : 4));
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -45,7 +47,7 @@ export function TopBar({
     <>
       <header
         className={cn(
-          'sticky top-0 z-30 pt-safe transition-[background-color,box-shadow] duration-200',
+          'gl-topbar sticky top-0 z-30 pt-safe transition-[background-color,box-shadow] duration-200',
           scrolled ? 'bg-surface-container/90 shadow-e1 backdrop-blur-xl' : 'bg-background',
           className,
         )}
@@ -57,9 +59,10 @@ export function TopBar({
             </IconButton>
           )}
           <div className={cn('min-w-0 flex-1 px-2 transition-opacity duration-200', large && !scrolled && 'opacity-0')}>
-            <h1 className="truncate text-title-lg">{title}</h1>
+            <CollapsedTitle className="gl-collapsed-title truncate text-title-lg">{title}</CollapsedTitle>
           </div>
           {actions && <div className="flex items-center gap-1">{actions}</div>}
+          <AccountSwitchTools />
         </div>
       </header>
       {large && (
@@ -74,7 +77,7 @@ export function TopBar({
 
 /** The scrolling body of a screen: centred, padded, clear of the nav bar. */
 export function Page({ children, className, wide }: { children: ReactNode; className?: string; wide?: boolean }) {
-  return <main className={cn('mx-auto w-full px-4 pb-nav md:px-6 lg:pb-12', wide ? 'max-w-[var(--content-max)]' : 'max-w-3xl', className)}>{children}</main>;
+  return <main className={cn('gl-page mx-auto w-full px-4 pb-nav md:px-6 lg:pb-12', wide ? 'max-w-[var(--content-max)]' : 'max-w-3xl', className)}>{children}</main>;
 }
 
 /** Bottom action bar for a screen's main CTA (thumb zone), above the nav bar on phones. */
@@ -82,7 +85,7 @@ export function ActionBar({ children, className }: { children: ReactNode; classN
   return (
     <div
       className={cn(
-        'fixed inset-x-0 bottom-0 z-40 border-t border-outline-variant bg-surface-container-low/95 px-4 pt-3 pb-[calc(var(--safe-bottom)+0.75rem)] backdrop-blur-xl',
+        'gl-actionbar fixed inset-x-0 bottom-0 z-40 border-t border-outline-variant bg-surface-container-low/95 px-4 pt-3 pb-[calc(var(--safe-bottom)+0.75rem)] backdrop-blur-xl',
         'lg:static lg:mt-6 lg:rounded-lg lg:border-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none',
         className,
       )}

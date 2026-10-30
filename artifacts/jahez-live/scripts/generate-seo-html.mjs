@@ -34,7 +34,7 @@ import { createServer } from 'vite';
 const SITE_URL = 'https://live.gahez.space';
 const BRAND = 'جاهز Live';
 const OG_IMAGE = `${SITE_URL}/og.png`;
-const OG_IMAGE_ALT = 'جاهز Live — حصص أونلاين مباشرة مع مدرسين حقيقيين';
+const OG_IMAGE_ALT = 'جاهز Live — مركزك التعليمي، أينما كنت.';
 const HOME_CRUMB = { label: 'الرئيسية', path: '/' };
 
 /**
@@ -43,19 +43,19 @@ const HOME_CRUMB = { label: 'الرئيسية', path: '/' };
  * Routes without jsonLd get the page's two-step BreadcrumbList.
  */
 const routes = [
-  { path: '/', h1: 'حصص أونلاين مباشرة مع مدرسين', title: 'حصص أونلاين مباشرة مع مدرسين | جاهز Live', description: 'اكتشف حصص مباشرة، تابع المدرسين اللي بتحب شرحهم، واحجز حصتك في ثواني. منصة جاهز Live للتعليم الأونلاين المباشر في مصر.', jsonLd: (sd) => [sd.organizationJsonLd(), sd.websiteJsonLd()] },
-  { path: '/classes', h1: 'الحصص الأونلاين', crumb: 'الحصص', title: 'حصص أونلاين مباشرة | اكتشف واحجز حصتك — جاهز Live', description: 'تصفح الحصص المباشرة والحصص الجاية في كل المواد والمراحل الدراسية. فلتر حسب المادة، الصف، السعر، والتقييم، واحجز حصتك في ثواني.' },
-  { path: '/teachers', h1: 'اختار المدرس اللي يناسبك.', crumb: 'المدرسين', title: 'مدرسين أونلاين | اكتشف المدرس المناسب ليك — جاهز Live', description: 'قارن بين المدرسين، شوف التقييمات وعدد المتابعين، وتابع اللي يناسب أسلوبك في المذاكرة.' },
-  { path: '/how-it-works', h1: 'الحجز بسيط.', crumb: 'إزاي بيشتغل', title: 'إزاي تحجز وتحضر حصص أونلاين؟ | جاهز Live', description: 'خطوة بخطوة: إزاي تكتشف الحصة وتحجزها كطالب، وإزاي تفتح حصتك كمدرس على جاهز Live.' },
-  { path: '/for-students', h1: 'أول حصة على بعد كام كليك.', crumb: 'للطلاب', title: 'حصص أونلاين للطلاب | اختار مدرسك وحصتك — جاهز Live', description: 'مش مربوط بسنتر واحد ولا مدرس واحد. اختار من مدرسين متعددين، شوف التقييمات، وتابع اللي يناسبك.' },
-  { path: '/for-teachers', h1: 'درّس أونلاين من غير ما تبني المنصة بنفسك.', crumb: 'للمدرسين', title: 'للمدرسين | افتح حصتك وابدأ التدريس أونلاين — جاهز Live', description: 'حوّل شرحك لمركز أونلاين: افتح حصصك، حدد ميعادها وسعرها، وخلي الطلاب يكتشفوك ويحجزوا معاك.' },
-  { path: '/payments', h1: 'الدفع والحجز واضحين من البداية.', crumb: 'الدفع', title: 'طرق الدفع والحجز | جاهز Live', description: 'إزاي الدفع بيشتغل على أندرويد، آيفون، والويب، وإيه اللي بيحصل بعد ما تدفع قيمة الحصة.' },
-  { path: '/about', h1: 'إحنا بنبني طريقة أبسط للتعليم المباشر أونلاين.', crumb: 'عن جاهز Live', title: 'عن جاهز Live | منصة الحصص الأونلاين', description: 'بنحاول نخلي الوصول لمدرس كويس أسهل. تعرف على فكرة جاهز Live وليه بنبنيها.' },
-  { path: '/faq', h1: 'الأسئلة الشائعة', crumb: 'الأسئلة الشائعة', title: 'الأسئلة الشائعة عن الحصص الأونلاين | جاهز Live', description: 'إجابات على أكتر الأسئلة اللي بتوصلنا من الطلاب والمدرسين عن الحجز، الدفع، والحصص المباشرة.', jsonLd: (sd, data) => [sd.breadcrumbJsonLd([HOME_CRUMB, { label: 'الأسئلة الشائعة' }]), sd.faqJsonLd(data.faqCategories)] },
-  { path: '/contact', h1: 'عندك سؤال؟', crumb: 'تواصل معنا', title: 'تواصل معنا | جاهز Live', description: 'محتاج مساعدة أو عندك استفسار؟ تواصل مع فريق جاهز Live.' },
-  { path: '/privacy', h1: 'سياسة الخصوصية', crumb: 'سياسة الخصوصية', title: 'سياسة الخصوصية | جاهز Live', description: 'إزاي جاهز Live بيتعامل مع بياناتك الشخصية.' },
-  { path: '/terms', h1: 'الشروط والأحكام', crumb: 'الشروط والأحكام', title: 'الشروط والأحكام | جاهز Live', description: 'الشروط والأحكام الخاصة باستخدام منصة جاهز Live.' },
-  { path: '/refund-policy', h1: 'سياسة الاسترجاع', crumb: 'سياسة الاسترجاع', title: 'سياسة الاسترجاع | جاهز Live', description: 'إزاي وإمتى تقدر تسترجع قيمة حصة على جاهز Live.' },
+  { path: '/', h1: 'حصتك جاهزة؟ تعلّم من مكانك.', jsonLd: (sd) => [sd.organizationJsonLd(), sd.websiteJsonLd()] },
+  { path: '/classes', h1: 'الحصص المباشرة عبر الإنترنت', crumb: 'الحصص' },
+  { path: '/teachers', h1: 'اختر المدرس المناسب لك.', crumb: 'المدرسون' },
+  { path: '/how-it-works', h1: 'الحجز بسيط.', crumb: 'كيف يعمل؟' },
+  { path: '/for-students', h1: 'اختر مدرسك. وابدأ بما تحتاجه.', crumb: 'للطلاب' },
+  { path: '/for-teachers', h1: 'ركّز على الشرح. ونظّم حصصك معنا.', crumb: 'للمدرسين' },
+  { path: '/payments', h1: 'اعرف السعر قبل الحجز.', crumb: 'الدفع' },
+  { path: '/about', h1: 'التعلّم يبدأ بمدرس يفهم سؤالك.', crumb: 'عن جاهز Live' },
+  { path: '/faq', h1: 'الأسئلة الشائعة', crumb: 'الأسئلة الشائعة', jsonLd: (sd, data) => [sd.breadcrumbJsonLd([HOME_CRUMB, { label: 'الأسئلة الشائعة' }]), sd.faqJsonLd(data.faqCategories)] },
+  { path: '/contact', h1: 'كيف يمكننا مساعدتك؟', crumb: 'تواصل معنا' },
+  { path: '/privacy', h1: 'سياسة الخصوصية', crumb: 'سياسة الخصوصية' },
+  { path: '/terms', h1: 'الشروط والأحكام', crumb: 'الشروط والأحكام' },
+  { path: '/refund-policy', h1: 'سياسة الاسترداد', crumb: 'سياسة الاسترداد' },
 ];
 
 /** Not in `routes`: no canonical, noindex, not in the sitemap. */
@@ -63,7 +63,7 @@ const notFound = {
   path: '/404',
   h1: 'الصفحة غير موجودة',
   title: 'الصفحة غير موجودة',
-  description: 'يمكن الرابط اتغيّر أو الصفحة لسه ما اتعملتش. ارجع للرئيسية وابدأ من هناك.',
+  description: 'قد يكون الرابط قد تغيّر أو لم تعد الصفحة متاحة. يمكنك متابعة التصفح من الرئيسية.',
   noindex: true,
 };
 
@@ -74,7 +74,7 @@ const NAV = [
   ['/teachers', 'المدرسين'],
   ['/for-students', 'للطلاب'],
   ['/for-teachers', 'للمدرسين'],
-  ['/how-it-works', 'إزاي بيشتغل'],
+  ['/how-it-works', 'كيف يعمل؟'],
   ['/payments', 'الدفع'],
   ['/faq', 'الأسئلة الشائعة'],
   ['/about', 'عن جاهز Live'],
@@ -175,7 +175,8 @@ async function loadAppModules(root) {
   try {
     const sd = await vite.ssrLoadModule('/src/lib/structured-data.ts');
     const { faqCategories } = await vite.ssrLoadModule('/src/data/faq.ts');
-    return { sd, data: { faqCategories } };
+    const { routes: routeMetadata } = await vite.ssrLoadModule('/src/lib/routes.ts');
+    return { sd, data: { faqCategories }, routeMetadata };
   } finally {
     await vite.close();
   }
@@ -194,7 +195,14 @@ async function main() {
     process.exit(1);
   }
 
-  const { sd, data } = await loadAppModules(root);
+  const { sd, data, routeMetadata } = await loadAppModules(root);
+  // The browser and generated HTML must use the same title and description.
+  for (const route of routes) {
+    const meta = Object.values(routeMetadata).find((item) => item.path === route.path);
+    if (!meta) throw new Error(`Missing metadata for ${route.path}`);
+    route.title = meta.title;
+    route.description = meta.description;
+  }
   const renderPage = await loadSsrRenderer(root);
   const prerendered = [];
   const { '@context': _context, ...organization } = sd.organizationJsonLd();

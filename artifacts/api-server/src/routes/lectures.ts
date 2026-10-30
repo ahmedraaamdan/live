@@ -1,3 +1,6 @@
+import { EasykashValidationError } from "../lib/payments/easykash";
+import { assertVerifiedTeacher } from "../lib/teacher-verification";
+import { assertOwnedMediaUrl } from "../lib/profile-media";
 import { Router } from "express";
 import { and, asc, count, desc, eq, gte, inArray, lt, or, sql } from "drizzle-orm";
 import {
@@ -15,11 +18,11 @@ import {
 import { lectureInputSchema, splitBooking, type AttendanceDTO, type BookingDTO, type BookResult, type StudentHomeDTO, type TeacherDashboardDTO } from "@workspace/live-core";
 import { assertOwner, bookedStudentIds, getLecture } from "../lib/access";
 import { requireRole, requireUser } from "../lib/auth";
-import { onBookingConfirmed, refundLecture } from "../lib/bookings";
+import { failPayment, onBookingConfirmed, refundLecture } from "../lib/bookings";
 import { shortCode } from "../lib/codes";
 import { lectureDTO, lectureDTOs, toMini } from "../lib/dto";
 import { sendLectureCancelled } from "../lib/emails";
-import { env } from "../lib/env";
+import { env, paymentConfigured } from "../lib/env";
 import { teacherBalances } from "../lib/ledger";
 import { badRequest, conflict, notFound, param, parse, uuidParam } from "../lib/http";
 import { logger } from "../lib/logger";
@@ -152,7 +155,10 @@ router.get("/student/home", async (req, res) => {
 
 router.post("/lectures", async (req, res) => {
   const user = requireRole(req, "teacher");
+  await assertVerifiedTeacher(user);
   const input = parse(lectureInputSchema, req.body);
+  await assertOwnedMediaUrl(user.id, input.coverUrl, true);
+  if (env.livekit.maxParticipants > 1 && input.capacity != null && input.capacity > env.livekit.maxParticipants - 1) throw badRequest(`حد التجربة الحالي ${env.livekit.maxParticipants - 1} طالبًا للحصة`);
   const startsAt = new Date(input.startsAt);
   if (startsAt.getTime() < Date.now() - 5 * 60_000) throw badRequest("الميعاد ده فات، اختار ميعاد جاي");
   const [lecture] = await db
@@ -164,10 +170,11 @@ router.post("/lectures", async (req, res) => {
       subject: input.subject,
       grade: input.grade,
       description: input.description,
+      coverUrl: input.coverUrl,
       startsAt,
       durationMin: input.durationMin,
       priceCents: input.priceCents,
-      capacity: input.capacity ?? null,
+      capacity: input.capacity ?? (env.livekit.maxParticipants > 1 ? env.livekit.maxParticipants - 1 : null),
       listed: input.listed,
       status: input.publish ? "scheduled" : "draft",
     })
@@ -194,10 +201,13 @@ router.get("/lectures/:id", async (req, res) => {
 
 router.patch("/lectures/:id", async (req, res) => {
   const user = requireRole(req, "teacher", "admin");
+  await assertVerifiedTeacher(user);
   const lecture = await getLecture(uuidParam(req.params.id));
   assertOwner(user, lecture);
   if (!["draft", "scheduled"].includes(lecture.status)) throw badRequest("مينفعش تعدّل حصة بدأت أو خلصت");
   const input = parse(lectureInputSchema, req.body);
+  await assertOwnedMediaUrl(user.id, input.coverUrl, true);
+  if (env.livekit.maxParticipants > 1 && input.capacity != null && input.capacity > env.livekit.maxParticipants - 1) throw badRequest(`حد التجربة الحالي ${env.livekit.maxParticipants - 1} طالبًا للحصة`);
   const [{ n }] = (await db
     .select({ n: count() })
     .from(bookingsTable)
@@ -210,10 +220,11 @@ router.patch("/lectures/:id", async (req, res) => {
       subject: input.subject,
       grade: input.grade,
       description: input.description,
+      coverUrl: input.coverUrl,
       startsAt: new Date(input.startsAt),
       durationMin: input.durationMin,
       priceCents: input.priceCents,
-      capacity: input.capacity ?? null,
+      capacity: input.capacity ?? (env.livekit.maxParticipants > 1 ? env.livekit.maxParticipants - 1 : null),
       listed: input.listed,
       status: input.publish ? "scheduled" : "draft",
       // A new time means a new reminder.
@@ -230,11 +241,12 @@ router.post("/lectures/:id/cancel", async (req, res) => {
   const lecture = await getLecture(uuidParam(req.params.id));
   assertOwner(user, lecture);
   if (!["draft", "scheduled"].includes(lecture.status)) throw badRequest("مينفعش تلغي حصة بدأت أو خلصت");
-  const [cancelled] = await db.update(lecturesTable).set({ status: "cancelled", updatedAt: new Date() }).where(eq(lecturesTable.id, lecture.id)).returning();
+  const [cancelled] = await db.update(lecturesTable).set({ status: "cancelled", updatedAt: new Date() }).where(and(eq(lecturesTable.id, lecture.id), inArray(lecturesTable.status, ["draft", "scheduled"]))).returning();
+  if (!cancelled) throw badRequest("تغيرت حالة الحصة ولا يمكن إلغاؤها الآن");
   const studentIds = await refundLecture(lecture.id);
   if (studentIds.length) {
     const students = await db.select().from(usersTable).where(inArray(usersTable.id, studentIds));
-    await notify(studentIds, { kind: "cancelled", title: "اتلغت حصة", body: `${lecture.title} — الفلوس هترجعلك`, link: `/lectures/${lecture.id}` });
+    await notify(studentIds, { kind: "cancelled", title: "أُلغيت الحصة", body: `${lecture.title} — يمكنك متابعة حالة عملية الدفع من حسابك`, link: `/lectures/${lecture.id}` });
     void sendLectureCancelled(students, lecture);
   }
   res.json(await lectureDTO(cancelled!, user));
@@ -293,39 +305,30 @@ router.get("/lectures/:id/attendance", async (req, res) => {
 
 router.post("/lectures/:id/book", async (req, res) => {
   const user = requireRole(req, "student");
-  const lecture = await getLecture(uuidParam(req.params.id));
-  if (!["scheduled", "live"].includes(lecture.status) || endsAt(lecture) < new Date()) {
-    throw badRequest("الحجز مقفول للحصة دي");
-  }
-
-  const existing = await db.query.bookingsTable.findFirst({
-    where: and(eq(bookingsTable.lectureId, lecture.id), eq(bookingsTable.studentId, user.id)),
+  const lectureId = uuidParam(req.params.id);
+  const { lecture, booking, alreadyConfirmed } = await db.transaction(async tx => {
+    // Capacity checks and seat reservation must use the same lock across students.
+    const [lecture] = await tx.select().from(lecturesTable).where(eq(lecturesTable.id, lectureId)).for("update");
+    if (!lecture) throw notFound();
+    if (!["scheduled", "live"].includes(lecture.status) || endsAt(lecture) < new Date()) throw badRequest("الحجز مغلق لهذه الحصة");
+    const existing = await tx.query.bookingsTable.findFirst({ where: and(eq(bookingsTable.lectureId, lecture.id), eq(bookingsTable.studentId, user.id)) });
+    if (existing?.status === "confirmed") return { lecture, booking: existing, alreadyConfirmed: true };
+    if (lecture.priceCents > 0 && provider.name === "easykash" && !user.phone?.trim()) throw badRequest("أضف رقم هاتفك من صفحة حسابي قبل متابعة الدفع.", "phone_required");
+    if (lecture.priceCents > 0 && !paymentConfigured) throw badRequest("الدفع الإلكتروني غير متاح حاليًا. لم يُنشأ حجز أو تُحجز أموال.", "payments_unavailable");
+    if (lecture.capacity) {
+      const holdSince = new Date(Date.now() - PENDING_HOLD_MIN * 60_000);
+      const [seats] = await tx.select({ n: count() }).from(bookingsTable).where(and(eq(bookingsTable.lectureId, lecture.id), or(eq(bookingsTable.status, "confirmed"), and(eq(bookingsTable.status, "pending_payment"), gte(bookingsTable.createdAt, holdSince))), existing ? sql`${bookingsTable.id} <> ${existing.id}` : undefined));
+      if (Number(seats?.n ?? 0) >= lecture.capacity) throw conflict("اكتمل عدد الأماكن في الحصة", "full");
+    }
+    const free = lecture.priceCents === 0;
+    const values = { status: free ? "confirmed" as const : "pending_payment" as const, pricePaidCents: lecture.priceCents, confirmedAt: free ? new Date() : null, confirmedPaymentId: null };
+    const [booking] = existing
+      ? await tx.update(bookingsTable).set({ ...values, createdAt: new Date() }).where(eq(bookingsTable.id, existing.id)).returning()
+      : await tx.insert(bookingsTable).values({ lectureId: lecture.id, studentId: user.id, ...values }).returning();
+    return { lecture, booking: booking!, alreadyConfirmed: false };
   });
-  if (existing?.status === "confirmed") {
-    const body: BookResult = { booking: bookingDTO(existing), payment: null, checkoutUrl: null };
-    return void res.json(body);
-  }
-
-  if (lecture.capacity) {
-    const holdSince = new Date(Date.now() - PENDING_HOLD_MIN * 60_000);
-    const [{ n }] = (await db
-      .select({ n: count() })
-      .from(bookingsTable)
-      .where(
-        and(
-          eq(bookingsTable.lectureId, lecture.id),
-          or(eq(bookingsTable.status, "confirmed"), and(eq(bookingsTable.status, "pending_payment"), gte(bookingsTable.createdAt, holdSince))),
-          existing ? sql`${bookingsTable.id} <> ${existing.id}` : undefined,
-        ),
-      )) as [{ n: number }];
-    if (Number(n) >= lecture.capacity) throw conflict("الأماكن خلصت في الحصة دي", "full");
-  }
-
+  if (alreadyConfirmed) return void res.json({ booking: bookingDTO(booking), payment: null, checkoutUrl: null } satisfies BookResult);
   const free = lecture.priceCents === 0;
-  const values = { status: free ? ("confirmed" as const) : ("pending_payment" as const), pricePaidCents: lecture.priceCents, confirmedAt: free ? new Date() : null };
-  const [booking] = existing
-    ? await db.update(bookingsTable).set({ ...values, createdAt: new Date() }).where(eq(bookingsTable.id, existing.id)).returning()
-    : await db.insert(bookingsTable).values({ lectureId: lecture.id, studentId: user.id, ...values }).returning();
 
   if (free) {
     void onBookingConfirmed(booking!.id);
@@ -342,7 +345,8 @@ router.post("/lectures/:id/book", async (req, res) => {
     checkout = await provider.createCheckout({ payment: payment!, lecture, payer: user });
   } catch (err) {
     logger.error({ err }, "createCheckout failed");
-    await db.update(paymentsTable).set({ status: "failed" }).where(eq(paymentsTable.id, payment!.id));
+    await failPayment(payment!.id);
+    if (err instanceof EasykashValidationError) throw badRequest(err.message, err.code);
     throw badRequest("بوابة الدفع مش متاحة دلوقتي، جرّب تاني بعد شوية", "gateway");
   }
   await db.update(paymentsTable).set({ providerRef: checkout.providerRef }).where(eq(paymentsTable.id, payment!.id));

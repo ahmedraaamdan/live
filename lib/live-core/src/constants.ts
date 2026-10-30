@@ -78,10 +78,11 @@ export const PAYMENT_STATUSES = ["pending", "succeeded", "failed", "refunded"] a
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
 /** How a student paid, as reported by the gateway. */
-export const PAYMENT_METHODS = ["card", "wallet", "apple_pay", "google_pay"] as const;
+export const PAYMENT_METHODS = ["card", "wallet", "apple_pay", "google_pay", "cash"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  cash: "فوري / أمان",
   card: "كارت بنكي",
   wallet: "محفظة موبايل",
   apple_pay: "Apple Pay",

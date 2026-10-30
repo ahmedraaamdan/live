@@ -3,3 +3,5 @@ export * from "./users";
 export * from "./lectures";
 export * from "./money";
 export * from "./homework";
+
+export * from "./verification";

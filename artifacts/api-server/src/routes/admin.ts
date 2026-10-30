@@ -18,7 +18,7 @@ router.get("/admin/overview", async (_req, res) => {
       .from(walletEntriesTable)
       .where(where)
       .then((r) => Number(r[0]?.v ?? 0));
-  const [gmv, platform, teacherPayable, paidOut, roles, lectures, bookings, recent, pending] = await Promise.all([
+  const [gmv, platform, teacherPayable, paidOut, roles, lectures, bookings, recent, pending, reviews] = await Promise.all([
     db
       .select({ v: sql<number>`coalesce(sum(${paymentsTable.amountCents}), 0)` })
       .from(paymentsTable)
@@ -49,11 +49,21 @@ router.get("/admin/overview", async (_req, res) => {
       .innerJoin(usersTable, eq(usersTable.id, payoutsTable.teacherId))
       .where(eq(payoutsTable.status, "requested"))
       .orderBy(payoutsTable.createdAt),
+    db.select({ p: paymentsTable, payer: usersTable, l: lecturesTable }).from(paymentsTable)
+      .innerJoin(usersTable, eq(usersTable.id, paymentsTable.userId))
+      .innerJoin(bookingsTable, eq(bookingsTable.id, paymentsTable.bookingId))
+      .innerJoin(lecturesTable, eq(lecturesTable.id, bookingsTable.lectureId))
+      .where(sql`${paymentsTable.raw}->>'gahezRefundPending' = 'true' or ${paymentsTable.raw}->>'gahezReviewReason' is not null`)
+      .orderBy(paymentsTable.createdAt).limit(100),
   ]);
-  const teacherIds = [...new Set(recent.map((r) => r.l.teacherId))];
+  const teacherIds = [...new Set([...recent, ...reviews].map((r) => r.l.teacherId))];
   const teachers = teacherIds.length ? await db.select().from(usersTable).where(inArray(usersTable.id, teacherIds)) : [];
   const teacherBy = new Map(teachers.map((t) => [t.id, t]));
   const byRole = new Map(roles.map((r) => [r.role, Number(r.n)]));
+  const toAdminPayment = ({ p, payer, l }: typeof recent[number]) => {
+    const flags = (p.raw ?? {}) as Record<string, unknown>;
+    return { id: p.id, status: p.status, amountCents: p.amountCents, method: p.method as PaymentMethod | null, provider: p.provider, bookingId: p.bookingId, lectureId: l.id, lectureTitle: l.title, createdAt: p.createdAt.toISOString(), payer: toMini(payer), teacher: toMini(teacherBy.get(l.teacherId) ?? { id: l.teacherId, name: "", avatarUrl: null }), refundPending: Boolean(flags.gahezRefundPending), requiresReview: Boolean(flags.gahezReviewReason) };
+  };
   const body: AdminOverviewDTO = {
     gmvCents: gmv,
     platformCents: platform,
@@ -67,19 +77,8 @@ router.get("/admin/overview", async (_req, res) => {
       lectures: Number(lectures[0]?.n ?? 0),
       bookings: Number(bookings[0]?.n ?? 0),
     },
-    recentPayments: recent.map(({ p, payer, l }) => ({
-      id: p.id,
-      status: p.status,
-      amountCents: p.amountCents,
-      method: p.method as PaymentMethod | null,
-      provider: p.provider,
-      bookingId: p.bookingId,
-      lectureId: l.id,
-      lectureTitle: l.title,
-      createdAt: p.createdAt.toISOString(),
-      payer: toMini(payer),
-      teacher: toMini(teacherBy.get(l.teacherId) ?? { id: l.teacherId, name: "", avatarUrl: null }),
-    })),
+    recentPayments: recent.map(toAdminPayment),
+    pendingReviews: reviews.map(toAdminPayment),
     pendingPayouts: pending.map(({ p, t }) => toPayout(p, toMini(t))),
   };
   res.json(body);

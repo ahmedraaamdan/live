@@ -32,9 +32,11 @@ function ScrollToTop() {
 }
 
 function Router() {
+  const [location] = useLocation();
   return (
     <RoutedErrorBoundary>
       <ScrollToTop />
+      <div key={location} className="studio-route">
       <Switch>
         <Route path="/" component={Home} />
         <Route path="/classes" component={Classes} />
@@ -54,6 +56,7 @@ function Router() {
         <Route path="/style-guide" component={StyleGuide} />
         <Route component={NotFound} />
       </Switch>
+      </div>
     </RoutedErrorBoundary>
   );
 }

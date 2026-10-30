@@ -1,0 +1,34 @@
+import { build } from 'esbuild';
+import assert from 'node:assert/strict';
+import path from 'node:path';
+import { mkdir, rm } from 'node:fs/promises';
+import { pathToFileURL } from 'node:url';
+const root = path.resolve('../..');
+const output = path.join(root, 'tmp', `client-switch-${Date.now()}.mjs`);
+await mkdir(path.dirname(output), { recursive: true });
+await build({ entryPoints:[path.join(root,'artifacts/live-app/src/lib/api.ts')], outfile:output, bundle:true, platform:'node', format:'esm', define:{'import.meta.env.VITE_API_URL':'""'} });
+const store = () => { const data = new Map(); return { getItem:k=>data.get(k) ?? null, setItem:(k,v)=>data.set(k,v), removeItem:k=>data.delete(k) }; };
+const old = { localStorage:globalThis.localStorage, sessionStorage:globalThis.sessionStorage, window:globalThis.window, fetch:globalThis.fetch };
+try {
+ globalThis.localStorage = store(); globalThis.sessionStorage = store(); globalThis.window = new EventTarget();
+ const client = await import(pathToFileURL(output));
+ let checks=0; const check=(name,condition)=>{assert.ok(condition,name);checks++;};
+ client.setToken('owner-original'); client.setSwitchToken('temporary-target');
+ check('owner token stays in original storage',localStorage.getItem('gl.token')==='owner-original');
+ check('target token is tab scoped',sessionStorage.getItem('gl.switch-token')==='temporary-target');
+ check('requests use target token',client.authHeaders().Authorization==='Bearer temporary-target');
+ let expired=0,signedOut=0;window.addEventListener('gl:switch-expired',()=>expired++);window.addEventListener('gl:signed-out',()=>signedOut++);
+ globalThis.fetch=async()=>new Response('{"error":"expired"}',{status:401,headers:{'Content-Type':'application/json'}});
+ await client.api('/me').catch(()=>{});
+ check('expired target falls back to original',client.getToken()==='owner-original'&&expired===1&&signedOut===0);
+ check('expired token removed',sessionStorage.getItem('gl.switch-token')===null);
+ let resolve;globalThis.fetch=()=>new Promise(r=>resolve=r);
+ const stale=client.api('/slow').catch(()=>{});
+ client.setSwitchToken('new-target');resolve(new Response('{"error":"old request"}',{status:401,headers:{'Content-Type':'application/json'}}));await stale;
+ check('stale 401 cannot clear a newer identity',client.getToken()==='new-target'&&expired===1);
+ const reloaded = await import(pathToFileURL(output).href+'?reload=1');
+ check('reload restores tab target',reloaded.getToken()==='new-target');
+ reloaded.setSwitchToken(null);check('return restores original without a new password',reloaded.getToken()==='owner-original');
+ client.setToken(null);check('logout clears both stores',localStorage.getItem('gl.token')===null&&sessionStorage.getItem('gl.switch-token')===null);
+ console.log(`${checks} client session-isolation checks passed`);
+} finally { Object.assign(globalThis,old); await rm(output,{force:true}); }
