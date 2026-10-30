@@ -67,7 +67,8 @@ export function WalletPage() {
             </div>
             <Button
               size="lg"
-              className="mt-6 bg-white text-black shadow-none"
+              variant="filled"
+              className="mt-6 bg-primary !text-white hover:bg-primary/90 shadow-glow font-bold"
               disabled={w.availableCents < MIN_PAYOUT_CENTS}
               onClick={() => {
                 setForm({ ...form, amount: String(w.availableCents / 100) });
@@ -75,7 +76,7 @@ export function WalletPage() {
                 setOpen(true);
               }}
             >
-              <ArrowUpFromLine /> اسحب فلوسك
+              <ArrowUpFromLine className="text-white" /> <span className="text-white">اسحب فلوسك</span>
             </Button>
           </div>
         </Card>

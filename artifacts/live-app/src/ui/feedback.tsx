@@ -61,10 +61,15 @@ export function LiveBadge({ className, label = 'مباشر' }: { className?: str
 }
 
 /** Small dot for unread counts on icons. */
-export function CountDot({ count }: { count: number }) {
+export function CountDot({ count, className }: { count: number; className?: string }) {
   if (count <= 0) return null;
   return (
-    <span className="absolute -top-0.5 -left-0.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-primary px-1 font-num text-label-sm text-on-primary">
+    <span
+      className={cn(
+        'absolute -top-1 -end-1 z-20 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 font-num text-[11px] font-bold leading-none text-white shadow-sm ring-2 ring-surface pointer-events-none select-none',
+        className,
+      )}
+    >
       {count > 99 ? '99+' : count}
     </span>
   );

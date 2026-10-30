@@ -81,8 +81,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           const on = isActive(item);
           return (
             <Link key={item.href} href={item.href} className="group flex w-full flex-col items-center gap-1 py-1" aria-current={on ? 'page' : undefined}>
-              <span className={cn('state-layer relative grid h-8 w-14 place-items-center rounded-full transition-colors', on ? 'bg-secondary-container text-on-secondary-container' : 'text-on-surface-variant')}>
-                <item.icon className="size-6" strokeWidth={on ? 2.4 : 2} />
+              <span className="relative">
+                <span className={cn('state-layer grid h-8 w-14 place-items-center rounded-full transition-colors', on ? 'bg-secondary-container text-on-secondary-container' : 'text-on-surface-variant')}>
+                  <item.icon className="size-6" strokeWidth={on ? 2.4 : 2} />
+                </span>
                 {item.href === '/notifications' && <CountDot count={unread} />}
               </span>
               <span className={cn('text-label-md', on ? 'text-on-surface' : 'text-on-surface-variant')}>{item.label}</span>
@@ -103,13 +105,15 @@ export function AppShell({ children }: { children: ReactNode }) {
             const on = isActive(item);
             return (
               <Link key={item.href} href={item.href} className="flex flex-1 flex-col items-center justify-center gap-1" aria-current={on ? 'page' : undefined}>
-                <span
-                  className={cn(
-                    'state-layer relative grid h-8 w-16 place-items-center rounded-full transition-[background-color,width] duration-300 ease-standard',
-                    on ? 'bg-secondary-container text-on-secondary-container' : 'w-12 text-on-surface-variant',
-                  )}
-                >
-                  <item.icon className="size-6" strokeWidth={on ? 2.4 : 2} />
+                <span className="relative">
+                  <span
+                    className={cn(
+                      'state-layer grid h-8 w-16 place-items-center rounded-full transition-[background-color,width] duration-300 ease-standard',
+                      on ? 'bg-secondary-container text-on-secondary-container' : 'w-12 text-on-surface-variant',
+                    )}
+                  >
+                    <item.icon className="size-6" strokeWidth={on ? 2.4 : 2} />
+                  </span>
                   {item.href === '/notifications' && <CountDot count={unread} />}
                 </span>
                 <span className={cn('text-label-md', on ? 'text-on-surface' : 'text-on-surface-variant')}>{item.label}</span>
@@ -126,9 +130,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 export function NotificationsButton() {
   const me = useMe();
   return (
-    <Link href="/notifications" className="state-layer relative grid size-11 place-items-center rounded-full text-on-surface-variant" aria-label="التنبيهات">
-      <Bell className="size-6" />
-      <CountDot count={me.unreadNotifications} />
+    <Link href="/notifications" className="relative grid size-11 place-items-center rounded-full text-on-surface-variant transition-colors hover:text-on-surface" aria-label="التنبيهات">
+      <span className="state-layer absolute inset-0 rounded-full" />
+      <Bell className="relative z-10 size-6" />
+      <CountDot count={me.unreadNotifications} className="top-1 end-1" />
     </Link>
   );
 }
