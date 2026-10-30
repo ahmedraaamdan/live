@@ -49,3 +49,22 @@ img { -webkit-user-drag: none; }
  .gl-shell .gl-actionbar { bottom:calc(var(--nav-height) + var(--safe-bottom)); z-index:45; padding-bottom:12px; background:var(--surface-container-lowest); }
  .gl-shell:has(.gl-actionbar) .gl-page { padding-bottom:calc(var(--nav-height) + var(--safe-bottom) + 128px); }
 }
+
+/* Dark mode refinements matching stage aesthetic */
+:root[data-theme='dark'] .gl-button[data-variant='filled'] {
+  border-color: var(--primary);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .gl-button[data-variant='filled'] {
+    border-color: var(--primary);
+  }
+}
+
+:root[data-theme='dark'] .gl-nav-bottom a[aria-current='page'] > span:first-child {
+  border-color: var(--primary);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .gl-nav-bottom a[aria-current='page'] > span:first-child {
+    border-color: var(--primary);
+  }
+}
