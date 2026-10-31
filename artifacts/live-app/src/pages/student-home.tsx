@@ -1,25 +1,60 @@
 import { StudyBanner, StudyIllustration } from '@/components/study-illustration';
 import { QueryError } from '@/components/query-error';
-import { useState } from 'react';
-import { Eye, NotebookPen, Radio, Sparkles, ThumbsUp, Ticket } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Bookmark, Eye, NotebookPen, Radio, Search, Sparkles, ThumbsUp, Ticket, UserCheck, X } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
-import { useQuery } from '@tanstack/react-query';
-import { SUBJECTS, subjectLabel, type FeedDTO, type FeedItem, type StudentHomeDTO } from '@workspace/live-core';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { GRADES, SUBJECTS, subjectLabel, type FeedDTO, type FeedItem, type LectureDTO, type StudentHomeDTO } from '@workspace/live-core';
 import { Countdown } from '@/components/bits';
+import { FollowTeacherButton, SaveLectureButton } from '@/components/lecture-actions';
 import { approvalPct } from '@/components/vote';
 import { NotificationsButton } from '@/layouts/app-shell';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { fmtDateTime, fmtRelative, greeting, money } from '@/lib/format';
 import { useMe } from '@/lib/session';
-import { Avatar, Badge, Button, Card, Chip, EmptyState, LinkCard, LiveBadge, Page, SectionHeader, SectionLink, TopBar } from '@/ui';
+import { Avatar, Badge, Button, Card, Chip, EmptyState, LinkCard, LiveBadge, Page, SectionHeader, SectionLink, Select, TextField, TopBar } from '@/ui';
+
+const PAGE_SIZE = 30;
+const gradeOptions = [{ value: '', label: 'كل الصفوف' }, ...GRADES.map((g) => ({ value: g.key, label: g.label }))];
+const priceOptions = [{ value: '', label: 'كل الأسعار' }, { value: 'free', label: 'مجانية' }, { value: 'paid', label: 'مدفوعة' }];
 
 export function StudentHome() {
   const me = useMe();
   const [, navigate] = useLocation();
   const [subject, setSubject] = useState<string>('');
+  const [following, setFollowing] = useState(false);
+  const [grade, setGrade] = useState('');
+  const [price, setPrice] = useState('');
+  const [typed, setTyped] = useState('');
+  const [search, setSearch] = useState('');
+  const [limit, setLimit] = useState(PAGE_SIZE);
+  // Wait for a pause in typing, and start again from the top when the question changes.
+  useEffect(() => {
+    const timer = setTimeout(() => setSearch(typed.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [typed]);
+  useEffect(() => setLimit(PAGE_SIZE), [subject, following, grade, price, search]);
+  const params = new URLSearchParams();
+  if (subject) params.set('subject', subject);
+  if (following) params.set('following', '1');
+  if (grade) params.set('grade', grade);
+  if (price) params.set('price', price);
+  if (search) params.set('q', search);
+  if (limit !== PAGE_SIZE) params.set('limit', String(limit));
+  const query = params.toString();
+  const filtered = Boolean(subject || following || grade || price || search);
+  const clearFilters = () => {
+    setSubject('');
+    setFollowing(false);
+    setGrade('');
+    setPrice('');
+    setTyped('');
+    setSearch('');
+  };
   const home = useQuery({ queryKey: ['student-home'], queryFn: () => api<StudentHomeDTO>('/student/home'), refetchInterval: 30_000 });
-  const feed = useQuery({ queryKey: ['feed', subject], queryFn: () => api<FeedDTO>(`/feed${subject ? `?subject=${subject}` : ''}`), refetchInterval: 30_000 });
+  const feed = useQuery({ queryKey: ['feed', query], queryFn: () => api<FeedDTO>(`/feed${query ? `?${query}` : ''}`), refetchInterval: 30_000, placeholderData: keepPreviousData });
+  const saved = useQuery({ queryKey: ['saved-lectures'], queryFn: () => api<LectureDTO[]>('/me/saved') });
   const h = home.data;
   const myLive = h?.liveNow[0];
   const next = h?.upcoming[0];
@@ -77,10 +112,36 @@ export function StudentHome() {
           </section>
         )}
 
+        {saved.data && saved.data.length > 0 && (
+          <section className="mb-8">
+            <SectionHeader title="حصص حفظتها" />
+            <div className="scrollbar-none -mx-4 flex snap-x gap-3 overflow-x-auto px-4 md:mx-0 md:px-0">
+              {saved.data.map((l) => (
+                <LinkCard key={l.id} href={l.booking?.status === 'confirmed' ? `/lectures/${l.id}` : `/l/${l.code}`} pad="sm" className="w-64 shrink-0 snap-start">
+                  <div className="flex items-center gap-2 text-primary">
+                    <Bookmark className="size-5" />
+                    <span className="text-label-md">{l.status === 'live' ? 'مباشرة الآن' : fmtRelative(l.startsAt)}</span>
+                  </div>
+                  <p className="mt-2 line-clamp-2 text-title-md">{l.title}</p>
+                  <p className="mt-1 truncate text-body-sm text-on-surface-variant">{l.teacher.name} · {l.priceCents ? money(l.priceCents) : 'مجانية'}</p>
+                </LinkCard>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Discovery: every teacher's classes, ranked (docs/app/RANKING.md). */}
+        <div className="mb-4 grid gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
+          <TextField type="search" aria-label="ابحث عن مدرس أو حصة" placeholder="ابحث عن مدرس أو حصة" value={typed} onChange={(e) => setTyped(e.target.value)} trailing={<Search className="me-3 size-5 text-on-surface-variant" />} />
+          <Select aria-label="الصف الدراسي" value={grade} onChange={(e) => setGrade(e.target.value)} options={gradeOptions} />
+          <Select aria-label="السعر" value={price} onChange={(e) => setPrice(e.target.value)} options={priceOptions} />
+        </div>
         <div className="scrollbar-none -mx-4 mb-5 flex gap-2 overflow-x-auto px-4 md:mx-0 md:px-0">
-          <Chip selected={!subject} onClick={() => setSubject('')} icon={<Sparkles />}>
+          <Chip selected={!subject && !following} onClick={() => { setSubject(''); setFollowing(false); }} icon={<Sparkles />}>
             لك
+          </Chip>
+          <Chip selected={following} onClick={() => setFollowing(!following)} icon={<UserCheck />}>
+            مدرسون أتابعهم
           </Chip>
           {SUBJECTS.filter((s) => s.key !== 'other').map((s) => (
             <Chip key={s.key} selected={subject === s.key} onClick={() => setSubject(s.key)}>
@@ -88,6 +149,13 @@ export function StudentHome() {
             </Chip>
           ))}
         </div>
+        {filtered && (
+          <div className="mb-5">
+            <Button variant="text" size="sm" onClick={clearFilters}>
+              <X /> مسح البحث والفلاتر
+            </Button>
+          </div>
+        )}
 
         <section className="mb-8">
           <SectionHeader
@@ -111,7 +179,7 @@ export function StudentHome() {
             </div>
           ) : (
             <Card variant="filled" className="text-center">
-              <p className="text-body-md text-on-surface-variant">مفيش بث شغال دلوقتي{subject ? ` في ${subjectLabel(subject)}` : ''}. بص على الحصص الجاية تحت.</p>
+              <p className="text-body-md text-on-surface-variant">{filtered ? 'لا يوجد بث مباشر يطابق بحثك الآن.' : 'لا يوجد بث مباشر الآن. تصفح الحصص القادمة بالأسفل.'}</p>
             </Card>
           )}
         </section>
@@ -125,7 +193,17 @@ export function StudentHome() {
               ))}
             </div>
           ) : (
-            !feed.isPending && <EmptyState icon={<Ticket />} title="مفيش حصص متجدولة" body="أول ما المدرسين ينزّلوا حصص جديدة هتلاقيها هنا. ولو معاك لينك من مدرسك افتحه على طول." />
+            !feed.isPending &&
+            (filtered ? (
+              <EmptyState icon={<Search />} title="لا توجد حصص تطابق بحثك" body={following ? 'تابع مدرسيك من ملفاتهم لتظهر حصصهم هنا.' : 'جرّب كلمة أخرى، أو غيّر المادة أو الصف.'} action={<Button variant="tonal" onClick={clearFilters}>مسح البحث والفلاتر</Button>} />
+            ) : (
+              <EmptyState icon={<Ticket />} title="لا توجد حصص قادمة" body="ستظهر هنا الحصص الجديدة فور نشرها. وإذا كان لديك رابط من مدرسك، افتحه مباشرة." />
+            ))
+          )}
+          {feed.data?.hasMore && (
+            <Button variant="tonal" block className="mt-4" loading={feed.isFetching} onClick={() => setLimit((current) => Math.min(current + PAGE_SIZE, 120))}>
+              عرض المزيد
+            </Button>
           )}
         </section>
       </Page>
@@ -154,13 +232,17 @@ function FeedCard({ item, rank }: { item: FeedItem; rank?: number }) {
             </Badge>
           )}
         </div>
-        <div className="absolute top-3 end-3">
+        <div className="lecture-card-action absolute top-3 end-3 flex items-center gap-2">
           {booked ? <Badge tone="success">حاجز</Badge> : full ? <Badge tone="error">كامل</Badge> : null}
+          {!booked && <SaveLectureButton lectureId={l.id} saved={l.saved} />}
         </div>
         <Link href={`/teachers/${l.teacher.id}`} className="teacher-link lecture-card-teacher flex items-center gap-2 text-white">
           <Avatar name={l.teacher.name} src={l.teacher.avatarUrl} size="sm" ring />
           <span className="text-title-sm drop-shadow">{l.teacher.name}</span>
         </Link>
+        <div className="lecture-card-action">
+          <FollowTeacherButton teacherId={l.teacher.id} followed={l.teacher.followed} compact />
+        </div>
       </div>
       <div className="p-4">
         <div className="flex items-center gap-2 text-body-sm text-on-surface-variant">

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Moon, Sun, UserRound, Settings, LogOut } from 'lucide-react';
+import { LifeBuoy, Moon, Sun, UserRound, Settings, LogOut } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useSession } from '@/lib/session';
 import { getTheme, setTheme } from '@/lib/theme';
@@ -14,5 +14,5 @@ export function ThemeToggle() {
 export function AccountMenu() {
  const {me,signOut}=useSession(); const [,navigate]=useLocation();
  if(!me)return null;
- return <ActionMenu trigger={<button type="button" className="app-account-trigger" aria-label="قائمة حسابي" title={me.user.name}><Avatar name={me.user.name} src={me.user.avatarUrl} size="sm"/></button>} items={[{label:'حسابي',icon:<UserRound/>,onSelect:()=>navigate('/me')},{label:'الإعدادات',icon:<Settings/>,onSelect:()=>{navigate('/me?section=settings');window.dispatchEvent(new Event('gl:settings-open'));}},{label:'تسجيل الخروج',icon:<LogOut/>,danger:true,onSelect:()=>{void signOut().then(()=>navigate('/welcome',{replace:true}));}}]}/>;
+ return <ActionMenu trigger={<button type="button" className="app-account-trigger" aria-label="قائمة حسابي" title={me.user.name}><Avatar name={me.user.name} src={me.user.avatarUrl} size="sm"/></button>} items={[{label:'حسابي',icon:<UserRound/>,onSelect:()=>navigate('/me')},{label:'الإعدادات',icon:<Settings/>,onSelect:()=>{navigate('/me?section=settings');window.dispatchEvent(new Event('gl:settings-open'));}},...(me.user.role==='admin'?[]:[{label:'الدعم',icon:<LifeBuoy/>,onSelect:()=>navigate('/support')}]),{label:'تسجيل الخروج',icon:<LogOut/>,danger:true,onSelect:()=>{void signOut().then(()=>navigate('/welcome',{replace:true}));}}]}/>;
 }

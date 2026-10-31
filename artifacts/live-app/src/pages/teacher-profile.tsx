@@ -4,6 +4,7 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { subjectLabel, type TeacherLecturesDTO, type TeacherProfileDTO } from '@workspace/live-core';
 import { api } from '@/lib/api';
 import { useSession } from '@/lib/session';
+import { FollowTeacherButton } from '@/components/lecture-actions';
 import { LectureCard } from '@/components/lecture-card';
 import { QueryError } from '@/components/query-error';
 import { ShareTeacherCard } from '@/components/share-teacher-card';
@@ -68,9 +69,12 @@ export function TeacherProfile({ id }: { id: string }) {
         title="ملف المدرس"
         back
         actions={
-          <Button size="sm" variant="tonal" onClick={() => setShare(true)}>
-            <Share2 /> مشاركة
-          </Button>
+          <>
+            {me?.user.role === 'student' && <FollowTeacherButton teacherId={id} followed={t.followed} />}
+            <Button size="sm" variant="tonal" onClick={() => setShare(true)}>
+              <Share2 /> مشاركة
+            </Button>
+          </>
         }
       />
       <Page className="teacher-profile-page">
