@@ -66,7 +66,7 @@ export function Sheet({
 
 export function ActionMenu({ trigger, items }: { trigger: ReactNode; items: Array<{ label: string; icon?: ReactNode; onSelect: () => void; danger?: boolean; count?: number }> }) {
   return (
-    <Menu.Root dir="rtl">
+    <Menu.Root dir="rtl" modal={false}>
       <Menu.Trigger asChild>{trigger}</Menu.Trigger>
       <Menu.Portal>
         <Menu.Content align="end" sideOffset={6} className="gl-menu z-[70] min-w-48 rounded-md bg-surface-container-lowest py-2 shadow-e3 data-[state=open]:animate-pop">

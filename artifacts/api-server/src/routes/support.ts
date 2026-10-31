@@ -1,7 +1,7 @@
 /** Support tickets: anyone signed in can write to the administrators and follow the reply here. */
 import { Router } from "express";
-import { asc, desc, eq, inArray } from "drizzle-orm";
-import { db, supportTicketMessagesTable, supportTicketsTable, usersTable, type SupportTicket, type User } from "@workspace/db";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { db, notificationsTable, supportTicketMessagesTable, supportTicketsTable, usersTable, type SupportTicket, type User } from "@workspace/db";
 import { ticketInputSchema, ticketReplySchema, type TicketDetailDTO, type TicketDTO } from "@workspace/live-core";
 import { requireRole, requireUser } from "../lib/auth";
 import { toMini } from "../lib/dto";
@@ -66,7 +66,12 @@ router.post("/tickets", async (req, res) => {
 
 router.get("/tickets/:id", async (req, res) => {
   const user = requireUser(req);
-  res.json(await detail(await loadTicket(uuidParam(req.params.id), user), user));
+  const ticket = await loadTicket(uuidParam(req.params.id), user);
+  await db
+    .update(notificationsTable)
+    .set({ readAt: new Date() })
+    .where(and(eq(notificationsTable.userId, user.id), eq(notificationsTable.link, `/support/${ticket.id}`), sql`${notificationsTable.readAt} is null`));
+  res.json(await detail(ticket, user));
 });
 
 router.post("/tickets/:id/messages", async (req, res) => {
@@ -96,6 +101,10 @@ router.post("/tickets/:id/close", async (req, res) => {
   const user = requireUser(req);
   const ticket = await loadTicket(uuidParam(req.params.id), user);
   const [updated] = await db.update(supportTicketsTable).set({ status: "closed", updatedAt: new Date() }).where(eq(supportTicketsTable.id, ticket.id)).returning();
+  await db
+    .update(notificationsTable)
+    .set({ readAt: new Date() })
+    .where(and(eq(notificationsTable.link, `/support/${ticket.id}`), sql`${notificationsTable.readAt} is null`));
   res.json(await detail(updated!, user));
 });
 

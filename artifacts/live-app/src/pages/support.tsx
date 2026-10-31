@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { LifeBuoy, Plus, Send } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ROLE_LABELS, TICKET_CATEGORY_LABELS, TICKET_STATUS_LABELS, ticketInputSchema, type TicketCategory, type TicketDetailDTO, type TicketDTO, type TicketStatus } from '@workspace/live-core';
@@ -115,6 +115,7 @@ export function TicketThread({ id }: { id: string }) {
     qc.setQueryData(['ticket', id], updated);
     void qc.invalidateQueries({ queryKey: ['tickets'] });
     void qc.invalidateQueries({ queryKey: ['admin-tickets'] });
+    void qc.invalidateQueries({ queryKey: ['me'] });
   };
   const send = useMutation({
     mutationFn: () => api<TicketDetailDTO>(`/tickets/${id}/messages`, { body: { body: reply } }),
@@ -127,6 +128,12 @@ export function TicketThread({ id }: { id: string }) {
   const close = useMutation({ mutationFn: () => api<TicketDetailDTO>(`/tickets/${id}/close`, { method: 'POST' }), onSuccess: done, onError: (e) => toast(errorMessage(e)) });
   if (q.isPending) return <PageSpinner />;
   if (!q.data) return <><TopBar title="التذكرة" back /><Page><QueryError error={q.error} retry={q.refetch} /></Page></>;
+  useEffect(() => {
+    if (q.data) {
+      void qc.invalidateQueries({ queryKey: ['me'] });
+    }
+  }, [q.data, qc]);
+
   const t = q.data;
   const asAdmin = me.user.role === 'admin';
   return (

@@ -172,7 +172,7 @@
     font-family: var(--font-sans);
     font-size: var(--text-body-lg);
     line-height: var(--text-body-lg--line-height);
-    overscroll-behavior-y: none;
+    overscroll-behavior-y: auto;
   }
   ::selection {
     background: var(--primary-container);
