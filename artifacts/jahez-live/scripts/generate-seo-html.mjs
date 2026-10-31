@@ -43,7 +43,7 @@ const HOME_CRUMB = { label: 'الرئيسية', path: '/' };
  * Routes without jsonLd get the page's two-step BreadcrumbList.
  */
 const routes = [
-  { path: '/', h1: 'حصتك جاهزة؟ تعلّم من مكانك.', jsonLd: (sd) => [sd.organizationJsonLd(), sd.websiteJsonLd()] },
+  { path: '/', h1: 'حصتك جاهزة؟ تعلّم من مكانك.', jsonLd: (sd) => [sd.organizationJsonLd(), sd.websiteJsonLd(), sd.promoVideoJsonLd()] },
   { path: '/classes', h1: 'الحصص المباشرة عبر الإنترنت', crumb: 'الحصص' },
   { path: '/teachers', h1: 'اختر المدرس المناسب لك.', crumb: 'المدرسون' },
   { path: '/how-it-works', h1: 'الحجز بسيط.', crumb: 'كيف يعمل؟' },
