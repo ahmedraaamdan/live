@@ -12,7 +12,7 @@
     "seed:demo": "node scripts/seed-demo.mjs",
     "demo:marketing": "tsx scripts/marketing-demo.ts",
     "smoke": "node scripts/smoke.mjs",
-    "test": "tsx --test src/lib/payments/easykash.test.ts src/lib/ledger.test.ts src/lib/account-switch.test.ts src/lib/teacher-tools.test.ts src/lib/asset-cache.test.ts src/lib/security-crypto.test.ts src/lib/teacher-verification.test.ts"
+    "test": "tsx --test src/lib/payments/easykash.test.ts src/lib/ledger.test.ts src/lib/account-switch.test.ts src/lib/teacher-tools.test.ts src/lib/asset-cache.test.ts src/lib/security-crypto.test.ts src/lib/teacher-verification.test.ts src/lib/hardening.test.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.11",

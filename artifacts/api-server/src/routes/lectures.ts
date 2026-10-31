@@ -2,7 +2,7 @@ import { EasykashValidationError } from "../lib/payments/easykash";
 import { assertVerifiedTeacher } from "../lib/teacher-verification";
 import { assertOwnedMediaUrl } from "../lib/profile-media";
 import { Router } from "express";
-import { and, asc, count, desc, eq, gte, inArray, lt, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, lt, ne, or, sql } from "drizzle-orm";
 import {
   assignmentsTable,
   attendanceTable,
@@ -23,7 +23,7 @@ import { shortCode } from "../lib/codes";
 import { lectureDTO, lectureDTOs, toMini } from "../lib/dto";
 import { sendLectureCancelled } from "../lib/emails";
 import { env, paymentConfigured } from "../lib/env";
-import { teacherBalances } from "../lib/ledger";
+import { teacherBalances, type Tx } from "../lib/ledger";
 import { badRequest, conflict, notFound, param, parse, uuidParam } from "../lib/http";
 import { logger } from "../lib/logger";
 import { notify } from "../lib/notify";
@@ -35,6 +35,25 @@ const router = Router();
 export const PENDING_HOLD_MIN = 60;
 
 const endsAt = (l: Lecture) => new Date(l.startsAt.getTime() + l.durationMin * 60_000);
+
+/** Time to clear a room between classes when a limited number of rooms is shared. */
+const ROOM_TURNOVER_MIN = 15;
+
+/**
+ * With a fixed number of live rooms, a class published for a taken hour would
+ * collect payments and then be refused when its teacher tries to go live.
+ */
+async function assertRoomFree(tx: Tx, startsAt: Date, durationMin: number, exceptId?: string) {
+  if (env.livekit.maxRooms <= 0) return;
+  await tx.execute(sql`select pg_advisory_xact_lock(772103)`);
+  const from = new Date(startsAt.getTime() - ROOM_TURNOVER_MIN * 60_000);
+  const to = new Date(startsAt.getTime() + (durationMin + ROOM_TURNOVER_MIN) * 60_000);
+  const clashes = await tx
+    .select({ id: lecturesTable.id })
+    .from(lecturesTable)
+    .where(and(inArray(lecturesTable.status, ["scheduled", "live"]), lt(lecturesTable.startsAt, to), sql`${lecturesTable.startsAt} + make_interval(mins => ${lecturesTable.durationMin}) > ${from}`, exceptId ? ne(lecturesTable.id, exceptId) : undefined));
+  if (clashes.length >= env.livekit.maxRooms) throw conflict("هذا الموعد محجوز لحصة أخرى، فالتجربة الحالية تسمح بعدد محدود من الحصص المباشرة في الوقت نفسه. اختر موعدًا آخر.", "slot_taken");
+}
 
 async function uniqueLectureCode(): Promise<string> {
   for (;;) {
@@ -161,25 +180,31 @@ router.post("/lectures", async (req, res) => {
   if (env.livekit.maxParticipants > 1 && input.capacity != null && input.capacity > env.livekit.maxParticipants - 1) throw badRequest(`حد التجربة الحالي ${env.livekit.maxParticipants - 1} طالبًا للحصة`);
   const startsAt = new Date(input.startsAt);
   if (startsAt.getTime() < Date.now() - 5 * 60_000) throw badRequest("الميعاد ده فات، اختار ميعاد جاي");
-  const [lecture] = await db
-    .insert(lecturesTable)
-    .values({
-      teacherId: user.id,
-      code: await uniqueLectureCode(),
-      title: input.title,
-      subject: input.subject,
-      grade: input.grade,
-      description: input.description,
-      coverUrl: input.coverUrl,
-      startsAt,
-      durationMin: input.durationMin,
-      priceCents: input.priceCents,
-      capacity: input.capacity ?? (env.livekit.maxParticipants > 1 ? env.livekit.maxParticipants - 1 : null),
-      listed: input.listed,
-      status: input.publish ? "scheduled" : "draft",
-    })
-    .returning();
-  res.status(201).json(await lectureDTO(lecture!, user));
+  // Before the transaction: it queries outside it, and must not wait on it.
+  const code = await uniqueLectureCode();
+  const lecture = await db.transaction(async (tx) => {
+    if (input.publish) await assertRoomFree(tx, startsAt, input.durationMin);
+    const [row] = await tx
+      .insert(lecturesTable)
+      .values({
+        teacherId: user.id,
+        code,
+        title: input.title,
+        subject: input.subject,
+        grade: input.grade,
+        description: input.description,
+        coverUrl: input.coverUrl,
+        startsAt,
+        durationMin: input.durationMin,
+        priceCents: input.priceCents,
+        capacity: input.capacity ?? (env.livekit.maxParticipants > 1 ? env.livekit.maxParticipants - 1 : null),
+        listed: input.listed,
+        status: input.publish ? "scheduled" : "draft",
+      })
+      .returning();
+    return row!;
+  });
+  res.status(201).json(await lectureDTO(lecture, user));
 });
 
 /** The public booking page behind the shared link. No login needed. */
@@ -213,27 +238,34 @@ router.patch("/lectures/:id", async (req, res) => {
     .from(bookingsTable)
     .where(and(eq(bookingsTable.lectureId, lecture.id), eq(bookingsTable.status, "confirmed")))) as [{ n: number }];
   if (Number(n) > 0 && input.priceCents !== lecture.priceCents) throw badRequest("فيه طلاب حجزوا، مينفعش تغيّر السعر دلوقتي");
-  const [updated] = await db
-    .update(lecturesTable)
-    .set({
-      title: input.title,
-      subject: input.subject,
-      grade: input.grade,
-      description: input.description,
-      coverUrl: input.coverUrl,
-      startsAt: new Date(input.startsAt),
-      durationMin: input.durationMin,
-      priceCents: input.priceCents,
-      capacity: input.capacity ?? (env.livekit.maxParticipants > 1 ? env.livekit.maxParticipants - 1 : null),
-      listed: input.listed,
-      status: input.publish ? "scheduled" : "draft",
-      // A new time means a new reminder.
-      reminderSentAt: new Date(input.startsAt).getTime() === lecture.startsAt.getTime() ? lecture.reminderSentAt : null,
-      updatedAt: new Date(),
-    })
-    .where(eq(lecturesTable.id, lecture.id))
-    .returning();
-  res.json(await lectureDTO(updated!, user));
+  const startsAt = new Date(input.startsAt);
+  // Editing the text of a class that already holds its slot needs no new room.
+  const needsRoom = input.publish && (lecture.status === "draft" || startsAt.getTime() !== lecture.startsAt.getTime() || input.durationMin !== lecture.durationMin);
+  const updated = await db.transaction(async (tx) => {
+    if (needsRoom) await assertRoomFree(tx, startsAt, input.durationMin, lecture.id);
+    const [row] = await tx
+      .update(lecturesTable)
+      .set({
+        title: input.title,
+        subject: input.subject,
+        grade: input.grade,
+        description: input.description,
+        coverUrl: input.coverUrl,
+        startsAt,
+        durationMin: input.durationMin,
+        priceCents: input.priceCents,
+        capacity: input.capacity ?? (env.livekit.maxParticipants > 1 ? env.livekit.maxParticipants - 1 : null),
+        listed: input.listed,
+        status: input.publish ? "scheduled" : "draft",
+        // A new time means a new reminder.
+        reminderSentAt: startsAt.getTime() === lecture.startsAt.getTime() ? lecture.reminderSentAt : null,
+        updatedAt: new Date(),
+      })
+      .where(eq(lecturesTable.id, lecture.id))
+      .returning();
+    return row!;
+  });
+  res.json(await lectureDTO(updated, user));
 });
 
 router.post("/lectures/:id/cancel", async (req, res) => {
