@@ -92,23 +92,24 @@ export function Account() {
               <p className="text-title-md">ولي الأمر</p>
               <p className="text-body-md text-on-surface-variant">تصله إشعارات الحجوزات والدرجات، ويتابع حضورك من حسابه.</p>
             </div>
-            <div className="flex items-center gap-3 rounded-md bg-surface-container p-4">
-              <div className="flex-1">
-                <p className="text-body-sm text-on-surface-variant">رمز ربط حسابك</p>
-                <p className="font-num text-headline-md tracking-[0.3em]" dir="ltr">
+                        <div>
+              <p className="mb-2 text-label-md font-medium text-on-surface-variant">رمز ربط حسابك</p>
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-outline-variant bg-surface-container-low px-4 py-3">
+                <span className="font-num text-xl font-bold tracking-[0.25em] text-on-surface select-all md:text-2xl" dir="ltr">
                   {me.student.linkCode}
-                </p>
+                </span>
+                <Button
+                  variant="tonal"
+                  size="sm"
+                  className="h-9 shrink-0 px-3 text-xs"
+                  onClick={async () => {
+                    await navigator.clipboard?.writeText(me.student!.linkCode);
+                    toast('نُسخ الرمز');
+                  }}
+                >
+                  <Copy className="size-3.5 me-1.5" /> نسخ
+                </Button>
               </div>
-              <Button
-                variant="tonal"
-                size="sm"
-                onClick={async () => {
-                  await navigator.clipboard?.writeText(me.student!.linkCode);
-                  toast('نُسخ الرمز');
-                }}
-              >
-                <Copy /> نسخ
-              </Button>
             </div>
             {me.student.parents.length > 0 && (
               <div className="flex flex-wrap gap-2">
@@ -119,10 +120,24 @@ export function Account() {
                 ))}
               </div>
             )}
-            <div className="flex items-end gap-2">
-              <TextField containerClassName="flex-1" label="البريد الإلكتروني لولي الأمر" type="email" ltr value={parentEmail} onChange={(e) => setParentEmail(e.target.value)} />
-              <Button variant="tonal" className="h-12" loading={invite.isPending} disabled={!parentEmail} onClick={() => invite.mutate()}>
-                <Mail /> إرسال دعوة
+                        <div className="space-y-2.5">
+              <TextField
+                label="البريد الإلكتروني لولي الأمر"
+                placeholder="parent@example.com"
+                type="email"
+                ltr
+                value={parentEmail}
+                onChange={(e) => setParentEmail(e.target.value)}
+              />
+              <Button
+                variant="tonal"
+                size="sm"
+                className="h-9 px-4 text-xs"
+                loading={invite.isPending}
+                disabled={!parentEmail}
+                onClick={() => invite.mutate()}
+              >
+                <Mail className="size-3.5 me-1.5" /> إرسال دعوة
               </Button>
             </div>
           </Card>
@@ -170,7 +185,22 @@ export function Account() {
         <List className="mb-6">
           {me.teacher && <ListItem href="/t/verification" leading={<Bell className="size-6 text-on-surface-variant" />} title="توثيق الحساب وحمايته" chevron />}
           <ListItem href="/notifications" leading={<Bell className="size-6 text-on-surface-variant" />} title="التنبيهات" chevron />
-          {me.user.role !== 'admin' && <ListItem href="/support" leading={<LifeBuoy className="size-6 text-on-surface-variant" />} title="الدعم" subtitle="أرسل تذكرة إلى فريق الإدارة" chevron />}
+          {me.user.role !== 'admin' && (
+            <ListItem
+              href="/support"
+              leading={<LifeBuoy className="size-6 text-on-surface-variant" />}
+              title="الدعم"
+              subtitle="أرسل تذكرة إلى فريق الإدارة"
+              trailing={
+                (me.unreadSupport ?? 0) > 0 ? (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 font-num text-[11px] font-bold leading-none text-white">
+                    {me.unreadSupport}
+                  </span>
+                ) : undefined
+              }
+              chevron
+            />
+          )}
         </List>
         <Button
           variant="danger-text"

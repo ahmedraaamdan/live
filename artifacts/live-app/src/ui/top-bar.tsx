@@ -9,9 +9,8 @@ import { cn } from '@/lib/cn';
 import { IconButton } from './button';
 
 /**
- * Top app bar. `large` shows an iOS-style large title that collapses into
- * the bar once the page scrolls; pages pushed on top get a back arrow
- * (pointing right: this is RTL).
+ * Top app bar: title is placed neatly right next to the back arrow so screen
+ * real estate is not wasted with huge empty headings on mobile.
  */
 export function TopBar({
   title,
@@ -31,7 +30,6 @@ export function TopBar({
 }) {
   const [, navigate] = useLocation();
   const [scrolled, setScrolled] = useState(false);
-  const CollapsedTitle = large ? 'div' : 'h1';
 
   useLayoutEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > (large ? 40 : 4));
@@ -55,23 +53,22 @@ export function TopBar({
           className,
         )}
       >
-        <div className="mx-auto flex h-16 max-w-[var(--content-max)] items-center gap-1 px-2 md:px-4">
+        <div className="mx-auto flex h-14 md:h-16 max-w-[var(--content-max)] items-center gap-1 px-2 md:px-4">
           {back && (
             <IconButton label="رجوع" onClick={goBack}>
               <ArrowRight />
             </IconButton>
           )}
-          <div className={cn('min-w-0 flex-1 px-2 transition-opacity duration-200', large && !scrolled && 'opacity-0')}>
-            <CollapsedTitle className="gl-collapsed-title truncate text-title-lg">{title}</CollapsedTitle>
+          <div className="min-w-0 flex-1 px-1.5 md:px-2">
+            <h1 className="gl-collapsed-title truncate text-base md:text-title-lg font-bold">{title}</h1>
           </div>
           {actions && <div className="flex items-center gap-1">{actions}</div>}
           <ThemeToggle /><AccountMenu /><AccountSwitchTools />
         </div>
       </header>
-      {large && (
-        <div className="mx-auto max-w-[var(--content-max)] px-4 pb-2 md:px-6">
-          <h1 className="text-headline-lg">{title}</h1>
-          {subtitle && <p className="text-body-md text-on-surface-variant">{subtitle}</p>}
+      {subtitle && (
+        <div className="mx-auto max-w-[var(--content-max)] px-4 pt-1 pb-2 md:px-6">
+          <p className="text-body-sm text-on-surface-variant">{subtitle}</p>
         </div>
       )}
     </>

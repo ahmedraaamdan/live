@@ -64,7 +64,7 @@ export function Sheet({
   );
 }
 
-export function ActionMenu({ trigger, items }: { trigger: ReactNode; items: Array<{ label: string; icon?: ReactNode; onSelect: () => void; danger?: boolean }> }) {
+export function ActionMenu({ trigger, items }: { trigger: ReactNode; items: Array<{ label: string; icon?: ReactNode; onSelect: () => void; danger?: boolean; count?: number }> }) {
   return (
     <Menu.Root dir="rtl">
       <Menu.Trigger asChild>{trigger}</Menu.Trigger>

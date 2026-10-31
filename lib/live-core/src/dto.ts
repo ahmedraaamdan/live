@@ -51,6 +51,7 @@ export interface MeDTO {
   teacher: { bio: string; headline: string; subject: string | null; experience?: string; socialLinks?: ProfileLink[]; certificates?: ProfileLink[] } | null;
   student: { grade: string | null; parentEmail: string | null; linkCode: string; parents: PersonMini[] } | null;
   unreadNotifications: number;
+  unreadSupport?: number;
 }
 
 export interface AuthResult {

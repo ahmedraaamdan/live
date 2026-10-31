@@ -131,12 +131,14 @@ export function StudentHome() {
         )}
 
         {/* Discovery: every teacher's classes, ranked (docs/app/RANKING.md). */}
-        <div className="mb-4 grid gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="mb-4 space-y-2.5 md:space-y-0 md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)] md:gap-3">
           <TextField type="search" aria-label="ابحث عن مدرس أو حصة" placeholder="ابحث عن مدرس أو حصة" value={typed} onChange={(e) => setTyped(e.target.value)} trailing={<Search className="me-3 size-5 text-on-surface-variant" />} />
-          <Select aria-label="الصف الدراسي" value={grade} onChange={(e) => setGrade(e.target.value)} options={gradeOptions} />
-          <Select aria-label="السعر" value={price} onChange={(e) => setPrice(e.target.value)} options={priceOptions} />
+          <div className="grid grid-cols-2 gap-2 md:contents">
+            <Select aria-label="الصف الدراسي" value={grade} onChange={(e) => setGrade(e.target.value)} options={gradeOptions} className="text-xs md:text-sm h-11 md:h-12" />
+            <Select aria-label="السعر" value={price} onChange={(e) => setPrice(e.target.value)} options={priceOptions} className="text-xs md:text-sm h-11 md:h-12" />
+          </div>
         </div>
-        <div className="scrollbar-none -mx-4 mb-5 flex gap-2 overflow-x-auto px-4 md:mx-0 md:px-0">
+        <div className="scrollbar-none -mx-4 mb-4 flex items-center gap-2 overflow-x-auto px-4 py-2 md:mx-0 md:px-0">
           <Chip selected={!subject && !following} onClick={() => { setSubject(''); setFollowing(false); }} icon={<Sparkles />}>
             لك
           </Chip>

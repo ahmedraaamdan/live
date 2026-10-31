@@ -11,6 +11,7 @@ import {
   parentLinksTable,
   recordingsTable,
   savedLecturesTable,
+  supportTicketsTable,
   studentProfilesTable,
   teacherFollowsTable,
   teacherProfilesTable,
@@ -47,7 +48,7 @@ export function toUser(u: User): UserDTO {
 export const toMini = (u: Pick<User, "id" | "name" | "avatarUrl">): PersonMini => ({ id: u.id, name: u.name, avatarUrl: u.avatarUrl });
 
 export async function loadMe(user: User, impersonation?: { actor: User }): Promise<MeDTO> {
-  const [teacher, student, security, unread] = await Promise.all([
+  const [teacher, student, security, unread, unreadTickets] = await Promise.all([
     user.role === "teacher" ? db.query.teacherProfilesTable.findFirst({ where: eq(teacherProfilesTable.userId, user.id) }) : undefined,
     user.role === "student" ? db.query.studentProfilesTable.findFirst({ where: eq(studentProfilesTable.userId, user.id) }) : undefined,
     user.role === "admin" ? db.query.userSecurityTable.findFirst({ where: eq(userSecurityTable.userId, user.id) }) : undefined,
@@ -55,6 +56,15 @@ export async function loadMe(user: User, impersonation?: { actor: User }): Promi
       .select({ n: count() })
       .from(notificationsTable)
       .where(and(eq(notificationsTable.userId, user.id), sql`${notificationsTable.readAt} is null`)),
+    user.role === "admin"
+      ? db
+          .select({ n: count() })
+          .from(supportTicketsTable)
+          .where(eq(supportTicketsTable.status, "open"))
+      : db
+          .select({ n: count() })
+          .from(supportTicketsTable)
+          .where(and(eq(supportTicketsTable.userId, user.id), eq(supportTicketsTable.status, "answered"))),
   ]);
   let parents: PersonMini[] = [];
   if (student) {
@@ -73,6 +83,7 @@ export async function loadMe(user: User, impersonation?: { actor: User }): Promi
     teacher: teacher ? { bio: teacher.bio, headline: teacher.headline, subject: teacher.subject, experience: teacher.experience, socialLinks: teacher.socialLinks, certificates: teacher.certificates } : null,
     student: student ? { grade: student.grade, parentEmail: student.parentEmail, linkCode: student.linkCode, parents } : null,
     unreadNotifications: Number(unread[0]?.n ?? 0),
+    unreadSupport: Number(unreadTickets[0]?.n ?? 0),
   };
 }
 

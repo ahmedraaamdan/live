@@ -367,12 +367,19 @@
 
 /* A permanent scroll lane prevents viewport/rail shifts between short and
    long screens. Native scrollbars retain their normal scroll behavior. */
-html { overflow-y:scroll; scrollbar-gutter:stable; scrollbar-width:thin; scrollbar-color:var(--primary) var(--background); }
-::-webkit-scrollbar { width:8px; height:8px; }
-::-webkit-scrollbar-track { background:var(--background); }
-::-webkit-scrollbar-thumb { background:var(--primary); border:2px solid var(--background); border-radius:10px; }
-::-webkit-scrollbar-thumb:hover { background:var(--ref-rose-700); }
-::-webkit-scrollbar-corner { background:var(--background); }
+@media (min-width: 1025px) {
+  html { overflow-y:scroll; scrollbar-gutter:stable; scrollbar-width:thin; scrollbar-color:var(--primary) var(--background); }
+  ::-webkit-scrollbar { width:8px; height:8px; }
+  ::-webkit-scrollbar-track { background:var(--background); }
+  ::-webkit-scrollbar-thumb { background:var(--primary); border:2px solid var(--background); border-radius:10px; }
+  ::-webkit-scrollbar-thumb:hover { background:var(--ref-rose-700); }
+  ::-webkit-scrollbar-corner { background:var(--background); }
+}
+@media (max-width: 1024px) {
+  html { overflow-y: auto; scrollbar-width: none; scrollbar-gutter: auto; }
+  body { scrollbar-width: none; -ms-overflow-style: none; }
+  ::-webkit-scrollbar { display: none; width: 0; height: 0; }
+}
 .gl-page-loading { min-height:calc(100dvh - var(--nav-height)); }
 .gl-loading-top { height:calc(64px + var(--safe-top)); max-width:var(--content-max); margin:auto; display:flex; align-items:center; justify-content:space-between; padding:var(--safe-top) 24px 0; }
 .gl-loading-top > span { width:116px; height:17px; border-radius:6px; background:var(--surface-container); }

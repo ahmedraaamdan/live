@@ -88,6 +88,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                   <item.icon className="size-6" strokeWidth={on ? 2.4 : 2} />
                 </span>
                 {item.href === '/notifications' && <CountDot count={unread} />}
+                {item.href === '/admin/tickets' && <CountDot count={me.unreadSupport ?? 0} />}
+                {item.href === '/me' && !unread && (me.unreadSupport ?? 0) > 0 && <CountDot count={me.unreadSupport ?? 0} />}
               </span>
               <span className={cn('text-label-md', on ? 'text-on-surface' : 'text-on-surface-variant')}>{item.label}</span>
             </Link>
@@ -117,6 +119,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                     <item.icon className="size-6" strokeWidth={on ? 2.4 : 2} />
                   </span>
                   {item.href === '/notifications' && <CountDot count={unread} />}
+                {item.href === '/admin/tickets' && <CountDot count={me.unreadSupport ?? 0} />}
+                {item.href === '/me' && !unread && (me.unreadSupport ?? 0) > 0 && <CountDot count={me.unreadSupport ?? 0} />}
                 </span>
                 <span className={cn('text-label-md', on ? 'text-on-surface' : 'text-on-surface-variant')}>{item.label}</span>
               </Link>

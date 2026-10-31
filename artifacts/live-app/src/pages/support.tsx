@@ -75,7 +75,23 @@ export function SupportList() {
         ) : (
           <List>
             {q.data.map((t) => (
-              <ListItem key={t.id} href={`/support/${t.id}`} chevron title={t.subject} subtitle={`${TICKET_CATEGORY_LABELS[t.category]} · ${fmtRelative(t.updatedAt)}`} trailing={<StatusBadge status={t.status} />} />
+              <ListItem
+                key={t.id}
+                href={`/support/${t.id}`}
+                chevron
+                title={t.subject}
+                subtitle={`${TICKET_CATEGORY_LABELS[t.category]} · ${fmtRelative(t.updatedAt)}`}
+                trailing={
+                  <div className="flex items-center gap-2">
+                    {t.status === 'answered' && (
+                      <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-bold text-on-primary">
+                        رد جديد
+                      </span>
+                    )}
+                    <StatusBadge status={t.status} />
+                  </div>
+                }
+              />
             ))}
           </List>
         )}
@@ -180,7 +196,16 @@ export function AdminTickets() {
                 leading={<Avatar name={t.user?.name ?? ''} src={t.user?.avatarUrl} size="sm" />}
                 title={t.subject}
                 subtitle={`${t.user?.name ?? ''}${t.user ? ` (${ROLE_LABELS[t.user.role]})` : ''} · ${TICKET_CATEGORY_LABELS[t.category]} · ${fmtRelative(t.updatedAt)}`}
-                trailing={<StatusBadge status={t.status} />}
+                trailing={
+                  <div className="flex items-center gap-2">
+                    {t.status === 'open' && (
+                      <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-bold text-on-primary">
+                        جديدة
+                      </span>
+                    )}
+                    <StatusBadge status={t.status} />
+                  </div>
+                }
               />
             ))}
           </List>

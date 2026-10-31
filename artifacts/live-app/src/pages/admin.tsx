@@ -257,7 +257,7 @@ export function AdminUsers() {
     <>
       <TopBar title="المستخدمين" large />
       <Page>
-        <div className="scrollbar-none mb-4 flex gap-2 overflow-x-auto">
+        <div className="scrollbar-none mb-4 flex items-center gap-2 overflow-x-auto py-2">
           {(['', 'teacher', 'student', 'parent', 'admin'] as const).map((r) => (
             <Chip key={r || 'all'} selected={role === r} onClick={() => setRole(r)}>
               {r ? ROLE_LABELS[r] : 'الكل'}
