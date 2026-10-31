@@ -31,7 +31,7 @@ export function AppDownloadSection() {
       <div className="container-wide app-promo-grid">
         <div className="fade-up">
           <SectionHeader kicker="التطبيق" title="حصصك في متناولك." />
-          <p className="app-promo-copy">تصفح الحصص، وتابع مدرسيك، وتلقّ تنبيهات بمواعيدها.</p>
+          <p className="app-promo-copy">تصفح الحصص، واحجز مقعدك، وتلقّ تنبيهات بمواعيدها.</p>
           <div className="app-promo-buttons">
             <StoreButton href={siteConfig.androidStoreUrl} label="حمّل التطبيق على" sub="Android" />
             <StoreButton href={siteConfig.iosStoreUrl} label="حمّل التطبيق على" sub="iPhone" />
