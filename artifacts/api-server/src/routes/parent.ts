@@ -17,6 +17,7 @@ import { requireRole } from "../lib/auth";
 import { lectureDTOs, toMini } from "../lib/dto";
 import { forbidden, notFound, parse, uuidParam } from "../lib/http";
 import { notify } from "../lib/notify";
+import { enforce, LIMITS } from "../lib/rate-limit";
 import { studentAssignments } from "./assignments";
 
 const router = Router();
@@ -106,6 +107,7 @@ router.get("/parent/children", async (req, res) => {
 
 router.post("/parent/children", async (req, res) => {
   const user = requireRole(req, "parent");
+  enforce(LIMITS.parentLink, user.id);
   const { code } = parse(linkChildSchema, req.body);
   const profile = await db.query.studentProfilesTable.findFirst({ where: eq(studentProfilesTable.linkCode, code.toUpperCase()) });
   if (!profile) throw notFound("الكود ده مش صحيح، خده من صفحة \"حسابي\" عند ابنك");

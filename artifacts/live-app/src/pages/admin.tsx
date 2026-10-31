@@ -34,11 +34,11 @@ export function AdminOverview() {
         </StatGrid>
 
         <div className="mt-8 grid gap-6 xl:grid-cols-2">
-          <section>
+          <section className="min-w-0">
             <SectionHeader title={`طلبات سحب مستنية (${d.pendingPayouts.length})`} />
             <PayoutList payouts={d.pendingPayouts} />
           </section>
-          <section>
+          <section className="min-w-0">
             <SectionHeader title="آخر المدفوعات" />
             {d.recentPayments.length === 0 ? (
               <EmptyState icon={<Banknote />} title="لا توجد مدفوعات بعد" />

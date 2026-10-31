@@ -9,10 +9,13 @@ import { authenticate } from "./lib/auth";
 import { env } from "./lib/env";
 import { errorHandler } from "./lib/http";
 import { logger } from "./lib/logger";
+import { securityHeaders } from "./lib/security-headers";
 
 const app: Express = express();
 
 app.set("trust proxy", 1);
+app.disable("x-powered-by");
+app.use(securityHeaders);
 app.use(
   pinoHttp({
     logger,

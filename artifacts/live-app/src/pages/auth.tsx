@@ -1,3 +1,4 @@
+import { ThemeToggle } from '@/components/account-menu';
 import { MfaLogin } from '@/components/mfa-login';
 import type { LoginResult } from '@workspace/live-core';
 import { useState, type FormEvent, type ReactNode } from 'react';
@@ -18,7 +19,7 @@ function useNext() {
 function AuthLayout({ title, subtitle, children, footer }: { title: string; subtitle?: ReactNode; children: ReactNode; footer?: ReactNode }) {
   return (
     <main className="gl-auth">
-      <header className="gl-auth-header"><Link href="/welcome"><Logo /></Link><a href="https://live.gahez.space/">عن جاهز Live <ArrowLeft size={16} /></a></header>
+      <header className="gl-auth-header"><Link href="/welcome"><Logo /></Link><div className="auth-header-actions"><ThemeToggle /><a href="https://live.gahez.space/">عن جاهز Live <ArrowLeft size={16} /></a></div></header>
       <div className="gl-auth-grid">
         <aside className="gl-auth-story"><span className="gl-eyebrow">السؤال بداية التعلّم.</span><h2>شرح أقرب.<br /><span>وبداية أسهل.</span></h2><p>اختر حصتك، وتعلّم مع مدرّسك مباشرة. كل ما تحتاجه لرحلتك التعليمية في مكان واحد.</p><img src={`${import.meta.env.BASE_URL}images/learning-hero.webp`} width={1000} height={1250} alt="رسم توضيحي لمدرس مصري مع شاشات حصص مباشرة" decoding="async" /><div className="gl-auth-note"><BookOpenCheck size={18} /> معك من أول سؤال.</div></aside>
         <section className="gl-auth-paper"><span className="gl-eyebrow">خطوتك التالية تبدأ هنا</span><h1>{title}</h1>{subtitle && <p className="gl-auth-subtitle">{subtitle}</p>}<div className="gl-auth-body">{children}</div>{footer && <div className="gl-auth-footer">{footer}</div>}</section>
@@ -38,7 +39,7 @@ export function Welcome() {
   if (me) return <Redirect to={homePath(me.user.role)} />;
   return (
     <main className="gl-welcome">
-      <header className="gl-welcome-header"><Logo /><Link className="gl-welcome-login" href="/login">تسجيل الدخول <ArrowLeft size={18} /></Link></header>
+      <header className="gl-welcome-header"><Logo /><div className="auth-header-actions"><ThemeToggle /><Link className="gl-welcome-login" href="/login">تسجيل الدخول <ArrowLeft size={18} /></Link></div></header>
       <section className="gl-welcome-hero"><div className="gl-welcome-copy"><span className="gl-eyebrow"><span /> حصص مباشرة، من أي مكان</span><h1>جاهز لتفهم؟<br /><span>اختر بدايتك.</span></h1><p>حصتك، ومدرّسك، وأسئلتك. مساحة واحدة تتعلّم فيها مباشرة، وتنظّم مواعيدك، وتتابع تقدّمك.</p><div className="gl-welcome-features"><span><Video size={18} /> شرح مباشر</span><span><BookOpenCheck size={18} /> واجبات ومراجعة</span><span><Users size={18} /> متابعة الأسرة</span></div></div><div className="gl-welcome-art"><img src={`${import.meta.env.BASE_URL}images/learning-hero.webp`} alt="تصميم توضيحي لمدرس مصري يحمل جهازًا لوحيًا" width={1000} height={1250} fetchPriority="high" /><span>السؤال جزء من الحصة.</span></div></section>
       <section className="gl-welcome-roles" aria-labelledby="choose-role"><div className="gl-welcome-section-title"><h2 id="choose-role">أنت هنا بصفتك…</h2><span>اختر حسابك، ولنبدأ.</span></div><div className="gl-role-grid">{ROLE_CARDS.map((c, i) => <Link key={c.role} href={`/signup?role=${c.role}`} className="gl-role-card animate-enter" style={{ animationDelay: `${i * 80}ms` }}><span className="gl-role-icon">{c.icon}</span><div><strong>{c.title}</strong><p>{c.body}</p></div><ArrowLeft className="gl-role-arrow" size={21} /></Link>)}</div><p className="gl-welcome-footer">لديك حساب بالفعل؟ <Link href="/login">تسجيل الدخول</Link><span> · </span><a href="https://live.gahez.space/">استكشف جاهز Live</a></p></section>
     </main>

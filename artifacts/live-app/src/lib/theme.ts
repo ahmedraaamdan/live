@@ -20,4 +20,5 @@ export function setTheme(choice: ThemeChoice) {
   } catch {
     // Not persisted in private mode; still applied for this visit.
   }
+  window.dispatchEvent(new Event('gl:theme'));
 }

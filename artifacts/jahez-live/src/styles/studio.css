@@ -2216,3 +2216,148 @@ body {
 
 /* Keep booking hover states in the Live identity as well. */
 .card-action:hover, .card-action.live:hover { background: var(--studio-accent-dark); color: #fff; }
+
+.app-promo-section,.studio-teach{position:relative;isolation:isolate;overflow:hidden}.app-promo-banner{position:relative;display:grid;place-items:center;min-height:330px;max-width:550px;margin:auto;isolation:isolate}.app-promo-banner>img{position:relative;z-index:1;width:min(100%,360px);height:360px;object-fit:contain;filter:drop-shadow(8px 12px 0 rgb(225 29 72 / .06))}.app-banner-orbit{position:absolute;inset:16% 10%;border:1px dashed var(--studio-red,#e11d48);border-radius:50%;transform:rotate(-18deg);opacity:.5}.app-banner-note{position:absolute;z-index:2;bottom:20px;right:2%;padding:12px 20px;background:var(--studio-yellow,#ffe16b);color:#171419;border:1.5px solid currentColor;border-radius:12px;box-shadow:4px 5px 0 #171419;font-family:var(--app-font-display);font-size:1.35rem;transform:rotate(-4deg)}.studio-app-wrap::before{content:'';position:absolute;inset:12% 4%;pointer-events:none;background:radial-gradient(circle at 14% 30%,rgb(225 29 72 / .08),transparent 30%);z-index:-1}.studio-app-wrap{position:relative;isolation:isolate}.teacher-workflow-board{padding:24px!important;transform:none;background:var(--studio-yellow,#ffe16b);border-radius:26px}.teacher-board-heading{display:flex;gap:12px;align-items:center;border-bottom:1px solid rgb(20 15 20 / .2);padding-bottom:16px;font-size:1.35rem;font-family:var(--app-font-display);color:#171419}.teacher-board-heading>svg:last-child{margin-inline-start:auto;color:#e11d48}.teacher-board-body{display:grid;grid-template-columns:.8fr 1.2fr;align-items:center;gap:20px;padding:20px 0}.teacher-board-art img{width:100%;max-height:285px;object-fit:contain}.teacher-board-body ol{display:grid;gap:20px;list-style:none;margin:0;padding:0}.teacher-board-body li{display:flex;gap:12px;align-items:flex-start;color:#171419}.teacher-board-body li>b{display:grid;place-items:center;flex-shrink:0;width:32px;height:32px;border:1px solid #171419;border-radius:50%;background:#fff}.teacher-board-body strong{font-family:var(--app-font-display);font-size:1.35rem;font-weight:400}.teacher-board-body p{margin:4px 0 0!important;font-size:.73rem!important;line-height:1.8!important;color:#46352c!important}.teacher-board-footer{display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgb(20 15 20 / .2);padding-top:16px;color:#171419;font-size:.85rem}.app-promo-section::after{content:'';position:absolute;inset:auto -80px -140px auto;width:380px;height:380px;border:1px solid rgb(225 29 72 / .12);border-radius:50%;pointer-events:none;z-index:-1}@media(prefers-reduced-motion:no-preference){.app-promo-banner>img{animation:promo-float 7s ease-in-out infinite}.app-banner-orbit{animation:promo-orbit 24s linear infinite}.studio-teach::before{content:'';position:absolute;width:200px;height:200px;top:10%;right:-70px;border:1px dashed rgb(225 29 72 / .18);border-radius:32px;animation:promo-orbit 38s linear infinite;pointer-events:none;z-index:-1}}@keyframes promo-float{50%{transform:translateY(-12px) rotate(1deg)}}@keyframes promo-orbit{to{transform:rotate(342deg)}}@media(max-width:700px){.teacher-board-body{gap:12px;grid-template-columns:.65fr 1.35fr}.teacher-workflow-board{padding:20px!important}.teacher-board-body strong{font-size:1.15rem}.app-promo-banner{min-height:300px}.app-promo-banner>img{height:310px}.app-banner-note{font-size:1.1rem;right:8%;bottom:0}}
+
+.studio-app-wrap .app-promo-visual{display:block!important;visibility:visible;opacity:1;transform:none}.studio-app-wrap .app-promo-grid{grid-template-columns:1fr 1fr;align-items:center}@media(max-width:1000px){.teacher-workflow-board .teacher-board-body{grid-template-columns:1fr}.teacher-workflow-board .teacher-board-art{display:none}.teacher-workflow-board .teacher-board-body ol{gap:16px}.teacher-workflow-board .teacher-board-body strong{font-size:1.2rem}}@media(max-width:700px){.studio-app-wrap .app-promo-grid{grid-template-columns:1fr;gap:24px}.studio-app-wrap .app-promo-visual{min-height:310px}}
+
+/* An intentionally dark FAQ stage in both appearance modes. */
+.studio-section.studio-faq{background:#12141b;color:#f8f6f0;border-color:#333746;--studio-ink:#f8f6f0;--studio-white:#1c1f29;--studio-line:#3b4050;--studio-soft:#1c1f29}
+.studio-faq h2,.studio-faq .studio-kicker,.studio-faq .studio-underlink{color:#f8f6f0}
+.studio-faq h2 span{color:#ff416d}
+.studio-faq .faq-category [data-state]{border-color:#3b4050}
+.studio-faq .faq-category [data-state][class*="border-b"]{background:#1c1f29;box-shadow:4px 5px 0 #080a10}
+.studio-faq .faq-category button{color:#f8f6f0;background:transparent;text-align:start}
+.studio-faq .faq-category button:hover,.studio-faq .faq-category button[data-state="open"]{color:#ffcb60}
+.studio-faq .faq-category button svg{color:#ff416d}
+.studio-faq .faq-category [role="region"]>div{color:#c6cad6}
+.studio-faq .faq-category button:focus-visible{outline:2px solid #ffcb60;outline-offset:4px}
+@media(max-width:1000px){.teacher-workflow-board .teacher-board-art{display:block}.teacher-workflow-board .teacher-board-art img{max-height:230px}.teacher-workflow-board .teacher-board-body{grid-template-columns:1fr}}
+
+/* Every class in one row that pans to its end and back; see ClassCarousel. */
+.studio-class-carousel-wrap {
+  position: relative;
+}
+.studio-discover .studio-demo-note {
+  padding-inline-end: 48px;
+}
+.studio-carousel-toggle {
+  position: absolute;
+  inset-block-start: -50px;
+  inset-inline-end: 0;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 2px solid var(--playful-outline);
+  border-radius: 50%;
+  background: var(--studio-white);
+  color: var(--studio-ink);
+  cursor: pointer;
+}
+.studio-carousel-toggle:focus-visible {
+  outline: 2px solid var(--studio-accent);
+  outline-offset: 3px;
+}
+.studio-class-carousel {
+  display: flex;
+  align-items: stretch;
+  gap: 26px;
+  margin-inline: -8px;
+  padding: 10px 8px 18px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to left, transparent, #000 24px, #000 calc(100% - 24px), transparent);
+  mask-image: linear-gradient(to left, transparent, #000 24px, #000 calc(100% - 24px), transparent);
+}
+.studio-class-carousel::-webkit-scrollbar {
+  display: none;
+}
+.studio-class-carousel > div {
+  flex: 0 0 clamp(300px, 31.6%, 440px);
+  min-width: 0;
+}
+.studio-class-carousel .class-card {
+  height: 100%;
+}
+@media (prefers-reduced-motion: reduce) {
+  .studio-carousel-toggle {
+    display: none;
+  }
+  .studio-discover .studio-demo-note {
+    padding-inline-end: 0;
+  }
+}
+@media (max-width: 700px) {
+  .studio-class-carousel {
+    gap: 16px;
+  }
+  .studio-class-carousel > div {
+    flex-basis: 86%;
+  }
+}
+
+/* An intentionally dark teacher stage in both appearance modes. */
+.studio-section.studio-teach {
+  background: #12141b;
+  color: #f8f6f0;
+  --studio-ink: #f8f6f0;
+  --studio-line: #3b4050;
+}
+.studio-section.studio-teach .studio-kicker {
+  color: #f8f6f0;
+}
+.studio-section.studio-teach h2 > span {
+  color: #ff416d;
+}
+.studio-section.studio-teach p {
+  color: #c6cad6;
+}
+.studio-section.studio-teach .studio-teach-grid {
+  border-block-color: #3b4050;
+}
+.studio-section.studio-teach .studio-teacher-desk {
+  border-color: #171419;
+  box-shadow: 6px 7px 0 #000;
+}
+
+/* Larger artwork in the teacher board and the app section. */
+.teacher-workflow-board .teacher-board-art img {
+  max-height: 400px;
+}
+.app-promo-banner {
+  max-width: 620px;
+  min-height: 470px;
+}
+.app-promo-banner > img {
+  width: min(100%, 500px);
+  height: auto;
+  aspect-ratio: 1;
+}
+@media (min-width: 1001px) {
+  .studio-section.studio-teach .studio-teach-grid {
+    grid-template-columns: 0.85fr 1.15fr;
+    gap: 6%;
+  }
+  .teacher-workflow-board .teacher-board-body {
+    grid-template-columns: 1fr 1.1fr;
+  }
+}
+@media (max-width: 1000px) {
+  .teacher-workflow-board .teacher-board-art img {
+    max-height: 320px;
+  }
+}
+@media (max-width: 700px) {
+  .app-promo-banner {
+    min-height: 0;
+  }
+  .app-promo-banner > img {
+    width: min(100%, 420px);
+    height: auto;
+  }
+  .studio-app-wrap .app-promo-visual {
+    min-height: 0;
+  }
+}

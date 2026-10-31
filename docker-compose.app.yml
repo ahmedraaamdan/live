@@ -52,6 +52,30 @@ services:
       timeout: 5s
       retries: 5
 
+  # Nightly dump and uploads archive into /srv/backups (see infra/backup/backup.sh).
+  backup:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_USER: live
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.app}
+      POSTGRES_DB: live
+      BACKUP_PREFIX: live-app
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+      BACKUP_UPLOADS_KEEP_DAYS: ${BACKUP_UPLOADS_KEEP_DAYS:-7}
+      # After the other services' dumps, so they never overlap.
+      BACKUP_HOUR: ${BACKUP_HOUR:-3}
+    volumes:
+      - ./infra/backup/backup.sh:/usr/local/bin/backup.sh:ro
+      - uploads:/uploads:ro
+      - /srv/backups:/backups
+    entrypoint: ['/bin/sh', '/usr/local/bin/backup.sh']
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [internal]
+
 volumes:
   pgdata: {}
   uploads: {}

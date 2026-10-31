@@ -1,3 +1,4 @@
+import { api } from '@/lib/api';
 import { Component, type ReactNode } from 'react';
 import { RotateCcw, TriangleAlert } from 'lucide-react';
 
@@ -11,6 +12,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
 
   componentDidCatch(error: Error) {
     console.error('[GahezLive] screen crashed', error);
+    void api('/client-errors', { body: { message: error.message.slice(0, 400), stack: (error.stack ?? '').replace(/\?[^\s)]+/g, '').slice(0, 2000), path: window.location.pathname.slice(0, 160) } }).catch(() => undefined);
   }
 
   render() {

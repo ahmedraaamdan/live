@@ -1,14 +1,16 @@
+import { logger } from "../lib/logger";
 /** Uploads, notifications, public config and the dev outbox. */
-import express, { Router } from "express";
+import express, { Router, type RequestHandler } from "express";
 import { readdir, readFile as readText } from "node:fs/promises";
 import path from "node:path";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { db, notificationsTable, uploadsTable } from "@workspace/db";
 import type { NotificationDTO, PublicConfigDTO } from "@workspace/live-core";
 import { requireUser } from "../lib/auth";
 import { toUpload } from "../lib/dto";
 import { env, liveConfigured, paymentConfigured, recordingConfigured } from "../lib/env";
-import { badRequest, notFound, param, uuidParam } from "../lib/http";
+import { badRequest, notFound, param, tooMany, uuidParam } from "../lib/http";
+import { enforce, LIMITS } from "../lib/rate-limit";
 import { readFile, saveFile } from "../lib/storage";
 import { randomUUID } from "node:crypto";
 
@@ -19,11 +21,44 @@ router.get("/config", (_req, res) => {
   res.json(body);
 });
 
+const clientErrorLimits = new Map<string, { until: number; count: number }>();
+router.post("/client-errors", (req, res) => {
+  const user = requireUser(req);
+  const now = Date.now();
+  const rate = clientErrorLimits.get(user.id);
+  if (rate && rate.until > now && rate.count >= 10) return void res.status(202).json({ ok: true });
+  if (clientErrorLimits.size > 5000) for (const [id, item] of clientErrorLimits) if (item.until < now) clientErrorLimits.delete(id);
+  clientErrorLimits.set(user.id, { until: rate && rate.until > now ? rate.until : now + 300000, count: rate && rate.until > now ? rate.count + 1 : 1 });
+  const clean = (value: unknown, max: number) => (typeof value === 'string' ? value : '').slice(0, max).replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[email]').replace(/Bearer\s+[^\s]+/gi, 'Bearer [redacted]');
+  logger.error({ userId: user.id, clientMessage: clean(req.body?.message, 400), clientStack: clean(req.body?.stack, 2000), clientPath: clean(req.body?.path, 160).split('?')[0] }, "Client render failure");
+  res.status(202).json({ ok: true });
+});
+
 // ---------------------------------------------------------------- uploads
 
 const ALLOWED = /^(image\/(png|jpe?g|webp|heic|heif)|application\/pdf)$/;
+const UPLOAD_MAX_PER_DAY = { files: 100, bytes: 300 * 1024 * 1024 };
+const UPLOAD_MAX_TOTAL_BYTES = 1024 * 1024 * 1024;
 
-router.post("/uploads", express.raw({ type: () => true, limit: "12mb" }), async (req, res) => {
+/** Runs before the body is read: uploads land on a disk shared with other services. */
+const uploadGate: RequestHandler = async (req, _res, next) => {
+  const user = requireUser(req);
+  enforce(LIMITS.upload, user.id);
+  const since = new Date(Date.now() - 86_400_000);
+  const [used] = await db
+    .select({
+      files: sql<number>`count(*) filter (where ${uploadsTable.createdAt} >= ${since})`,
+      bytesToday: sql<number>`coalesce(sum(${uploadsTable.size}) filter (where ${uploadsTable.createdAt} >= ${since}), 0)`,
+      bytes: sql<number>`coalesce(sum(${uploadsTable.size}), 0)`,
+    })
+    .from(uploadsTable)
+    .where(eq(uploadsTable.ownerId, user.id));
+  if (Number(used?.files) >= UPLOAD_MAX_PER_DAY.files || Number(used?.bytesToday) >= UPLOAD_MAX_PER_DAY.bytes) throw tooMany("وصلت إلى الحد اليومي لرفع الملفات. حاول غدًا.");
+  if (Number(used?.bytes) >= UPLOAD_MAX_TOTAL_BYTES) throw tooMany("امتلأت مساحة ملفاتك. تواصل مع الدعم لزيادتها.");
+  next();
+};
+
+router.post("/uploads", uploadGate, express.raw({ type: () => true, limit: "12mb" }), async (req, res) => {
   const user = requireUser(req);
   const mime = String(req.headers["content-type"] ?? "").split(";")[0]!.trim();
   if (!ALLOWED.test(mime)) throw badRequest("ارفع صورة أو PDF بس");

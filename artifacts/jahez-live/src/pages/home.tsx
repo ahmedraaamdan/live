@@ -20,6 +20,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Header } from "@/components/marketing/header";
 import { Footer } from "@/components/marketing/footer";
 import { ClassCard } from "@/components/marketing/class-card";
+import { ClassCarousel } from "@/components/marketing/class-carousel";
 import { AppDownloadSection } from "@/components/marketing/app-download-section";
 import { FaqAccordion } from "@/components/marketing/faq-accordion";
 import {
@@ -75,9 +76,7 @@ export default function Home() {
   const [subject, setSubject] = useState("الكل");
   const [followed, setFollowed] = useState<Set<string>>(new Set());
   const reduce = useReducedMotion();
-  const selected = classes
-    .filter((item) => subject === "الكل" || item.subject === subject)
-    .slice(0, 3);
+  const selected = classes.filter((item) => item.subject === subject);
   const follow = (id: string) =>
     setFollowed((current) => {
       const next = new Set(current);
@@ -239,30 +238,45 @@ export default function Home() {
               <Radio size={13} /> نماذج توضيحية للحصص والمدرسين. التسجيل متاح
               قبل الإطلاق.
             </p>
-            <motion.div
-              layout={!reduce}
-              className="class-grid studio-class-grid"
-            >
-              <AnimatePresence mode="popLayout" initial={false}>
-                {selected.map((item, i) => (
-                  <motion.div
-                    key={item.id}
-                    layout={!reduce}
-                    initial={reduce ? false : { opacity: 0, y: 28 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.96 }}
-                    transition={{ duration: 0.35, delay: i * 0.04 }}
-                  >
+            {subject === "الكل" ? (
+              <ClassCarousel>
+                {classes.map((item) => (
+                  <div key={item.id}>
                     <ClassCard
                       item={item}
                       followed={followed.has(item.teacherId)}
                       onFollow={() => follow(item.teacherId)}
                       onAction={() => openSignup("student")}
                     />
-                  </motion.div>
+                  </div>
                 ))}
-              </AnimatePresence>
-            </motion.div>
+              </ClassCarousel>
+            ) : (
+              <motion.div
+                layout={!reduce}
+                className="class-grid studio-class-grid"
+              >
+                <AnimatePresence mode="popLayout" initial={false}>
+                  {selected.map((item, i) => (
+                    <motion.div
+                      key={item.id}
+                      layout={!reduce}
+                      initial={reduce ? false : { opacity: 0, y: 28 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.96 }}
+                      transition={{ duration: 0.35, delay: i * 0.04 }}
+                    >
+                      <ClassCard
+                        item={item}
+                        followed={followed.has(item.teacherId)}
+                        onFollow={() => follow(item.teacherId)}
+                        onAction={() => openSignup("student")}
+                      />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </motion.div>
+            )}
           </div>
         </section>
 
@@ -389,42 +403,10 @@ export default function Home() {
                 ابدأ كمدرس <ArrowUpLeft size={21} />
               </Link>
             </Reveal>
-            <TiltSurface className="studio-teacher-desk">
-              <div className="desk-caption">
-                <GraduationCap size={21} /> مساحة المدرس{" "}
-                <span>معاينة توضيحية</span>
-              </div>
-              <div className="desk-paper">
-                <span className="studio-kicker">حصتك القادمة</span>
-                <strong>
-                  فكرة تستحق
-                  <br />
-                  أن تشرحها.
-                </strong>
-                <div className="desk-fields">
-                  <span>
-                    <BookOpen size={16} /> الموضوع
-                  </span>
-                  <span>
-                    <CalendarDays size={16} /> الموعد
-                  </span>
-                  <span>
-                    <Users size={16} /> الطلاب
-                  </span>
-                </div>
-                <Link href={routes.forTeachers.path}>
-                  تعرّف إلى أدواتك <ArrowLeft size={19} />
-                </Link>
-              </div>
-              <div className="desk-stamp">
-                <Check size={28} />
-                <span>
-                  ركّز على
-                  <br />
-                  الشرح.
-                </span>
-              </div>
-              <span className="desk-handnote">ابدأ بما تتقنه.</span>
+            <TiltSurface className="studio-teacher-desk teacher-workflow-board">
+              <div className="teacher-board-heading"><GraduationCap size={26}/><span>مساحتك لتصنع فرقًا.</span><Radio size={20}/></div>
+              <div className="teacher-board-body"><div className="teacher-board-art"><img src={`${import.meta.env.BASE_URL}images/teacher-studio.webp`} width={1024} height={1024} loading="lazy" alt="مدرس يشرح الفيزياء على سبورة رقمية"/></div><ol><li><b>01</b><div><strong>حضّر حصتك</strong><p>اختر الموضوع والموعد، وأضف غلافك.</p></div></li><li><b>02</b><div><strong>شارك رابطك</strong><p>ملفك وحصصك وتقييمك أمام طلابك.</p></div></li><li><b>03</b><div><strong>اشرح. واسمع أسئلتهم.</strong><p>بث وسبورة وواجب، في مساحة واحدة.</p></div></li></ol></div>
+              <Link className="teacher-board-footer" href={routes.forTeachers.path}>تعرّف إلى أدوات المدرس <ArrowLeft size={20}/></Link>
             </TiltSurface>
           </div>
         </section>

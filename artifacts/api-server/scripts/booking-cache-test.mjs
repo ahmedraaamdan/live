@@ -1,0 +1,21 @@
+import {build} from 'esbuild';
+import {createRequire} from 'node:module';
+const require=createRequire(new URL('../../live-app/package.json',import.meta.url));
+const {QueryClient}=require('@tanstack/react-query');
+import assert from 'node:assert/strict';
+const {outputFiles}=await build({entryPoints:['../live-app/src/lib/booking-cache.ts'],bundle:true,platform:'node',format:'esm',write:false,define:{'import.meta.env.VITE_API_URL':'""'}});
+const cache=await import('data:text/javascript;base64,'+Buffer.from(outputFiles[0].text).toString('base64'));
+const qc=new QueryClient({defaultOptions:{queries:{retry:false}}});
+const lecture={id:'lesson-a',code:'ABC',booking:null,status:'live'};
+qc.setQueryData(['lecture','lesson-a'],lecture);qc.setQueryData(['public-lecture','ABC','student'],lecture);
+let finish;
+const slow=qc.fetchQuery({queryKey:['lecture','lesson-a'],queryFn:()=>new Promise(resolve=>{finish=resolve;}),staleTime:0}).catch(()=>undefined);
+await cache.cacheConfirmedBooking(qc,lecture,{id:'booking-a',status:'confirmed'});
+finish({...lecture,booking:null});await slow;
+assert.equal(qc.getQueryData(['lecture','lesson-a']).booking.status,'confirmed');
+assert.equal(qc.getQueryData(['public-lecture','ABC','student']).booking.id,'booking-a');
+let count=0,release;
+const original=globalThis.fetch;
+try{globalThis.fetch=()=>{count++;return new Promise(resolve=>{release=()=>resolve(new Response(JSON.stringify({booking:{id:'booking-a',status:'confirmed'}}),{headers:{'Content-Type':'application/json'}}));});};
+const a=cache.requestBooking('lesson-a','student'),b=cache.requestBooking('lesson-a','student');assert.equal(a,b);assert.equal(count,1);release();await Promise.all([a,b]);}finally{globalThis.fetch=original;qc.clear();}
+console.log('4 booking cache, stale-response and rapid-click regression checks passed');

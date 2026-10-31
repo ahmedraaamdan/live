@@ -31,21 +31,14 @@ export function AppDownloadSection() {
       <div className="container-wide app-promo-grid">
         <div className="fade-up">
           <SectionHeader kicker="التطبيق" title="حصصك في متناولك." />
-          <p className="app-promo-copy">تصفح الحصص، وتابع مدرسيك، وتلقّ تنبيهات بمواعيدها.</p>
+          <p className="app-promo-copy">تصفح الحصص، واحجز مقعدك، وتلقّ تنبيهات بمواعيدها.</p>
           <div className="app-promo-buttons">
             <StoreButton href={siteConfig.androidStoreUrl} label="حمّل التطبيق على" sub="Android" />
             <StoreButton href={siteConfig.iosStoreUrl} label="حمّل التطبيق على" sub="iPhone" />
           </div>
         </div>
-        <div className="app-promo-visual fade-up delay-1" aria-hidden="true">
-          <div className="app-promo-phone">
-            <span className="app-promo-notch" />
-            <div className="app-promo-screen">
-              <span className="signal-live"><i /> LIVE</span>
-              <div className="app-promo-card" />
-              <div className="app-promo-card" />
-            </div>
-          </div>
+        <div className="app-promo-visual fade-up delay-1" >
+          <div className="app-promo-banner"><span className="app-banner-orbit" /><img src={`${import.meta.env.BASE_URL}images/student-anywhere.webp`} width={1024} height={1024} loading="lazy" alt="طالبة تتابع حصتها وتدوّن ملاحظاتها" /><span className="app-banner-note">حصتك أقرب. أينما كنت.</span></div>
         </div>
       </div>
     </section>

@@ -90,7 +90,7 @@ export default function Classes() {
   const toggleFollow = (id: string, name: string) =>
     setFollowedTeachers((current) => {
       const next = new Set(current);
-      if (next.has(id)) { next.delete(id); notify(`ألغيت متابعة ${name}`); } else { next.add(id); notify(`ستصلك حصص ${name} الجديدة`); }
+      if (next.has(id)) { next.delete(id); notify(`ألغيت متابعة ${name}`); } else { next.add(id); notify(`أضفت ${name} إلى اختياراتك في هذه الصفحة`); }
       return next;
     });
 

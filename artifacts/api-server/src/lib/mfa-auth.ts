@@ -1,7 +1,20 @@
-import { and, eq, gt, lt } from "drizzle-orm";
+import type { RequestHandler } from "express";
+import { and, eq, gt } from "drizzle-orm";
 import { db, securityChallengesTable, userSecurityTable } from "@workspace/db";
 import { randomToken, sha256 } from "./auth";
+import { HttpError } from "./http";
 import { openSecret, recoveryDigest, totpStep } from "./two-factor";
+
+const OPEN_WITHOUT_MFA = /^\/(?:healthz|config|client-errors|me|me\/security(?:\/.*)?|auth\/(?:login|logout|forgot|reset|mfa|switch\/stop))$/;
+
+/** Administrators can move money and enter other accounts, so until two-factor is on they can only set it up. */
+export const requireAdminMfa: RequestHandler = async (req, _res, next) => {
+  const admin = req.impersonation?.actor ?? (req.user?.role === "admin" ? req.user : undefined);
+  if (!admin || OPEN_WITHOUT_MFA.test(req.path)) return next();
+  const security = await db.query.userSecurityTable.findFirst({ where: eq(userSecurityTable.userId, admin.id) });
+  if (!security?.totpEnabledAt || !security.totpSecretEnc) throw new HttpError(403, "فعّل المصادقة الثنائية لحسابك أولًا.", "mfa_required");
+  next();
+};
 
 export async function createMfaChallenge(userId: string) {
   const challenge = randomToken();

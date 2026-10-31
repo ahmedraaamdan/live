@@ -4,15 +4,16 @@ import { z } from "zod/v4";
 import { db, securityChallengesTable, userSecurityTable, sessionsTable, usersTable, teacherVerificationsTable } from "@workspace/db";
 import { bearer, createSession, requireRole, sha256, verifyPassword } from "../lib/auth";
 import { badRequest, parse, unauthorized } from "../lib/http";
+import { enforce, LIMITS } from "../lib/rate-limit";
 import { accountSecurity, requireDirectAccount } from "../lib/teacher-verification";
 import { loadMe } from "../lib/dto";
 import { consumeMfa } from "../lib/mfa-auth";
 import { newRecoveryCodes, newTotpSecret, openSecret, recoveryDigest, sealSecret, totpStep } from "../lib/two-factor";
 const router = Router();
 const codeSchema = z.object({ code: z.string().trim().min(6).max(40) });
-router.get("/me/security", async (req, res) => { const user = requireRole(req, "teacher"); res.json(await accountSecurity(user.id, !req.impersonation)); });
+router.get("/me/security", async (req, res) => { const user = requireRole(req, "teacher", "admin"); res.json(await accountSecurity(user.id, !req.impersonation)); });
 router.post("/me/security/mfa/setup", async (req, res) => {
-  const user = requireRole(req, "teacher"); requireDirectAccount(req);
+  const user = requireRole(req, "teacher", "admin"); requireDirectAccount(req);
   const { password } = parse(z.object({ password: z.string().max(500) }), req.body);
   if (!(await verifyPassword(password, user.passwordHash))) throw badRequest("كلمة المرور غير صحيحة");
   const existing = await db.query.userSecurityTable.findFirst({ where: eq(userSecurityTable.userId, user.id) });
@@ -22,7 +23,7 @@ router.post("/me/security/mfa/setup", async (req, res) => {
   res.json({ secret, uri: `otpauth://totp/${encodeURIComponent(`Gahez Live:${user.email}`)}?secret=${secret}&issuer=Gahez%20Live&algorithm=SHA1&digits=6&period=30` });
 });
 router.post("/me/security/mfa/confirm", async (req, res) => {
-  const user = requireRole(req, "teacher"); requireDirectAccount(req);
+  const user = requireRole(req, "teacher", "admin"); requireDirectAccount(req);
   const { code } = parse(codeSchema, req.body);
   const codes = newRecoveryCodes();
   await db.transaction(async tx => {
@@ -37,6 +38,7 @@ router.post("/me/security/mfa/confirm", async (req, res) => {
   res.json({ recoveryCodes: codes });
 });
 router.post("/auth/mfa", async (req, res) => {
+  enforce(LIMITS.mfaIp, String(req.ip));
   const { challenge, code } = parse(codeSchema.extend({ challenge: z.string().min(30).max(100) }), req.body);
   const pending = await db.query.securityChallengesTable.findFirst({ where: and(eq(securityChallengesTable.tokenHash, sha256(challenge)), eq(securityChallengesTable.purpose, "login"), gt(securityChallengesTable.expiresAt, new Date())) });
   if (!pending) throw badRequest("انتهت محاولة الدخول. أدخل كلمة المرور مجددًا.");
@@ -47,7 +49,7 @@ router.post("/auth/mfa", async (req, res) => {
   res.json({ token: await createSession(user.id, req.headers["user-agent"]), me: await loadMe(user) });
 });
 router.post("/me/security/mfa/disable", async (req, res) => {
-  const user = requireRole(req, "teacher"); requireDirectAccount(req);
+  const user = requireRole(req, "teacher", "admin"); requireDirectAccount(req);
   const { code, password } = parse(codeSchema.extend({ password: z.string().max(500) }), req.body);
   if (!(await verifyPassword(password, user.passwordHash))) throw badRequest("كلمة المرور غير صحيحة");
   const result = await consumeMfa(user.id, code); if (!result.ok) throw badRequest(result.error);

@@ -14,16 +14,8 @@ export function Spinner({ className }: { className?: string }) {
 
 export function PageSpinner() {
   const [slow, setSlow] = useState(false);
-  useEffect(() => {
-    const timer = window.setTimeout(() => setSlow(true), 180);
-    return () => window.clearTimeout(timer);
-  }, []);
-  return (
-    <div className="gl-page-loading" role="status" aria-label="جارٍ تحميل الصفحة">
-      <div className="gl-loading-top" aria-hidden="true"><span /><i>{slow && <Spinner className="size-5" />}</i></div>
-      <div className="gl-loading-content" aria-hidden="true"><div className="gl-loading-title" /><div className="gl-loading-subtitle" /><div className="gl-loading-card" /><div className="gl-loading-pair"><div /><div /></div></div>
-    </div>
-  );
+  useEffect(() => { const timer = window.setTimeout(() => setSlow(true), 180); return () => window.clearTimeout(timer); }, []);
+  return <div className="app-loading-surface" role="status" aria-label="جارٍ تحميل الصفحة"><span className="app-loading-orbit" aria-hidden="true"><i /></span><span className="app-loading-caption">{slow ? 'نجهّز مساحتك…' : ''}</span></div>;
 }
 
 export function Skeleton({ className }: { className?: string }) {

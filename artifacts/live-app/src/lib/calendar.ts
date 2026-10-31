@@ -17,5 +17,17 @@ export function fromCairoInput(value: string): Date | null {
   const date = new Date(instant);
   return Number.isFinite(instant) && toCairoInput(date) === value ? date : null;
 }
-export const cairoSlot = (day: string, hour: number) => fromCairoInput(`${day}T${String(hour).padStart(2, '0')}:00`)!;
+export function cairoSlot(day: string, hour: number): Date {
+  if (!Number.isInteger(hour)) throw new RangeError('Calendar hour must be an integer');
+  const normalizedDay = addCalendarDays(day, Math.floor(hour / 24));
+  const normalizedHour = ((hour % 24) + 24) % 24;
+  const wall = new Date(`${normalizedDay}T${String(normalizedHour).padStart(2, '0')}:00:00Z`);
+  // Cairo's spring clock change can skip midnight. A day boundary is its first valid instant.
+  for (let minute = 0; minute <= 120; minute++) {
+    const input = new Date(wall.getTime() + minute * 60000).toISOString().slice(0, 16);
+    const instant = fromCairoInput(input);
+    if (instant) return instant;
+  }
+  throw new RangeError('Invalid calendar boundary');
+}
 export function cairoWeekStart(day: string) { const weekday = new Date(`${day}T12:00:00Z`).getUTCDay(); return addCalendarDays(day, -((weekday + 1) % 7)); }

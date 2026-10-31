@@ -12,6 +12,7 @@ import {
   studentProfilesTable,
   teacherProfilesTable,
   uploadsTable,
+  userSecurityTable,
   usersTable,
   type Lecture,
   type Payout,
@@ -42,9 +43,10 @@ export function toUser(u: User): UserDTO {
 export const toMini = (u: Pick<User, "id" | "name" | "avatarUrl">): PersonMini => ({ id: u.id, name: u.name, avatarUrl: u.avatarUrl });
 
 export async function loadMe(user: User, impersonation?: { actor: User }): Promise<MeDTO> {
-  const [teacher, student, unread] = await Promise.all([
+  const [teacher, student, security, unread] = await Promise.all([
     user.role === "teacher" ? db.query.teacherProfilesTable.findFirst({ where: eq(teacherProfilesTable.userId, user.id) }) : undefined,
     user.role === "student" ? db.query.studentProfilesTable.findFirst({ where: eq(studentProfilesTable.userId, user.id) }) : undefined,
+    user.role === "admin" ? db.query.userSecurityTable.findFirst({ where: eq(userSecurityTable.userId, user.id) }) : undefined,
     db
       .select({ n: count() })
       .from(notificationsTable)
@@ -61,6 +63,7 @@ export async function loadMe(user: User, impersonation?: { actor: User }): Promi
   }
   return {
     isSuperAdmin: !impersonation && isSuperAdmin(user),
+    mfaSetupRequired: user.role === "admin" && !(security?.totpEnabledAt && security.totpSecretEnc),
     impersonation: impersonation ? { actorId: impersonation.actor.id, actorName: impersonation.actor.name } : null,
     user: toUser(user),
     teacher: teacher ? { bio: teacher.bio, headline: teacher.headline, subject: teacher.subject, experience: teacher.experience, socialLinks: teacher.socialLinks, certificates: teacher.certificates } : null,
@@ -70,7 +73,9 @@ export async function loadMe(user: User, impersonation?: { actor: User }): Promi
 }
 
 export function toRecording(r: Recording, canWatch: boolean): RecordingDTO {
-  return { id: r.id, status: r.status, url: canWatch ? r.url : null, durationSec: r.durationSec, createdAt: r.createdAt.toISOString() };
+  // Rows from before links were limited to https must never reach a browser as a script URL.
+  const url = r.url && /^https?:\/\//i.test(r.url) ? r.url : null;
+  return { id: r.id, status: r.status, url: canWatch ? url : null, durationSec: r.durationSec, createdAt: r.createdAt.toISOString() };
 }
 
 export function toUpload(u: Upload): UploadDTO {
