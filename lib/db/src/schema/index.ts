@@ -5,3 +5,4 @@ export * from "./money";
 export * from "./homework";
 
 export * from "./verification";
+export * from "./support";

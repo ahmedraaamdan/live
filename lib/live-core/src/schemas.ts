@@ -3,7 +3,7 @@
  * sides agree on what "valid" means. Error messages are user-facing Arabic.
  */
 import { z } from "zod/v4";
-import { MESSAGE_KINDS, MIN_PAYOUT_CENTS, PAYMENT_METHODS, PAYOUT_METHODS, SIGNUP_ROLES } from "./constants";
+import { MESSAGE_KINDS, MIN_PAID_PRICE_CENTS, MIN_PAYOUT_CENTS, PAYMENT_METHODS, PAYOUT_METHODS, REPORT_REASON_LABELS, SIGNUP_ROLES, TICKET_CATEGORY_LABELS, type ReportReason, type TicketCategory } from "./constants";
 
 const email = z.email({ message: "اكتب إيميل صحيح" }).transform((v) => v.trim().toLowerCase());
 const password = z.string().min(8, { message: "الباسورد لازم يكون 8 حروف على الأقل" }).max(200);
@@ -61,7 +61,7 @@ export const lectureInputSchema = z.object({
   /** ISO timestamp. */
   startsAt: z.iso.datetime({ offset: true, message: "اختار ميعاد صحيح" }),
   durationMin: z.coerce.number().int().min(15, { message: "أقل مدة 15 دقيقة" }).max(300, { message: "أقصى مدة 5 ساعات" }),
-  priceCents: z.coerce.number().int().min(0).max(100_000_00),
+  priceCents: z.coerce.number().int().min(0).max(100_000_00).refine(value => value === 0 || value >= MIN_PAID_PRICE_CENTS, { message: `أقل سعر للحصة المدفوعة ${MIN_PAID_PRICE_CENTS / 100} ج.م` }),
   capacity: z.coerce.number().int().min(1).max(10_000).nullable().optional(),
   publish: z.boolean().optional().default(true),
   /** Show it in the discovery feed, not only to people with the link. */
@@ -133,6 +133,24 @@ export const payoutDecisionSchema = z.object({
   note: z.string().trim().max(500).optional().default(""),
 });
 
+/** The checkout needs a phone number; the booking step can collect a missing one. */
+export const bookingInputSchema = z.object({ phone });
+
+export const lectureReportSchema = z.object({
+  reason: z.enum(Object.keys(REPORT_REASON_LABELS) as [ReportReason, ...ReportReason[]], { message: "اختر سبب البلاغ" }),
+  details: z.string().trim().max(1000).optional().default(""),
+});
+
+export const fundsDecisionSchema = z.object({
+  decision: z.enum(["release", "refund"]),
+  note: z.string().trim().max(500).optional().default(""),
+});
+
+export const reportDecisionSchema = z.object({
+  decision: z.enum(["refund", "dismiss"]),
+  note: z.string().trim().max(500).optional().default(""),
+});
+
 export const linkChildSchema = z.object({ code: z.string().trim().min(4).max(20) });
 export const parentInviteSchema = z.object({ email });
 
@@ -165,3 +183,13 @@ export const teacherVerificationInputSchema = z.object({
 }).refine(value => value.frontDocumentId !== value.backDocumentId, { message: "ارفع صورتين مختلفتين لوجهي الكارنيه" });
 export type TeacherVerificationInput = z.infer<typeof teacherVerificationInputSchema>;
 export const verificationReviewSchema = z.object({ submittedAt: z.iso.datetime({ offset: true }), action: z.enum(["approve", "reject", "changes"]), note: z.string().trim().max(2000).default("") }).refine(value => value.action === "approve" || value.note.length >= 5, { message: "اكتب سبب الرفض أو التعديل المطلوب" });
+
+export const ticketInputSchema = z.object({
+  category: z.enum(Object.keys(TICKET_CATEGORY_LABELS) as [TicketCategory, ...TicketCategory[]], { message: "اختر نوع المشكلة" }),
+  subject: z.string().trim().min(3, { message: "اكتب عنوانًا مختصرًا" }).max(120),
+  body: z.string().trim().min(5, { message: "اشرح المشكلة في جملة على الأقل" }).max(4000),
+});
+
+export const ticketReplySchema = z.object({
+  body: z.string().trim().min(1, { message: "اكتب ردك" }).max(4000),
+});

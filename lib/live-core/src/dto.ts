@@ -5,12 +5,16 @@
 import type { BoardOp } from "./board";
 import type {
   BookingStatus,
+  FundsReviewReason,
   LectureStatus,
   MessageKind,
   PaymentMethod,
   PaymentStatus,
   PayoutMethod,
   PayoutStatus,
+  ReportReason,
+  TicketCategory,
+  TicketStatus,
   Role,
   WalletEntryKind,
 } from "./constants";
@@ -34,6 +38,8 @@ export interface PersonMini {
 export interface TeacherMini extends PersonMini {
   headline: string | null;
   subject: string | null;
+  /** The viewing student follows this teacher. */
+  followed?: boolean;
 }
 
 export interface MeDTO {
@@ -78,14 +84,33 @@ export interface LectureDTO {
   liveEndedAt: string | null;
   teacher: TeacherMini;
   seatsTaken: number;
+  /** The viewer kept this class for later. */
+  saved?: boolean;
   /** The viewer's own booking, for a student. */
-  booking: { id: string; status: BookingStatus } | null;
+  booking: {
+    id: string;
+    status: BookingStatus;
+    /** The student may still leave this class and get their money back. */
+    canCancel?: boolean;
+    /** The student may still report a problem with this finished class. */
+    canReport?: boolean;
+    reported?: boolean;
+  } | null;
   recording: RecordingDTO | null;
   votes: LectureVotes;
   /** Students watching right now (live lectures). */
   viewersNow: number;
   /** Only for the lecture's teacher (and admins). */
-  stats: { bookings: number; revenueCents: number; teacherCents: number; attendees: number } | null;
+  stats: { bookings: number; revenueCents: number; teacherCents: number; attendees: number; fundsReview?: FundsReviewReason | null } | null;
+}
+
+export interface FundReviewDTO {
+  lecture: { id: string; title: string; startsAt: string; durationMin: number; liveMinutes: number; attendees: number };
+  teacher: PersonMini;
+  reason: FundsReviewReason;
+  /** What students paid for this class and has not been refunded. */
+  amountCents: number;
+  reports: Array<{ id: string; reason: ReportReason; details: string; student: PersonMini; createdAt: string }>;
 }
 
 export interface LectureVotes {
@@ -107,6 +132,8 @@ export interface FeedItem {
 export interface FeedDTO {
   live: FeedItem[];
   upcoming: FeedItem[];
+  /** More classes match than this page shows. */
+  hasMore?: boolean;
 }
 
 export interface BookingDTO {
@@ -305,6 +332,7 @@ export interface AdminOverviewDTO {
 export interface AdminUserDTO extends UserDTO {
   lectures: number;
   bookings: number;
+  suspended: boolean;
 }
 
 export interface NotificationDTO {
@@ -354,7 +382,7 @@ export interface ProfileLink { label: string; url: string; kind?: "image" | "doc
 export interface TeacherProfileDTO {
   teacher: TeacherMini & { verified: boolean; bio: string; experience: string; socialLinks: ProfileLink[]; certificates: ProfileLink[] };
   rating: { likes: number; dislikes: number; total: number; positivePercent: number | null; raters: number };
-  stats: { completedLessons: number; students: number };
+  stats: { completedLessons: number; students: number; followers: number };
 }
 export interface TeacherLecturesDTO { items: LectureDTO[]; nextOffset: number | null }
 export interface HomeworkTemplateDTO {
@@ -377,3 +405,26 @@ export interface VerificationQueueItem { teacher: PersonMini & { email: string }
 export interface VerificationAdminDetail extends TeacherVerificationDTO { teacher: PersonMini & { email: string }; history: Array<{ action: string; note: string; createdAt: string }> }
 
 export interface VerificationQueueDTO { items: VerificationQueueItem[]; nextOffset: number | null; counts: { pending: number; approved: number; rejected: number; needs_changes: number } }
+
+export interface TicketMessageDTO {
+  id: string;
+  body: string;
+  fromAdmin: boolean;
+  author: PersonMini;
+  createdAt: string;
+}
+
+export interface TicketDTO {
+  id: string;
+  category: TicketCategory;
+  subject: string;
+  status: TicketStatus;
+  createdAt: string;
+  updatedAt: string;
+  /** Who opened it, shown to administrators. */
+  user: (PersonMini & { role: Role; email: string }) | null;
+}
+
+export interface TicketDetailDTO extends TicketDTO {
+  messages: TicketMessageDTO[];
+}

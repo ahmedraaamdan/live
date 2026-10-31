@@ -24,6 +24,20 @@ export const accountSwitchesTable = pgTable("account_switches", {
   endedAt: timestamp("ended_at", { withTimezone: true }),
 });
 
+/** Who decided what on money and accounts; IDs are retained even if an account is removed. */
+export const adminActionsTable = pgTable(
+  "admin_actions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    actorId: uuid("actor_id").notNull(),
+    action: text("action").notNull(),
+    targetId: text("target_id").notNull(),
+    note: text("note").notNull().default(""),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("admin_actions_target_idx").on(t.targetId, t.createdAt)],
+);
+
 /** Opaque bearer tokens; only the SHA-256 of a token is stored. */
 export const sessionsTable = pgTable(
   "sessions",

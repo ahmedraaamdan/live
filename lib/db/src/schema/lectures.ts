@@ -42,10 +42,67 @@ export const lecturesTable = pgTable(
     reminderSentAt: timestamp("reminder_sent_at", { withTimezone: true }),
     /** When the teacher's earnings for this lecture became withdrawable. */
     fundsReleasedAt: timestamp("funds_released_at", { withTimezone: true }),
+    /** Why the teacher's earnings wait for an administrator; cleared or decided by them. */
+    fundsReviewReason: text("funds_review_reason").$type<"short_live" | "no_attendance" | "reported">(),
+    fundsReviewedAt: timestamp("funds_reviewed_at", { withTimezone: true }),
+    fundsReviewedBy: uuid("funds_reviewed_by").references(() => usersTable.id),
+    /** Last time the start moved with students booked; they may then still leave. */
+    rescheduledAt: timestamp("rescheduled_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("lectures_teacher_idx").on(t.teacherId, t.startsAt), index("lectures_status_idx").on(t.status, t.startsAt)],
+);
+
+/** A student's report that a finished class went wrong. Holds its earnings until decided. */
+export const lectureReportsTable = pgTable(
+  "lecture_reports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    lectureId: uuid("lecture_id")
+      .notNull()
+      .references(() => lecturesTable.id, { onDelete: "cascade" }),
+    studentId: uuid("student_id")
+      .notNull()
+      .references(() => usersTable.id),
+    reason: text("reason").$type<"not_held" | "ended_early" | "technical" | "other">().notNull(),
+    details: text("details").notNull().default(""),
+    status: text("status").$type<"open" | "dismissed" | "refunded">().notNull().default("open"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    resolvedBy: uuid("resolved_by").references(() => usersTable.id),
+  },
+  (t) => [uniqueIndex("lecture_reports_lecture_student_idx").on(t.lectureId, t.studentId), index("lecture_reports_status_idx").on(t.status)],
+);
+
+/** A student following a teacher: that teacher's classes come first in their feed. */
+export const teacherFollowsTable = pgTable(
+  "teacher_follows",
+  {
+    studentId: uuid("student_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    teacherId: uuid("teacher_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.studentId, t.teacherId] }), index("teacher_follows_teacher_idx").on(t.teacherId)],
+);
+
+/** A class a student kept for later, to come back and book it. */
+export const savedLecturesTable = pgTable(
+  "saved_lectures",
+  {
+    studentId: uuid("student_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    lectureId: uuid("lecture_id")
+      .notNull()
+      .references(() => lecturesTable.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.studentId, t.lectureId] })],
 );
 
 export const bookingStatusEnum = pgEnum("booking_status", ["pending_payment", "confirmed", "cancelled", "refunded"]);
