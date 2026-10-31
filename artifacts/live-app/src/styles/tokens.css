@@ -212,19 +212,19 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* Unified Live identity: same warm surfaces, fonts and offset shadows as the public site. */
+/* Unified Live identity: same white surfaces, fonts and offset shadows as the public site. */
 :root {
  --gl-display: 'Lalezar', 'Readex Pro', sans-serif;
  --font-sans: 'Readex Pro', system-ui, sans-serif;
- --primary: #e11d48; --on-primary: #fffefa; --primary-container: #ffe5e9; --on-primary-container: #8d1231;
- --secondary: #be123c; --on-secondary: #fffefa; --secondary-container: #ffe6ea; --on-secondary-container: #8d1231;
- --tertiary: #8a6200; --on-tertiary: #fffefa; --tertiary-container: #ffecac; --on-tertiary-container: #614400;
- --background: #faf7f0; --surface: #faf7f0; --surface-bright: #fffefa;
- --surface-container-lowest: #fffefa; --surface-container-low: #f7f0e5; --surface-container: #f0e8dc; --surface-container-high: #f7f0e5; --surface-container-highest: #e9dfd0;
- --on-surface: #181513; --on-surface-variant: #675e55; --outline: #181513; --outline-variant: #ded4c7;
- --inverse-surface: #211b18; --inverse-on-surface: #faf7f0;
- --gradient-brand: linear-gradient(#e11d48,#e11d48); --gradient-live: linear-gradient(#e11d48,#e11d48); --gradient-ink: linear-gradient(#211b18,#211b18);
- --gl-shadow-ink: #181513; --gl-yellow: #ffdc69; --gl-line: #181513;
+ --primary: #e11d48; --on-primary: #ffffff; --primary-container: #ffe5e9; --on-primary-container: #8d1231;
+ --secondary: #be123c; --on-secondary: #ffffff; --secondary-container: #ffe6ea; --on-secondary-container: #8d1231;
+ --tertiary: #0f172a; --on-tertiary: #ffffff; --tertiary-container: #f1f5f9; --on-tertiary-container: #0f172a;
+ --background: #ffffff; --surface: #ffffff; --surface-bright: #ffffff;
+ --surface-container-lowest: #ffffff; --surface-container-low: #f8fafc; --surface-container: #f1f5f9; --surface-container-high: #eef2f7; --surface-container-highest: #e2e8f0;
+ --on-surface: #0f172a; --on-surface-variant: #4a5a73; --outline: #0f172a; --outline-variant: #e2e8f0;
+ --inverse-surface: #0f172a; --inverse-on-surface: #ffffff;
+ --gradient-brand: linear-gradient(#e11d48,#e11d48); --gradient-live: linear-gradient(#e11d48,#e11d48); --gradient-ink: linear-gradient(#0f172a,#0f172a);
+ --gl-shadow-ink: #0f172a; --gl-sun: #fda4af; --gl-line: #0f172a;
  --elevation-1: 2px 3px 0 var(--gl-shadow-ink); --elevation-2: 3px 4px 0 var(--gl-shadow-ink); --elevation-3: 4px 5px 0 var(--gl-shadow-ink); --elevation-4: 5px 6px 0 var(--gl-shadow-ink); --elevation-5: 6px 7px 0 var(--gl-shadow-ink);
  --glow-primary: 3px 4px 0 var(--gl-shadow-ink); --rail-width: 6.25rem;
 }
@@ -239,10 +239,10 @@
     --on-secondary: #ffffff;
     --secondary-container: #1b1e2a;
     --on-secondary-container: #f8f9fd;
-    --tertiary: #facc15;
-    --on-tertiary: #1a1300;
-    --tertiary-container: #332500;
-    --on-tertiary-container: #fef08a;
+    --tertiary: #f8f9fd;
+    --on-tertiary: #06070c;
+    --tertiary-container: #1c202f;
+    --on-tertiary-container: #f8f9fd;
     --error: #f87171;
     --on-error: #450a0a;
     --error-container: #5c1414;
@@ -308,10 +308,10 @@
     --on-secondary: #ffffff;
     --secondary-container: #1b1e2a;
     --on-secondary-container: #f8f9fd;
-    --tertiary: #facc15;
-    --on-tertiary: #1a1300;
-    --tertiary-container: #332500;
-    --on-tertiary-container: #fef08a;
+    --tertiary: #f8f9fd;
+    --on-tertiary: #06070c;
+    --tertiary-container: #1c202f;
+    --on-tertiary-container: #f8f9fd;
     --error: #f87171;
     --on-error: #450a0a;
     --error-container: #5c1414;
