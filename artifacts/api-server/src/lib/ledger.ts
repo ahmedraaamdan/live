@@ -24,8 +24,8 @@ export async function recordSale(tx: Tx, opts: { lecture: Lecture; booking: Book
   ]);
 }
 
-export async function releaseLectureFunds(lectureId: string) {
-  await db
+export async function releaseLectureFunds(lectureId: string, q: Tx | typeof db = db) {
+  await q
     .update(walletEntriesTable)
     .set({ status: "available" })
     .where(and(eq(walletEntriesTable.lectureId, lectureId), eq(walletEntriesTable.status, "pending"), inArray(walletEntriesTable.kind, ["sale", "commission"])));

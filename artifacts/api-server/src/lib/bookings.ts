@@ -12,13 +12,14 @@ import {
   paymentsTable,
   studentProfilesTable,
   usersTable,
+  type Lecture,
   type Payment,
 } from "@workspace/db";
 import type { PaymentMethod } from "@workspace/live-core";
-import { sendBookingConfirmed } from "./emails";
+import { sendBookingConfirmed, sendLectureCancelled, sendLectureRescheduled } from "./emails";
 import { recordSale, reverseBooking } from "./ledger";
 import { logger } from "./logger";
-import { notify } from "./notify";
+import { notify, notifyAdmins } from "./notify";
 import { paymentProviderFor } from "./payments";
 
 export async function parentsOf(studentId: string) {
@@ -77,7 +78,8 @@ export async function confirmPayment(paymentId: string, opts: { txnId?: string; 
       .returning();
     // Paid twice (two tabs, a retry): keep the first, give this one back.
     if (booking!.status === "confirmed") return { duplicate: paid! };
-    if (lecture!.status === "cancelled") {
+    // A slow payment can land after the class was cancelled or already over: give it back.
+    if (lecture!.status === "cancelled" || lecture!.status === "ended") {
       await tx.update(bookingsTable).set({ status: "cancelled" }).where(eq(bookingsTable.id, booking!.id));
       return { duplicate: paid! };
     }
@@ -138,27 +140,68 @@ async function refundPayment(payment: Payment, reason: string) {
   }
 }
 
-/** Teacher cancelled: refund every paid booking and reverse its credits. */
-export async function refundLecture(lectureId: string) {
+/** Give one booking's money back, undo its credits and free its seat. */
+export async function refundBooking(bookingId: string, memo: string, reason: string) {
+  const payments = await db
+    .select()
+    .from(paymentsTable)
+    .where(and(eq(paymentsTable.bookingId, bookingId), eq(paymentsTable.status, "succeeded")));
+  for (const p of payments) await refundPayment(p, reason);
+  await db.transaction(async (tx) => {
+    await reverseBooking(tx, bookingId, memo);
+    const settled = payments.length ? await tx.select({ id: paymentsTable.id }).from(paymentsTable).where(and(inArray(paymentsTable.id, payments.map(p => p.id)), eq(paymentsTable.status, "refunded"))) : [];
+    await tx.update(bookingsTable).set({ status: payments.length && settled.length === payments.length ? "refunded" : "cancelled" }).where(eq(bookingsTable.id, bookingId));
+    await tx
+      .update(paymentsTable)
+      .set({ status: "failed", updatedAt: new Date() })
+      .where(and(eq(paymentsTable.bookingId, bookingId), eq(paymentsTable.status, "pending")));
+  });
+}
+
+/** Refund every paid booking of a lecture and reverse its credits. */
+export async function refundLecture(lectureId: string, memo = "إلغاء الحصة", reason = "lecture cancelled") {
   const bookings = await db
     .select()
     .from(bookingsTable)
     .where(and(eq(bookingsTable.lectureId, lectureId), inArray(bookingsTable.status, ["confirmed", "pending_payment"])));
-  for (const b of bookings) {
-    const payments = await db
-      .select()
-      .from(paymentsTable)
-      .where(and(eq(paymentsTable.bookingId, b.id), eq(paymentsTable.status, "succeeded")));
-    for (const p of payments) await refundPayment(p, "lecture cancelled");
-    await db.transaction(async (tx) => {
-      await reverseBooking(tx, b.id, "إلغاء الحصة");
-      const settled = payments.length ? await tx.select({ id: paymentsTable.id }).from(paymentsTable).where(and(inArray(paymentsTable.id, payments.map(p => p.id)), eq(paymentsTable.status, "refunded"))) : [];
-      await tx.update(bookingsTable).set({ status: payments.length && settled.length === payments.length ? "refunded" : "cancelled" }).where(eq(bookingsTable.id, b.id));
-      await tx
-        .update(paymentsTable)
-        .set({ status: "failed", updatedAt: new Date() })
-        .where(and(eq(paymentsTable.bookingId, b.id), eq(paymentsTable.status, "pending")));
-    });
-  }
+  for (const b of bookings) await refundBooking(b.id, memo, reason);
   return bookings.map((b) => b.studentId);
+}
+
+/** Students and the parents following them, with everyone's email addresses. */
+async function audienceOf(studentIds: string[]) {
+  const unique = [...new Set(studentIds)];
+  const students = unique.length ? await db.select().from(usersTable).where(inArray(usersTable.id, unique)) : [];
+  const parents = await Promise.all(unique.map(parentsOf));
+  const parentEmails = [...new Set(parents.flatMap((p) => p.emails))];
+  return { students, parentIds: parents.flatMap((p) => p.ids), recipients: [...students.map((s) => ({ email: s.email })), ...parentEmails.map((email) => ({ email }))] };
+}
+
+/** Everything after a lecture is marked cancelled: money back, and everyone told. */
+export async function settleCancelledLecture(lecture: Lecture, opts: { noShow?: boolean } = {}) {
+  const studentIds = await refundLecture(lecture.id, opts.noShow ? "لم تبدأ الحصة في موعدها" : "إلغاء الحصة", opts.noShow ? "teacher no-show" : "lecture cancelled");
+  const notice = { kind: "cancelled", title: opts.noShow ? "أُلغيت الحصة لأن المدرس لم يبدأها" : "أُلغيت الحصة", body: `${lecture.title}${lecture.priceCents > 0 ? " — يمكنك متابعة حالة عملية الدفع من حسابك" : ""}`, link: `/lectures/${lecture.id}` };
+  if (studentIds.length) {
+    const { parentIds, recipients } = await audienceOf(studentIds);
+    await notify(studentIds, notice);
+    await notify(parentIds, notice);
+    void sendLectureCancelled(recipients, lecture, opts);
+  }
+  if (opts.noShow) {
+    await notify([lecture.teacherId], { kind: "cancelled", title: "أُلغيت حصتك لأنها لم تبدأ في موعدها", body: lecture.title, link: `/lectures/${lecture.id}` });
+    if (studentIds.length) await notifyAdmins({ kind: "cancelled", title: "حصة لم يبدأها المدرس", body: `${lecture.title} · ${new Set(studentIds).size} طالب`, link: "/admin" });
+  }
+  return studentIds;
+}
+
+/** The teacher moved a class that students already booked. */
+export async function announceReschedule(lecture: Lecture, previousStart: Date) {
+  const rows = await db.select({ id: bookingsTable.studentId }).from(bookingsTable).where(and(eq(bookingsTable.lectureId, lecture.id), eq(bookingsTable.status, "confirmed")));
+  if (!rows.length) return;
+  const studentIds = rows.map((r) => r.id);
+  const { parentIds, recipients } = await audienceOf(studentIds);
+  const notice = { kind: "rescheduled", title: "تغيّر موعد حصتك", body: `${lecture.title} — يمكنك إلغاء حجزك إذا لم يناسبك الموعد الجديد`, link: `/lectures/${lecture.id}` };
+  await notify(studentIds, notice);
+  await notify(parentIds, notice);
+  void sendLectureRescheduled(recipients, lecture, previousStart);
 }

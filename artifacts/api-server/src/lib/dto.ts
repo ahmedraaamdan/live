@@ -5,11 +5,14 @@ import {
   attendanceTable,
   bookingsTable,
   db,
+  lectureReportsTable,
   lectureVotesTable,
   notificationsTable,
   parentLinksTable,
   recordingsTable,
+  savedLecturesTable,
   studentProfilesTable,
+  teacherFollowsTable,
   teacherProfilesTable,
   uploadsTable,
   userSecurityTable,
@@ -31,6 +34,7 @@ import type {
   UserDTO,
 } from "@workspace/live-core";
 import { VOTE_MIN_LIVE_SECONDS, VOTE_MIN_REPLAY_SECONDS, splitBooking } from "@workspace/live-core";
+import { canCancelBooking, canReportLecture } from "./access";
 import { env } from "./env";
 import { viewerCount } from "./events";
 
@@ -114,6 +118,18 @@ export async function lectureDTOs(lectures: Lecture[], viewer: User | null, opts
   const teacherIds = [...new Set(lectures.map((l) => l.teacherId))];
   const studentId = opts.studentId ?? (viewer?.role === "student" ? viewer.id : undefined);
 
+  const isStudent = viewer?.role === "student";
+  const [myReports, mySaved, myFollows] = isStudent
+    ? await Promise.all([
+        db.select({ lectureId: lectureReportsTable.lectureId }).from(lectureReportsTable).where(and(eq(lectureReportsTable.studentId, viewer.id), inArray(lectureReportsTable.lectureId, ids))),
+        db.select({ lectureId: savedLecturesTable.lectureId }).from(savedLecturesTable).where(and(eq(savedLecturesTable.studentId, viewer.id), inArray(savedLecturesTable.lectureId, ids))),
+        db.select({ teacherId: teacherFollowsTable.teacherId }).from(teacherFollowsTable).where(and(eq(teacherFollowsTable.studentId, viewer.id), inArray(teacherFollowsTable.teacherId, teacherIds))),
+      ])
+    : [[], [], []];
+  const reportedSet = new Set(myReports.map((r) => r.lectureId));
+  const savedSet = new Set(mySaved.map((s) => s.lectureId));
+  const followedSet = new Set(myFollows.map((f) => f.teacherId));
+
   const [teachers, seats, mine, recs, votes, myVotes, myAttendance] = await Promise.all([
     db
       .select({ id: usersTable.id, name: usersTable.name, avatarUrl: usersTable.avatarUrl, headline: teacherProfilesTable.headline, subject: teacherProfilesTable.subject })
@@ -127,7 +143,7 @@ export async function lectureDTOs(lectures: Lecture[], viewer: User | null, opts
       .groupBy(bookingsTable.lectureId),
     studentId
       ? db
-          .select({ lectureId: bookingsTable.lectureId, id: bookingsTable.id, status: bookingsTable.status })
+          .select({ lectureId: bookingsTable.lectureId, id: bookingsTable.id, status: bookingsTable.status, confirmedAt: bookingsTable.confirmedAt })
           .from(bookingsTable)
           .where(and(eq(bookingsTable.studentId, studentId), inArray(bookingsTable.lectureId, ids)))
       : Promise.resolve([]),
@@ -210,9 +226,19 @@ export async function lectureDTOs(lectures: Lecture[], viewer: User | null, opts
       listed: l.listed,
       liveStartedAt: iso(l.liveStartedAt),
       liveEndedAt: iso(l.liveEndedAt),
-      teacher: { id: l.teacherId, name: t?.name ?? "", avatarUrl: t?.avatarUrl ?? null, headline: t?.headline ?? null, subject: t?.subject ?? null },
+      teacher: { id: l.teacherId, name: t?.name ?? "", avatarUrl: t?.avatarUrl ?? null, headline: t?.headline ?? null, subject: t?.subject ?? null, followed: followedSet.has(l.teacherId) },
       seatsTaken: seatsBy.get(l.id) ?? 0,
-      booking: booking ? { id: booking.id, status: booking.status } : null,
+      saved: savedSet.has(l.id),
+      booking: booking
+        ? {
+            id: booking.id,
+            status: booking.status,
+            // A parent's view of a child's booking offers neither action.
+            canCancel: isStudent && booking.status === "confirmed" && canCancelBooking(l, booking.confirmedAt),
+            canReport: isStudent && booking.status === "confirmed" && !reportedSet.has(l.id) && canReportLecture(l),
+            reported: reportedSet.has(l.id),
+          }
+        : null,
       recording: rec ? toRecording(rec, canWatch) : null,
       votes: {
         likes: Number(votesBy.get(l.id)?.likes ?? 0),
@@ -224,7 +250,7 @@ export async function lectureDTOs(lectures: Lecture[], viewer: User | null, opts
       },
       viewersNow: l.status === "live" ? viewerCount(l.id) : 0,
       stats: isOwner
-        ? { bookings: Number(st?.n ?? 0), revenueCents: revenue, teacherCents: splitBooking(revenue, env.feeBps).teacherCents, attendees: attendBy.get(l.id) ?? 0 }
+        ? { bookings: Number(st?.n ?? 0), revenueCents: revenue, teacherCents: splitBooking(revenue, env.feeBps).teacherCents, attendees: attendBy.get(l.id) ?? 0, fundsReview: l.fundsReviewedAt ? null : l.fundsReviewReason }
         : null,
     };
   });

@@ -226,18 +226,72 @@ export async function sendPasswordReset(user: User, token: string) {
   await sendMail({ to: user.email, subject: "تغيير الباسورد على Gahez Live", ...mail });
 }
 
-export async function sendLectureCancelled(to: User[], lecture: Lecture) {
+export async function sendLectureCancelled(to: Array<Pick<User, "email">>, lecture: Lecture, opts: { noShow?: boolean } = {}) {
   const paid = lecture.priceCents > 0;
   const mail = renderEmail({
     product: "live",
     robot: "phone",
     preheader: `حصة "${lecture.title}" اتلغت.`,
     title: "الحصة اتلغت",
-    intro: `للأسف المدرس لغى حصة "${esc(lecture.title)}" اللي كانت ${esc(fmtDateTime(lecture.startsAt))}.${
-      paid ? " فلوسك هترجع على نفس وسيلة الدفع خلال أيام عمل قليلة." : ""
+    intro: `${opts.noShow ? "المدرس ما بدأش" : "للأسف المدرس لغى"} حصة "${esc(lecture.title)}" اللي كانت ${esc(fmtDateTime(lecture.startsAt))}${opts.noShow ? " في ميعادها، فاتلغت." : "."}${
+      paid ? " بنتابع رد الفلوس على نفس وسيلة الدفع، وممكن تاخد أيام عمل قليلة." : ""
     }`,
     cta: { label: "افتح التطبيق", url: link("/s") },
     note: "وصلك الإيميل ده لأنك كنت حاجز الحصة دي.",
   });
   await Promise.all(to.map((u) => sendMail({ to: u.email, subject: `اتلغت: ${lecture.title}`, ...mail })));
+}
+
+export async function sendLectureRescheduled(to: Array<Pick<User, "email">>, lecture: Lecture, previousStart: Date) {
+  const mail = renderEmail({
+    product: "live",
+    robot: "phone",
+    preheader: `ميعاد "${lecture.title}" اتغير.`,
+    title: "ميعاد الحصة اتغير",
+    intro: `المدرس غيّر ميعاد حصة "${esc(lecture.title)}" من ${esc(fmtDateTime(previousStart))} إلى <strong>${esc(fmtDateTime(lecture.startsAt))}</strong>. لو الميعاد الجديد مش مناسب، تقدر تلغي حجزك من صفحة الحصة.`,
+    cta: { label: "افتح الحصة", url: link(`/lectures/${lecture.id}`) },
+    note: "وصلك الإيميل ده لأنك حاجز الحصة دي أو ولي أمر طالب حاجزها.",
+  });
+  await Promise.all(to.map((u) => sendMail({ to: u.email, subject: `ميعاد جديد: ${lecture.title}`, ...mail })));
+}
+
+export async function sendBookingCancelled(student: User, lecture: Lecture) {
+  const mail = renderEmail({
+    product: "live",
+    robot: "phone",
+    preheader: `حجزك في "${lecture.title}" اتلغى.`,
+    title: "حجزك اتلغى",
+    intro: `لغينا حجزك في حصة "${esc(lecture.title)}".${lecture.priceCents > 0 ? " بنتابع رد الفلوس على نفس وسيلة الدفع، وممكن تاخد أيام عمل قليلة." : ""}`,
+    cta: { label: "افتح التطبيق", url: link("/s") },
+    note: "وصلك الإيميل ده لأنك لغيت حجزك في الحصة دي.",
+  });
+  await sendMail({ to: student.email, subject: `اتلغى حجزك: ${lecture.title}`, ...mail });
+}
+
+/** Tickets reach the team's inbox too; replying there goes to the person who wrote. */
+export async function sendTicketOpened(user: User, subject: string, body: string, ticketId: string) {
+  const mail = renderEmail({
+    product: "live",
+    robot: "desk",
+    preheader: `${user.name}: ${subject}`,
+    title: "تذكرة دعم جديدة",
+    intro: `<strong>${esc(user.name)}</strong> بعت تذكرة: ${esc(subject)}`,
+    rows: [["الرسالة", `<div style="font-weight:400;white-space:pre-wrap;line-height:1.8">${esc(body)}</div>`]],
+    cta: { label: "افتح التذكرة", url: link(`/support/${ticketId}`) },
+    note: "وصلك الإيميل ده لأن حد بعت تذكرة دعم من التطبيق.",
+  });
+  await sendMail({ to: "support@gahez.space", replyTo: user.email, subject: `تذكرة: ${subject}`, ...mail });
+}
+
+export async function sendTicketAnswered(user: User, subject: string, ticketId: string) {
+  const mail = renderEmail({
+    product: "live",
+    robot: "phone",
+    preheader: `وصلك رد على "${subject}".`,
+    title: "وصلك رد من الدعم",
+    intro: `فريق الدعم رد على تذكرتك "${esc(subject)}".`,
+    cta: { label: "شوف الرد", url: link(`/support/${ticketId}`) },
+    note: "وصلك الإيميل ده لأنك بعت تذكرة دعم.",
+  });
+  await sendMail({ to: user.email, subject: `رد على: ${subject}`, ...mail });
 }
