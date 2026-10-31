@@ -25,6 +25,7 @@ import {
 import { Link, useLocation } from 'wouter';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  FUNDS_REVIEW_LABELS,
   HEARTBEAT_SECONDS,
   LIVE_OPEN_MINUTES_BEFORE,
   assignmentInputSchema,
@@ -39,6 +40,7 @@ import {
 import { Countdown, ShareLectureSheet } from '@/components/bits';
 import { StatusBadge, lectureEnded } from '@/components/lecture-card';
 import { BoardReview } from '@/components/board/board-review';
+import { CancelBookingCard, ReportProblemCard } from '@/components/booking-panels';
 import { MessageItem, threadMessages } from '@/components/qa';
 import { VoteBar } from '@/components/vote';
 import { api, errorMessage } from '@/lib/api';
@@ -171,6 +173,11 @@ function TeacherLecture({ l }: { l: LectureDTO }) {
       />
       <Page wide>
         <LectureHeader l={l} />
+        {l.stats?.fundsReview && (
+          <div className="mb-6">
+            <Banner tone="warning" title="أرباح الحصة قيد المراجعة">{FUNDS_REVIEW_LABELS[l.stats.fundsReview]}. ستراجعها الإدارة، وسيصلك إشعار بالنتيجة.</Banner>
+          </div>
+        )}
         {l.stats && (
           <StatGrid className="mb-6 lg:grid-cols-3">
             <Stat icon={<Users />} tone="secondary" label="حاجزين" value={l.capacity ? `${l.stats.bookings}/${l.capacity}` : l.stats.bookings} />
@@ -515,6 +522,8 @@ function StudentLecture({ l }: { l: LectureDTO }) {
             <p className="mt-2 text-body-sm text-on-surface-variant">ستجد رابط الانضمام هنا عند بدء المدرس للبث.</p>
           </Card>
         )}
+        {booked && student && l.booking?.canCancel && <CancelBookingCard l={l} />}
+        {student && <ReportProblemCard l={l} />}
         {booked && l.recording && l.status !== 'live' && (
           <section className="mb-6">
             <h2 className="mb-3 text-title-lg">التسجيل</h2>

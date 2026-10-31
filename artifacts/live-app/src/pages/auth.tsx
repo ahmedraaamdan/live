@@ -167,7 +167,7 @@ export function Signup() {
         {error && <Banner tone="error">{error}</Banner>}
         <TextField label={role === 'teacher' ? 'الاسم الذي يعرفك به طلابك' : 'الاسم'} autoComplete="name" value={form.name} onChange={set('name')} placeholder={role === 'teacher' ? 'أ. محمد سامي' : ''} />
         <TextField label="البريد الإلكتروني" type="email" autoComplete="email" inputMode="email" ltr value={form.email} onChange={set('email')} />
-        <TextField label="رقم الهاتف" type="tel" autoComplete="tel" inputMode="tel" ltr value={form.phone} onChange={set('phone')} placeholder="01xxxxxxxxx" hint="اختياري" />
+        <TextField label="رقم الهاتف" type="tel" autoComplete="tel" inputMode="tel" ltr value={form.phone} onChange={set('phone')} placeholder="01xxxxxxxxx" hint="مطلوب عند حجز حصة مدفوعة" />
         <TextField label="كلمة المرور" type="password" autoComplete="new-password" ltr value={form.password} onChange={set('password')} hint="8 أحرف على الأقل" />
         {role === 'student' && (
           <>
@@ -238,7 +238,7 @@ export function ResetPassword() {
         }}
       >
         {m.error && <Banner tone="error">{errorMessage(m.error)}</Banner>}
-        <TextField label="كلمة المرور الجديد" type="password" autoComplete="new-password" ltr value={password} onChange={(e) => setPassword(e.target.value)} hint="8 أحرف على الأقل" />
+        <TextField label="كلمة المرور الجديدة" type="password" autoComplete="new-password" ltr value={password} onChange={(e) => setPassword(e.target.value)} hint="8 أحرف على الأقل" />
         <Button type="submit" size="lg" block loading={m.isPending}>
           حفظ ومتابعة
         </Button>

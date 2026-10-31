@@ -1,8 +1,11 @@
 import { useCapabilities } from '@/lib/capabilities';
+import { PhoneSheet } from '@/components/booking-panels';
+import { FollowTeacherButton, SaveLectureButton } from '@/components/lecture-actions';
+import { useState } from 'react';
 import { BookOpen, CalendarClock, Check, Clock, CreditCard, Radio, ShieldCheck, ThumbsUp, Users } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { gradeLabel, subjectLabel, type BookResult, type LectureDTO } from '@workspace/live-core';
+import { STUDENT_CANCEL_HOURS, gradeLabel, subjectLabel, type LectureDTO } from '@workspace/live-core';
 import { Countdown } from '@/components/bits';
 import { lectureEnded } from '@/components/lecture-card';
 import { approvalPct } from '@/components/vote';
@@ -24,9 +27,11 @@ export function PublicLecture({ params }: { params: { code: string } }) {
   const { me } = useSession();
   const [, navigate] = useLocation();
   const q = useQuery({ queryKey: ['public-lecture', code, me?.user.id], queryFn: () => api<LectureDTO>(`/l/${code}`), refetchInterval: 15_000 });
+  const [phoneSheet, setPhoneSheet] = useState<'closed' | 'needed' | 'rejected'>('closed');
   const book = useMutation({
-    mutationFn: (id: string) => requestBooking(id, me?.user.id ?? ''),
+    mutationFn: ({ id, phone }: { id: string; phone?: string }) => requestBooking(id, me?.user.id ?? '', phone),
     onSuccess: async (r) => {
+      setPhoneSheet('closed');
       if (r.checkoutUrl && r.payment) await openCheckout(r.checkoutUrl);
       else if (r.booking.status === 'confirmed' && q.data) {
         await cacheConfirmedBooking(qc, q.data, r.booking as typeof r.booking & { status: 'confirmed' });
@@ -35,6 +40,8 @@ export function PublicLecture({ params }: { params: { code: string } }) {
       }
     },
     onError: async (e) => {
+      if (e instanceof ApiError && e.code === 'phone_required') return setPhoneSheet('needed');
+      if (e instanceof ApiError && e.code === 'mobile_invalid') return setPhoneSheet('rejected');
       if (e instanceof ApiError && (e.status === 0 || e.status >= 500)) {
         try { const current = await api<LectureDTO>(`/l/${code}`); if (current.booking?.status === 'confirmed') { await cacheConfirmedBooking(qc, current, { id: current.booking.id, status: 'confirmed' }); toast('حجزك مؤكّد'); navigate(current.status === 'live' ? `/live/${current.id}` : `/lectures/${current.id}?booked=1`); return; } } catch { /* Preserve the original error; never repeat a charge automatically. */ }
       }
@@ -98,7 +105,7 @@ export function PublicLecture({ params }: { params: { code: string } }) {
     );
   } else if (student) {
     cta = (
-      <Button size="lg" block loading={book.isPending} onClick={() => book.mutate(l.id)}>
+      <Button size="lg" block loading={book.isPending} onClick={() => book.mutate({ id: l.id })}>
         {l.priceCents ? `احجز مقعدك · ${money(l.priceCents)}` : 'احجز مجانًا'}
       </Button>
     );
@@ -139,7 +146,8 @@ export function PublicLecture({ params }: { params: { code: string } }) {
             </div>
             {!closed && l.status !== 'live' && <div className="lesson-countdown"><span>نلتقي بعد</span><Countdown to={l.startsAt} /></div>}
             <div className="lesson-cta">{cta}</div>
-            {!closed && !booked && <p className="lesson-booking-note"><ShieldCheck size={15} /> {l.priceCents ? 'يتأكد مقعدك بعد إتمام الدفع.' : 'احجز مقعدك وانضم من حسابك.'}</p>}
+            {!closed && !booked && <p className="lesson-booking-note"><ShieldCheck size={15} /> {l.priceCents ? `يتأكد مقعدك بعد إتمام الدفع. استرداد كامل عند الإلغاء قبل الحصة بـ${STUDENT_CANCEL_HOURS} ساعة، وإذا لم تُعقد الحصة.` : 'احجز مقعدك وانضم من حسابك.'}</p>}
+            {student && !closed && <div className="mt-3 flex items-center justify-between gap-2"><span className="text-body-sm text-on-surface-variant">{l.saved ? 'محفوظة في حصصك' : 'احفظها وعُد إليها لاحقًا'}</span><span className="flex gap-2"><FollowTeacherButton teacherId={l.teacher.id} followed={l.teacher.followed} compact /><SaveLectureButton lectureId={l.id} saved={l.saved} /></span></div>}
             <div className="lesson-includes"><span><Check /> رابط البث داخل حسابك</span><span><Check /> متابعة من الهاتف أو الحاسوب</span>{capabilities.data?.recordingConfigured && <span><Check /> التسجيل عند إتاحته من المدرس</span>}</div>
             {l.priceCents > 0 && !closed && capabilities.data?.paymentConfigured && <p className="lesson-payment"><CreditCard size={16} /> ادفع عبر وسائل بوابة الدفع المتاحة</p>}
           </aside>
@@ -147,6 +155,7 @@ export function PublicLecture({ params }: { params: { code: string } }) {
         <footer className="lesson-footer"><Logo /><span>مساحة للتعلّم. ووقت للفهم.</span><Link href="/">اكتشف جاهز <ArrowLeft size={16} /></Link></footer>
       </div>
       <div className="lesson-mobile-booking"><div><strong>{l.priceCents ? money(l.priceCents) : 'مجانية'}</strong><span>{fmtTime(l.startsAt)} · {fmtDay(l.startsAt)}</span></div><div>{cta}</div></div>
+      <PhoneSheet open={phoneSheet !== 'closed'} onOpenChange={(open) => !open && setPhoneSheet('closed')} invalid={phoneSheet === 'rejected'} pending={book.isPending} onSubmit={(phone) => book.mutate({ id: l.id, phone })} />
     </div>
   );
 }
