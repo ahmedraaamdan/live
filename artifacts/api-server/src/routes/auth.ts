@@ -27,6 +27,7 @@ import { loadMe } from "../lib/dto";
 import { sendParentInvite, sendPasswordReset, sendWelcome } from "../lib/emails";
 import { env } from "../lib/env";
 import { badRequest, conflict, parse, unauthorized } from "../lib/http";
+import { allow, enforce, forgive, LIMITS } from "../lib/rate-limit";
 
 const router = Router();
 
@@ -39,6 +40,7 @@ async function uniqueLinkCode(): Promise<string> {
 }
 
 router.post("/auth/signup", async (req, res) => {
+  enforce(LIMITS.signupIp, String(req.ip));
   const input = parse(signupSchema, req.body);
   const exists = await db.query.usersTable.findFirst({ where: eq(usersTable.email, input.email) });
   if (exists) throw conflict("الإيميل ده عليه حساب بالفعل، سجّل دخول", "email_taken");
@@ -77,8 +79,13 @@ router.post("/auth/signup", async (req, res) => {
 
 router.post("/auth/login", async (req, res) => {
   const input = parse(loginSchema, req.body);
+  const attempt = `${input.email}|${req.ip}`;
+  enforce(LIMITS.loginIp, String(req.ip));
+  enforce(LIMITS.loginEmail, input.email);
+  enforce(LIMITS.loginAttempt, attempt, "محاولات دخول كثيرة. انتظر 15 دقيقة أو أعد تعيين كلمة المرور.");
   const user = await db.query.usersTable.findFirst({ where: eq(usersTable.email, input.email) });
   if (!user || !(await verifyPassword(input.password, user.passwordHash))) throw unauthorized("الإيميل أو الباسورد غلط");
+  forgive(LIMITS.loginAttempt, attempt);
   if (user.suspended) throw unauthorized("الحساب ده موقوف، كلّمنا على support@gahez.space");
   const security = await db.query.userSecurityTable.findFirst({ where: eq(userSecurityTable.userId, user.id) });
   if (security?.totpEnabledAt) return void res.json({ requiresMfa: true, challenge: await createMfaChallenge(user.id) });
@@ -95,10 +102,12 @@ router.post("/auth/logout", async (req, res) => {
 });
 
 router.post("/auth/forgot", async (req, res) => {
+  enforce(LIMITS.forgotIp, String(req.ip));
   const { email } = parse(forgotSchema, req.body);
   const user = await db.query.usersTable.findFirst({ where: eq(usersTable.email, email) });
   // Same answer either way, so the endpoint doesn't reveal who has an account.
-  if (user) {
+  // Past the budget nothing is sent, which also stops it filling someone's inbox.
+  if (user && allow(LIMITS.forgotEmail, email)) {
     const token = randomToken();
     await db.insert(passwordResetsTable).values({ tokenHash: sha256(token), userId: user.id, expiresAt: new Date(Date.now() + 3_600_000) });
     void sendPasswordReset(user, token);
@@ -107,6 +116,7 @@ router.post("/auth/forgot", async (req, res) => {
 });
 
 router.post("/auth/reset", async (req, res) => {
+  enforce(LIMITS.resetIp, String(req.ip));
   const { token, password } = parse(resetSchema, req.body);
   const reset = await db.query.passwordResetsTable.findFirst({
     where: and(eq(passwordResetsTable.tokenHash, sha256(token)), gt(passwordResetsTable.expiresAt, new Date()), isNull(passwordResetsTable.usedAt)),
@@ -165,6 +175,7 @@ router.patch("/me", async (req, res) => {
 /** A student (re)sends the invitation to their parent's email. */
 router.post("/me/parent-invite", async (req, res) => {
   const user = requireRole(req, "student");
+  enforce(LIMITS.parentInvite, user.id);
   const { email } = parse(parentInviteSchema, req.body);
   const profile = await db.query.studentProfilesTable.findFirst({ where: eq(studentProfilesTable.userId, user.id) });
   await db.update(studentProfilesTable).set({ parentEmail: email }).where(eq(studentProfilesTable.userId, user.id));

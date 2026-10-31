@@ -38,6 +38,8 @@ export interface TeacherMini extends PersonMini {
 
 export interface MeDTO {
   isSuperAdmin?: boolean;
+  /** An administrator who has not turned on two-factor yet: every admin tool stays closed until they do. */
+  mfaSetupRequired?: boolean;
   impersonation?: { actorId: string; actorName: string } | null;
   user: UserDTO;
   teacher: { bio: string; headline: string; subject: string | null; experience?: string; socialLinks?: ProfileLink[]; certificates?: ProfileLink[] } | null;

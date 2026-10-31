@@ -375,6 +375,8 @@ const FORMS = { '/api/waitlist': waitlist, '/api/contact': contact };
 
 createServer(async (req, res) => {
   try {
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Content-Security-Policy', "frame-ancestors 'none'; base-uri 'self'; object-src 'none'");
     const url = new URL(req.url ?? '/', 'http://localhost');
     if (url.pathname === '/healthz') return json(res, 200, { ok: true });
     const form = FORMS[url.pathname];

@@ -477,7 +477,7 @@ export function RecordingPlayer({ l, track }: { l: LectureDTO; track?: boolean }
         <Film />
       </span>
       <p className="flex-1 text-title-md">التسجيل متاح</p>
-      <Button onClick={() => window.open(rec.url!, '_blank')}>مشاهدة التسجيل</Button>
+      <Button onClick={() => { if (/^https?:\/\//i.test(rec.url!)) window.open(rec.url!, '_blank', 'noopener,noreferrer'); }}>مشاهدة التسجيل</Button>
     </Card>
   );
 }

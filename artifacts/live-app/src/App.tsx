@@ -9,6 +9,7 @@ import { homePath, useSession } from '@/lib/session';
 import { Page, PageSpinner, TopBar } from '@/ui';
 import { ForgotPassword, JoinParent, Login, ResetPassword, Signup, Welcome } from '@/pages/auth';
 
+const AdminMfaGate = lazy(() => import('@/components/admin-mfa-gate').then(m => ({ default: m.AdminMfaGate })));
 const Checkout = lazy(() => import('@/pages/checkout').then(m => ({ default: m.Checkout })));
 const DevPay = lazy(() => import('@/pages/checkout').then(m => ({ default: m.DevPay })));
 const TeacherVerification = lazy(() => import('@/pages/teacher-verification').then(m => ({ default: m.TeacherVerification })));
@@ -117,5 +118,5 @@ export function App() {
     </Suspense>
   );
   const content = me && inShell ? <AppShell><ErrorBoundary key={loc}>{routes}</ErrorBoundary></AppShell> : routes;
-  return <div className={me?.impersonation ? 'gl-impersonating' : undefined}><AccountSwitchBanner />{content}</div>;
+  return <div className={me?.impersonation ? 'gl-impersonating' : undefined}><AccountSwitchBanner />{me?.user.role === 'admin' ? <Suspense fallback={<PageSpinner />}><AdminMfaGate>{content}</AdminMfaGate></Suspense> : content}</div>;
 }

@@ -8,6 +8,7 @@ export class HttpError extends Error {
     public status: number,
     message: string,
     public code?: string,
+    public retryAfterSeconds?: number,
   ) {
     super(message);
   }
@@ -18,6 +19,7 @@ export const unauthorized = (msg = "لازم تسجّل دخول الأول") =>
 export const forbidden = (msg = "مش مسموح لك تعمل ده") => new HttpError(403, msg, "forbidden");
 export const notFound = (msg = "مش لاقيين اللي بتدور عليه") => new HttpError(404, msg, "not_found");
 export const conflict = (msg: string, code?: string) => new HttpError(409, msg, code);
+export const tooMany = (msg: string, retryAfterSeconds?: number) => new HttpError(429, msg, "rate_limited", retryAfterSeconds);
 
 /** Validates a body against a shared schema; the first issue becomes the message. */
 export function parse<S extends z.ZodType>(schema: S, input: unknown): z.output<S> {
@@ -43,6 +45,7 @@ export function uuidParam(value: string | string[] | undefined): string {
 
 export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   if (err instanceof HttpError) {
+    if (err.retryAfterSeconds) res.setHeader("Retry-After", String(err.retryAfterSeconds));
     res.status(err.status).json({ error: err.message, code: err.code });
     return;
   }

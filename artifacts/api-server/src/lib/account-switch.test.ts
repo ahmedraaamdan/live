@@ -20,6 +20,7 @@ test("super-admin account switching preserves authority and target isolation", a
   await initDb({ migrationsFolder: path.resolve(root, "../lib/db/drizzle"), pgliteDir: dir });
   const { db } = database;
   const { createSession, hashPassword, sha256 } = await import("./auth");
+  const { newTotpSecret, sealSecret } = await import("./two-factor");
   const { default: app } = await import("../app");
   const passwordHash = await hashPassword("audit-password-only");
   const [owner, admin, teacher, student, parent, suspended] = await db.insert(usersTable).values([
@@ -30,6 +31,7 @@ test("super-admin account switching preserves authority and target isolation", a
     { role: "parent" as const, name: "Audit Parent", email: "parent@audit.gahez", passwordHash },
     { role: "teacher" as const, name: "Suspended Teacher", email: "suspended@audit.gahez", suspended: true, passwordHash },
   ]).returning();
+  await db.insert(database.userSecurityTable).values([owner!, admin!].map(u => ({ userId: u.id, totpSecretEnc: sealSecret(newTotpSecret()), totpEnabledAt: new Date() })));
   const tokens = await Promise.all([owner!, admin!, teacher!, student!].map(u => createSession(u.id)));
   const server = app.listen(0, "127.0.0.1");
   await new Promise<void>(r => server.once("listening", r));

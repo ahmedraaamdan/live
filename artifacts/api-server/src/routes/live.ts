@@ -34,6 +34,7 @@ import { publish, subscribe } from "../lib/events";
 import { badRequest, forbidden, notFound, parse, uuidParam } from "../lib/http";
 import { closeRoom, liveToken, openRoom, startRecording, stopRecording } from "../lib/livekit";
 import { notify } from "../lib/notify";
+import { enforce, LIMITS } from "../lib/rate-limit";
 
 const router = Router();
 
@@ -198,6 +199,7 @@ router.post("/lectures/:id/messages", async (req, res) => {
   const lecture = await getLecture(uuidParam(req.params.id));
   await assertAccess(user, lecture);
   if (user.role === "parent") throw forbidden("أولياء الأمور بيتابعوا بس");
+  enforce(LIMITS.message, user.id, "ترسل رسائل بسرعة كبيرة. انتظر قليلًا ثم حاول مجددًا.");
   const input = parse(messageInputSchema, req.body);
   const host = user.role === "teacher" && user.id === lecture.teacherId;
   if (host && lecture.status !== "live") await assertVerifiedTeacher(user);

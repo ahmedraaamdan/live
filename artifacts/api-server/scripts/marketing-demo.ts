@@ -200,7 +200,8 @@ async function seedDemo(): Promise<DemoAccount[]> {
     const links = [{ parentId: parents[0]!.id, studentId: students[0]!.id }, { parentId: parents[0]!.id, studentId: students[1]!.id }];
     for (const parent of parents.slice(1)) for (const student of sample(students.slice(2), chance(0.2) ? 2 : 1)) links.push({ parentId: parent.id, studentId: student.id });
     await insertAll(tx, parentLinksTable, links);
-    // Teaching needs an approved identity review and two-factor, as in production.
+    // Admin tools and teaching both need two-factor, as in production; the picker signs in directly.
+    await tx.insert(userSecurityTable).values({ userId: admin.id, totpSecretEnc: sealSecret(newTotpSecret()), totpEnabledAt: admin.createdAt });
     await insertAll(tx, userSecurityTable, teachers.map((t) => ({ userId: t.id, googleSubject: `demo-${t.id}`, googleEmail: t.user.email, totpSecretEnc: sealSecret(newTotpSecret()), totpEnabledAt: t.user.createdAt })));
     const documents = teachers.flatMap((t) => [0, 1].map((n) => ({ id: randomUUID(), ownerId: t.id, filename: `demo-${n}.png`, mime: "image/png", size: 1, storageKey: "demo-fixture" })));
     await insertAll(tx, verificationDocumentsTable, documents);

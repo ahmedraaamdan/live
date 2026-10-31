@@ -142,7 +142,7 @@ export const mockPaySchema = z.object({
 });
 
 export const recordingInputSchema = z.object({
-  url: z.url({ message: "حط لينك صحيح" }).max(1000),
+  url: z.url({ message: "حط لينك صحيح" }).max(1000).refine(value => /^https:\/\//i.test(value), { message: "رابط التسجيل يجب أن يبدأ بـ https://" }),
 });
 
 export const voteSchema = z.object({ value: z.union([z.literal(1), z.literal(-1), z.literal(0)]) });

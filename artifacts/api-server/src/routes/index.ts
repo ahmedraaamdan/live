@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { requireAdminMfa } from "../lib/mfa-auth";
 import teacherVerificationRouter from "./teacher-verification";
 import socialIdentityRouter from "./social-identity";
 import accountSecurityRouter from "./account-security";
@@ -19,6 +20,7 @@ import walletRouter from "./wallet";
 
 const router: IRouter = Router();
 
+router.use(requireAdminMfa);
 router.use(healthRouter);
 router.use(authRouter);
 router.use(accountSecurityRouter);
