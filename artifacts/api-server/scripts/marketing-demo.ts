@@ -63,9 +63,9 @@ const { subscribe } = await import("../src/lib/events");
 const { default: app } = await import("../src/app");
 
 const {
-  assignmentsTable, attendanceTable, bookingsTable, initDb, lectureMessagesTable, lecturesTable, lectureVotesTable,
-  notificationsTable, parentLinksTable, paymentsTable, payoutsTable, studentProfilesTable, submissionsTable,
-  teacherProfilesTable, teacherVerificationsTable, userSecurityTable, usersTable, verificationDocumentsTable, walletEntriesTable,
+  assignmentsTable, attendanceTable, bookingsTable, initDb, lectureMessagesTable, lectureReportsTable, lecturesTable, lectureVotesTable,
+  notificationsTable, parentLinksTable, paymentsTable, payoutsTable, savedLecturesTable, studentProfilesTable, submissionsTable,
+  supportTicketMessagesTable, supportTicketsTable, teacherFollowsTable, teacherProfilesTable, teacherVerificationsTable, userSecurityTable, usersTable, verificationDocumentsTable, walletEntriesTable,
 } = database;
 
 const FEE_BPS = 1000;
@@ -384,6 +384,30 @@ async function seedDemo(): Promise<DemoAccount[]> {
   bell.push({ userId: parents[0]!.id, kind: "graded", title: `درجة جديدة لـ${star.name}`, body: "واجب: 18/20", link: `/p/children/${star.id}`, createdAt: ago(5 * HOUR) });
   bell.push({ userId: admin.id, kind: "payout", title: `طلب سحب جديد من ${firstTeacher.user.name}`, link: "/admin/payouts", createdAt: ago(2 * HOUR) });
   await db().insert(notificationsTable).values(bell);
+
+  // Enough for the follow, save, support and review screens to have something to show.
+  await db().insert(teacherFollowsTable).values(teachers.slice(0, 4).map((t) => ({ studentId: star.id, teacherId: t.id })));
+  const starBooked = new Set(bookings.filter((b) => b.studentId === star.id).map((b) => b.lectureId));
+  const worthSaving = lectures.filter((l) => l.phase === "future" && l.row.grade === "s3" && !starBooked.has(l.row.id)).slice(0, 4);
+  await db().insert(savedLecturesTable).values(worthSaving.map((l) => ({ studentId: star.id, lectureId: l.row.id })));
+  const tickets = [
+    { user: star.id, category: "payment" as const, subject: "دفعت ولم يظهر الحجز", body: "دفعت بالمحفظة أمس ولم تظهر الحصة في حسابي.", reply: "راجعنا العملية وتأكد حجزك. تجده الآن في حصصك." },
+    { user: firstTeacher.id, category: "account" as const, subject: "تعديل بيانات التحويل", body: "أريد تغيير رقم المحفظة التي تصلها أرباحي.", reply: null },
+    { user: students[7]!.id, category: "technical" as const, subject: "الصوت يتقطع في البث", body: "الصوت كان يتقطع في حصة أمس على الموبايل.", reply: null },
+  ];
+  for (const t of tickets) {
+    const id = randomUUID();
+    await db().insert(supportTicketsTable).values({ id, userId: t.user, category: t.category, subject: t.subject, status: t.reply ? "answered" : "open", createdAt: ago(20 * HOUR), updatedAt: ago(3 * HOUR) });
+    await db().insert(supportTicketMessagesTable).values({ ticketId: id, authorId: t.user, body: t.body, createdAt: ago(20 * HOUR) });
+    if (t.reply) await db().insert(supportTicketMessagesTable).values({ ticketId: id, authorId: admin.id, fromAdmin: true, body: t.reply, createdAt: ago(3 * HOUR) });
+  }
+  const waiting = lectures.filter((l) => l.phase === "past" && !l.row.fundsReleasedAt && l.row.priceCents > 0);
+  const reported = waiting.find((l) => bookings.some((b) => b.lectureId === l.row.id));
+  if (reported) {
+    const reporter = bookings.find((b) => b.lectureId === reported.row.id)!;
+    await db().insert(lectureReportsTable).values({ lectureId: reported.row.id, studentId: reporter.studentId, reason: "technical", details: "الصوت كان يتقطع في آخر نصف ساعة." });
+    await db().update(lecturesTable).set({ fundsReviewReason: "reported" }).where(eq(lecturesTable.id, reported.row.id));
+  }
 
   console.log(`  seeded in ${Math.round((Date.now() - started) / 1000)}s`);
   return [
