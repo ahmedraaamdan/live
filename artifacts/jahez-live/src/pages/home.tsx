@@ -22,6 +22,7 @@ import { Footer } from "@/components/marketing/footer";
 import { ClassCard } from "@/components/marketing/class-card";
 import { ClassCarousel } from "@/components/marketing/class-carousel";
 import { AppDownloadSection } from "@/components/marketing/app-download-section";
+import { PromoVideoSection } from "@/components/marketing/promo-video-section";
 import { FaqAccordion } from "@/components/marketing/faq-accordion";
 import {
   Reveal,
@@ -35,7 +36,7 @@ import { InquirySection } from "@/components/marketing/inquiry-section";
 import { useSeo } from "@/hooks/use-seo";
 import { routes } from "@/lib/routes";
 import { openSignup } from "@/lib/signup";
-import { organizationJsonLd, websiteJsonLd } from "@/lib/structured-data";
+import { organizationJsonLd, promoVideoJsonLd, websiteJsonLd } from "@/lib/structured-data";
 import { classes, subjects, teachers } from "@/data/classes";
 import { faqCategories } from "@/data/faq";
 
@@ -71,7 +72,7 @@ export default function Home() {
     title: routes.home.title,
     description: routes.home.description,
     path: routes.home.path,
-    jsonLd: [organizationJsonLd(), websiteJsonLd()],
+    jsonLd: [organizationJsonLd(), websiteJsonLd(), promoVideoJsonLd()],
   });
   const [subject, setSubject] = useState("الكل");
   const [followed, setFollowed] = useState<Set<string>>(new Set());
@@ -194,6 +195,8 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        <PromoVideoSection />
 
         <section className="studio-section studio-discover" id="discover">
           <div className="container-wide">

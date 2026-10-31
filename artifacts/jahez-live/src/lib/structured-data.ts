@@ -1,6 +1,7 @@
 import { isConfigured, siteConfig } from '@/lib/site-config';
 import type { Crumb } from '@/components/marketing/breadcrumbs';
 import type { FaqCategory } from '@/components/marketing/faq-accordion';
+import { PROMO_VIDEO_ID, PROMO_VIDEO_POSTER, PROMO_VIDEO_TITLE } from '@/components/marketing/promo-video-section';
 
 /**
  * Generic, truthful structured data only — no fabricated ratings, prices,
@@ -35,6 +36,20 @@ export function websiteJsonLd() {
     name: siteConfig.brandName,
     url: `${siteConfig.siteUrl}/`,
     inLanguage: 'ar',
+    publisher: { '@id': ORGANIZATION_ID },
+  };
+}
+
+export function promoVideoJsonLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'VideoObject',
+    name: PROMO_VIDEO_TITLE,
+    description: 'فيديو تعريفي بمنصة جاهز Live للمدرس والطالب وولي الأمر: الحصة والواجب والفلوس في مكان واحد.',
+    thumbnailUrl: `${siteConfig.siteUrl}${PROMO_VIDEO_POSTER}`,
+    uploadDate: '2026-10-31',
+    duration: 'PT1M25S',
+    embedUrl: `https://www.youtube-nocookie.com/embed/${PROMO_VIDEO_ID}`,
     publisher: { '@id': ORGANIZATION_ID },
   };
 }

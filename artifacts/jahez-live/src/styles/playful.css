@@ -1927,3 +1927,131 @@ img { -webkit-user-drag: none; }
     mix-blend-mode: screen;
   }
 }
+
+/* Promo video: a dark stage in both appearance modes, like the FAQ. */
+.promo-video-section {
+  background: #12141b;
+  color: #f8f6f0;
+}
+.promo-video-section h2,
+.promo-video-section .studio-kicker {
+  color: #f8f6f0;
+}
+.promo-video-section h2 > span {
+  color: #ff416d;
+}
+.promo-video-lead {
+  max-width: 440px;
+  margin: 0;
+  color: #cbd2e0;
+  font-size: 1.1rem;
+  line-height: 1.9;
+}
+.promo-video-frame {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #000;
+  border: 3px solid #f8f6f0;
+  border-radius: 24px;
+  box-shadow: 10px 12px 0 #e11d48;
+}
+.promo-video-frame iframe,
+.promo-video-play {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.promo-video-play {
+  cursor: pointer;
+}
+.promo-video-play img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+.promo-video-play:hover img {
+  transform: scale(1.03);
+}
+.promo-video-icon {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  width: 112px;
+  height: 112px;
+  margin: auto;
+  color: #fff;
+  background: #e11d48;
+  border: 3px solid #12141b;
+  border-radius: 50%;
+  box-shadow: 5px 6px 0 #12141b;
+  transition: transform 0.2s ease;
+}
+.promo-video-play:hover .promo-video-icon {
+  transform: scale(1.08);
+}
+.promo-video-play:focus-visible {
+  outline: none;
+}
+.promo-video-play:focus-visible .promo-video-icon {
+  outline: 3px solid #fff;
+  outline-offset: 4px;
+}
+.promo-video-time {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  padding: 3px 12px;
+  color: #fff;
+  font-weight: 700;
+  background: #12141b;
+  border-radius: 8px;
+}
+.promo-video-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 16px 28px;
+  margin-top: 48px;
+}
+.promo-video-note {
+  color: #aab2c2;
+  font-size: 0.9rem;
+}
+@media (max-width: 767px) {
+  .promo-video-section .studio-section-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .promo-video-frame {
+    border-radius: 16px;
+    box-shadow: 6px 7px 0 #e11d48;
+  }
+  .promo-video-icon {
+    width: 72px;
+    height: 72px;
+  }
+  .promo-video-icon svg {
+    width: 30px;
+    height: 30px;
+  }
+  .promo-video-time {
+    bottom: 8px;
+    left: 8px;
+    font-size: 0.8rem;
+  }
+  .promo-video-foot {
+    margin-top: 32px;
+  }
+}
