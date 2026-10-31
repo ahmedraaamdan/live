@@ -1,11 +1,20 @@
 {
-  "name": "Gahez Live",
-  "short_name": "Gahez Live",
+  "id": "/",
+  "name": "جاهز Live",
+  "short_name": "جاهز Live",
+  "description": "حصصك المباشرة في مكان واحد",
   "lang": "ar",
   "dir": "rtl",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#FFFFFF",
   "theme_color": "#E11D48",
-  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+  "categories": ["education"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
 }

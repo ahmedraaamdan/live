@@ -36,6 +36,7 @@ const TicketThread = lazy(() => import('@/pages/support').then(m => ({ default: 
 const Account = lazy(() => import('@/pages/account').then(m => ({ default: m.Account })));
 const Notifications = lazy(() => import('@/pages/account').then(m => ({ default: m.Notifications })));
 const NotFound = lazy(() => import('@/pages/not-found').then(m => ({ default: m.NotFound })));
+const InstallPage = lazy(() => import('@/pages/install').then(m => ({ default: m.InstallPage })));
 
 // Heavy and only needed in their own screens.
 const LiveRoom = lazy(() => import('@/pages/live').then((m) => ({ default: m.LiveRoom })));
@@ -82,6 +83,7 @@ export function App() {
         <Route path="/forgot-password" component={ForgotPassword} />
         <Route path="/reset-password" component={ResetPassword} />
         <Route path="/join/parent" component={JoinParent} />
+        <Route path="/install" component={InstallPage} />
         <Route path="/l/:code" component={PublicLecture} />
         <Route path="/teachers/:id">{p => <TeacherProfile id={p.id} />}</Route>
 

@@ -679,6 +679,55 @@ h3 {
 }
 .store-button-disabled {
   opacity: 1;
+  cursor: default;
+  pointer-events: none;
+  user-select: none;
+}
+.app-install {
+  margin-top: 26px;
+  padding-top: 22px;
+  border-top: 1px dashed var(--playful-outline);
+}
+.app-install h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+.app-install p {
+  font-size: 0.82rem;
+  color: hsl(var(--muted-foreground));
+  margin: 0 0 14px;
+}
+.app-install-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  max-width: 440px;
+}
+.app-install-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 8px 10px;
+  border: 2px solid var(--playful-outline);
+  border-radius: 13px;
+  background: var(--studio-white);
+  color: var(--playful-outline);
+  box-shadow: 3px 4px 0 var(--playful-shadow);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.app-install-option:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 5px 0 var(--playful-shadow);
+}
+.app-install-option:focus-visible {
+  outline: 3px solid var(--studio-accent);
+  outline-offset: 2px;
 }
 .studio-faq-grid {
   grid-template-columns: 0.9fr 1.1fr;
