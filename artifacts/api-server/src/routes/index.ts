@@ -16,6 +16,7 @@ import homeworkTemplatesRouter from "./homework-templates";
 import miscRouter from "./misc";
 import parentRouter from "./parent";
 import paymentsRouter from "./payments";
+import supportRouter from "./support";
 import walletRouter from "./wallet";
 
 const router: IRouter = Router();
@@ -38,5 +39,6 @@ router.use(adminRouter);
 router.use(miscRouter);
 router.use(teacherProfilesRouter);
 router.use(homeworkTemplatesRouter);
+router.use(supportRouter);
 
 export default router;

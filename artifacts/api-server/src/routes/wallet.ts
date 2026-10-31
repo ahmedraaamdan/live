@@ -5,9 +5,10 @@ import { payoutRequestSchema, type WalletDTO } from "@workspace/live-core";
 import { requireRole } from "../lib/auth";
 import { toPayout } from "../lib/dto";
 import { env } from "../lib/env";
-import { badRequest, parse } from "../lib/http";
+import { badRequest, forbidden, parse } from "../lib/http";
 import { teacherBalances } from "../lib/ledger";
 import { notify } from "../lib/notify";
+import { assertVerifiedTeacher } from "../lib/teacher-verification";
 import { and } from "drizzle-orm";
 
 const router = Router();
@@ -47,6 +48,8 @@ router.get("/wallet", async (req, res) => {
 
 router.post("/wallet/payouts", async (req, res) => {
   const user = requireRole(req, "teacher");
+  if (req.impersonation) throw forbidden("لا يمكن طلب سحب أثناء تبديل الحساب");
+  await assertVerifiedTeacher(user);
   const input = parse(payoutRequestSchema, req.body);
   await db.transaction(async (tx) => {
     // Lock a row that always exists, including before the first payout request.

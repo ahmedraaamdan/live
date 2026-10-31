@@ -1,5 +1,6 @@
 /** In-app notifications (the bell). Push notifications will hang off this later. */
-import { db, notificationsTable } from "@workspace/db";
+import { and, eq } from "drizzle-orm";
+import { db, notificationsTable, usersTable } from "@workspace/db";
 import { logger } from "./logger";
 
 export interface NotificationInput {
@@ -17,4 +18,9 @@ export async function notify(userIds: string[], n: NotificationInput) {
   } catch (err) {
     logger.error({ err }, "notify failed");
   }
+}
+
+export async function notifyAdmins(n: NotificationInput) {
+  const admins = await db.select({ id: usersTable.id }).from(usersTable).where(and(eq(usersTable.role, "admin"), eq(usersTable.suspended, false)));
+  await notify(admins.map((a) => a.id), n);
 }

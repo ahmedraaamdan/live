@@ -18,6 +18,7 @@ import {
   boardOpsSchema,
   type BoardOp,
   LIVE_OPEN_MINUTES_BEFORE,
+  NO_SHOW_GRACE_MINUTES,
   heartbeatSchema,
   messageInputSchema,
   messagePatchSchema,
@@ -65,6 +66,7 @@ router.post("/lectures/:id/live/start", async (req, res) => {
   if (lecture.startsAt.getTime() - Date.now() > LIVE_OPEN_MINUTES_BEFORE * 60_000) {
     throw badRequest(`تقدر تبدأ البث قبل الميعاد بـ${LIVE_OPEN_MINUTES_BEFORE} دقيقة بس`);
   }
+  if (Date.now() - lecture.startsAt.getTime() > NO_SHOW_GRACE_MINUTES * 60_000) throw badRequest(`انتهت مهلة بدء الحصة (${NO_SHOW_GRACE_MINUTES} دقيقة بعد موعدها)، وستُلغى ويُرد للطلاب ما دفعوه.`, "start_window_closed");
 
   const live = await db.transaction(async tx => {
     if (env.livekit.maxRooms > 0) {

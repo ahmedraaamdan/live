@@ -1,19 +1,21 @@
 import { reconcileEasykashPending } from "./easykash-reconcile";
 /**
- * Once a minute: reminders an hour before class, releasing teachers' money
- * after the hold, freeing seats held by abandoned checkouts, and ending
- * lectures a teacher forgot to end.
+ * Once a minute: reminders an hour before class, cancelling classes nobody
+ * started, settling teachers' money after the hold, freeing seats held by
+ * abandoned checkouts, and ending lectures a teacher forgot to end.
  *
- * Each job is a single idempotent query plus side effects, so a missed or
- * doubled tick is harmless. With more than one API process, run it in one
- * (SCHEDULER=off on the others).
+ * Each job picks its work with one query and settles each item on its own, so a
+ * missed or doubled tick is harmless. With more than one API process, run it in
+ * one (SCHEDULER=off on the others).
  */
 import { and, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 import { bookingsTable, db, lecturesTable, paymentsTable, usersTable } from "@workspace/db";
+import { NO_SHOW_GRACE_MINUTES } from "@workspace/live-core";
 import { bookedStudentIds } from "./access";
+import { settleCancelledLecture } from "./bookings";
 import { sendLectureReminder } from "./emails";
 import { env } from "./env";
-import { releaseLectureFunds } from "./ledger";
+import { settleLectureFunds } from "./funds";
 import { logger } from "./logger";
 import { notify } from "./notify";
 import { endLecture } from "../routes/live";
@@ -41,21 +43,48 @@ async function sendReminders() {
   }
 }
 
-async function releaseFunds() {
-  const ready = await db
+/** A class its teacher never started: students get their money back instead of waiting. */
+export async function cancelNoShows() {
+  const missed = await db
     .update(lecturesTable)
-    .set({ fundsReleasedAt: new Date() })
+    .set({ status: "cancelled", updatedAt: new Date() })
+    .where(and(eq(lecturesTable.status, "scheduled"), sql`${lecturesTable.startsAt} + make_interval(mins => ${NO_SHOW_GRACE_MINUTES}) < now()`))
+    .returning();
+  for (const lecture of missed) {
+    try {
+      await settleCancelledLecture(lecture, { noShow: true });
+    } catch (err) {
+      logger.error({ err, lectureId: lecture.id }, "Could not settle a cancelled lecture");
+    }
+  }
+  // A crash between marking and refunding must not leave anyone with a seat in a dead class.
+  const stranded = await db
+    .selectDistinct({ lecture: lecturesTable })
+    .from(lecturesTable)
+    .innerJoin(bookingsTable, eq(bookingsTable.lectureId, lecturesTable.id))
+    .where(and(eq(lecturesTable.status, "cancelled"), inArray(bookingsTable.status, ["confirmed", "pending_payment"]), sql`${lecturesTable.updatedAt} < now() - interval '5 minutes'`));
+  for (const { lecture } of stranded) await settleCancelledLecture(lecture);
+}
+
+export async function releaseFunds() {
+  const ready = await db
+    .select({ id: lecturesTable.id })
+    .from(lecturesTable)
     .where(
       and(
         eq(lecturesTable.status, "ended"),
         isNull(lecturesTable.fundsReleasedAt),
+        isNull(lecturesTable.fundsReviewedAt),
+        isNull(lecturesTable.fundsReviewReason),
         sql`${lecturesTable.liveEndedAt} < now() - make_interval(hours => ${env.payoutHoldHours})`,
       ),
-    )
-    .returning();
-  for (const l of ready) {
-    await releaseLectureFunds(l.id);
-    await notify([l.teacherId], { kind: "funds", title: "فلوس حصة بقت متاحة للسحب 💰", body: l.title, link: "/t/wallet" });
+    );
+  for (const { id } of ready) {
+    try {
+      await settleLectureFunds(id);
+    } catch (err) {
+      logger.error({ err, lectureId: id }, "Could not settle a lecture's earnings");
+    }
   }
 }
 
@@ -89,7 +118,7 @@ export function startScheduler() {
     if (running) return;
     running = true;
     try {
-    for (const job of [reconcileEasykashPending, sendReminders, releaseFunds, expireCheckouts, endForgottenLectures]) {
+    for (const job of [reconcileEasykashPending, sendReminders, cancelNoShows, releaseFunds, expireCheckouts, endForgottenLectures]) {
       try {
         await job();
       } catch (err) {

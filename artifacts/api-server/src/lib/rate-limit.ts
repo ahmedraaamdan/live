@@ -28,6 +28,8 @@ export const LIMITS = {
   parentLink: { name: "parent-link", max: 10, windowMs: HOUR },
   upload: { name: "upload", max: 60, windowMs: HOUR },
   message: { name: "message", max: 30, windowMs: MINUTE },
+  ticket: { name: "ticket", max: 5, windowMs: HOUR },
+  ticketMessage: { name: "ticket-message", max: 20, windowMs: HOUR },
 } satisfies Record<string, Limit>;
 
 const windows = new Map<string, { count: number; resetAt: number }>();

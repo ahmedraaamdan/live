@@ -57,6 +57,20 @@
       "when": 1793382156567,
       "tag": "0007_stale_doomsday",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793410880216,
+      "tag": "0008_living_emma_frost",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793411270488,
+      "tag": "0009_tired_reaper",
+      "breakpoints": true
     }
   ]
 }

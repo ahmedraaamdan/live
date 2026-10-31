@@ -1,11 +1,13 @@
 import { Router } from "express";
-import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
-import { bookingsTable, db, lecturesTable, paymentsTable, payoutsTable, usersTable, walletEntriesTable } from "@workspace/db";
-import { payoutDecisionSchema, type AdminOverviewDTO, type AdminUserDTO, type PaymentMethod, type Role } from "@workspace/live-core";
-import { roleGate } from "../lib/auth";
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import { attendanceTable, bookingsTable, db, lectureReportsTable, lecturesTable, paymentsTable, payoutsTable, usersTable, walletEntriesTable } from "@workspace/db";
+import { FUNDS_MIN_ATTENDED_SECONDS, fundsDecisionSchema, payoutDecisionSchema, reportDecisionSchema, type AdminOverviewDTO, type AdminUserDTO, type FundReviewDTO, type PaymentMethod, type Role } from "@workspace/live-core";
+import { recordAdminAction } from "../lib/audit";
+import { isSuperAdmin, requireUser, roleGate } from "../lib/auth";
 import { toMini, toPayout, toUser } from "../lib/dto";
 import { sendPayoutUpdate } from "../lib/emails";
-import { badRequest, notFound, parse, uuidParam } from "../lib/http";
+import { decideLectureFunds, resolveLectureReport } from "../lib/funds";
+import { badRequest, forbidden, notFound, parse, uuidParam } from "../lib/http";
 import { notify } from "../lib/notify";
 
 const router = Router();
@@ -42,7 +44,7 @@ router.get("/admin/overview", async (_req, res) => {
       .innerJoin(lecturesTable, eq(lecturesTable.id, bookingsTable.lectureId))
       .where(inArray(paymentsTable.status, ["succeeded", "refunded"]))
       .orderBy(desc(paymentsTable.createdAt))
-      .limit(20),
+      .limit(100),
     db
       .select({ p: payoutsTable, t: usersTable })
       .from(payoutsTable)
@@ -95,15 +97,19 @@ router.get("/admin/payouts", async (_req, res) => {
 });
 
 router.post("/admin/payouts/:id", async (req, res) => {
+  const actor = requireUser(req);
   const id = uuidParam(req.params.id);
   const { status, note } = parse(payoutDecisionSchema, req.body);
-  const payout = await db.query.payoutsTable.findFirst({ where: eq(payoutsTable.id, id) });
-  if (!payout) throw notFound();
-  if (payout.status !== "requested") throw badRequest("الطلب ده اتنفّذ قبل كده");
-  await db.transaction(async (tx) => {
+  const payout = await db.transaction(async (tx) => {
+    // Two decisions at once must not both win: "paid" plus "rejected" would pay and refund.
+    const [current] = await tx.select().from(payoutsTable).where(eq(payoutsTable.id, id)).for("update");
+    if (!current) throw notFound();
+    if (current.status !== "requested") throw badRequest("الطلب ده اتنفّذ قبل كده");
     await tx.update(payoutsTable).set({ status, adminNote: note || null, processedAt: new Date() }).where(eq(payoutsTable.id, id));
     // Rejected: the debit taken at request time is voided, so the money is back.
     if (status === "rejected") await tx.update(walletEntriesTable).set({ status: "void" }).where(eq(walletEntriesTable.payoutId, id));
+    await recordAdminAction(tx, actor.id, `payout.${status}`, id, note);
+    return current;
   });
   const teacher = await db.query.usersTable.findFirst({ where: eq(usersTable.id, payout.teacherId) });
   await notify([payout.teacherId], {
@@ -138,14 +144,83 @@ router.get("/admin/users", async (req, res) => {
     : [[], []];
   const l = new Map(lec.map((x) => [x.id, Number(x.n)]));
   const b = new Map(book.map((x) => [x.id, Number(x.n)]));
-  const body: AdminUserDTO[] = users.map((u) => ({ ...toUser(u), lectures: l.get(u.id) ?? 0, bookings: b.get(u.id) ?? 0 }));
+  const body: AdminUserDTO[] = users.map((u) => ({ ...toUser(u), lectures: l.get(u.id) ?? 0, bookings: b.get(u.id) ?? 0, suspended: u.suspended }));
   res.json(body);
 });
 
 router.post("/admin/users/:id/suspend", async (req, res) => {
+  const actor = requireUser(req);
   const id = uuidParam(req.params.id);
   const suspended = Boolean(req.body?.suspended);
-  await db.update(usersTable).set({ suspended }).where(eq(usersTable.id, id));
+  if (id === actor.id) throw badRequest("لا يمكنك إيقاف حسابك.");
+  const target = await db.query.usersTable.findFirst({ where: eq(usersTable.id, id) });
+  if (!target) throw notFound();
+  if (isSuperAdmin(target)) throw forbidden("لا يمكن إيقاف حساب المالك.");
+  await db.transaction(async (tx) => {
+    await tx.update(usersTable).set({ suspended }).where(eq(usersTable.id, id));
+    await recordAdminAction(tx, actor.id, suspended ? "user.suspend" : "user.restore", id);
+  });
+  res.json({ ok: true });
+});
+
+// ---------------------------------------------------------------- earnings under review
+
+router.get("/admin/fund-reviews", async (_req, res) => {
+  const lectures = await db
+    .select({ l: lecturesTable, t: usersTable })
+    .from(lecturesTable)
+    .innerJoin(usersTable, eq(usersTable.id, lecturesTable.teacherId))
+    .where(and(isNotNull(lecturesTable.fundsReviewReason), isNull(lecturesTable.fundsReviewedAt)))
+    .orderBy(asc(lecturesTable.liveEndedAt))
+    .limit(100);
+  if (lectures.length === 0) return void res.json([]);
+  const ids = lectures.map((r) => r.l.id);
+  const [amounts, attendees, reports] = await Promise.all([
+    db
+      .select({ id: bookingsTable.lectureId, total: sql<number>`coalesce(sum(${bookingsTable.pricePaidCents}), 0)` })
+      .from(bookingsTable)
+      .where(and(inArray(bookingsTable.lectureId, ids), eq(bookingsTable.status, "confirmed")))
+      .groupBy(bookingsTable.lectureId),
+    db
+      .select({ id: attendanceTable.lectureId, n: count() })
+      .from(attendanceTable)
+      .where(and(inArray(attendanceTable.lectureId, ids), sql`${attendanceTable.liveSeconds} >= ${FUNDS_MIN_ATTENDED_SECONDS}`))
+      .groupBy(attendanceTable.lectureId),
+    db
+      .select({ r: lectureReportsTable, s: usersTable })
+      .from(lectureReportsTable)
+      .innerJoin(usersTable, eq(usersTable.id, lectureReportsTable.studentId))
+      .where(and(inArray(lectureReportsTable.lectureId, ids), eq(lectureReportsTable.status, "open")))
+      .orderBy(asc(lectureReportsTable.createdAt)),
+  ]);
+  const amountBy = new Map(amounts.map((a) => [a.id, Number(a.total)]));
+  const attendeesBy = new Map(attendees.map((a) => [a.id, Number(a.n)]));
+  const body: FundReviewDTO[] = lectures.map(({ l, t }) => ({
+    lecture: {
+      id: l.id,
+      title: l.title,
+      startsAt: l.startsAt.toISOString(),
+      durationMin: l.durationMin,
+      liveMinutes: l.liveStartedAt && l.liveEndedAt ? Math.round((l.liveEndedAt.getTime() - l.liveStartedAt.getTime()) / 60_000) : 0,
+      attendees: attendeesBy.get(l.id) ?? 0,
+    },
+    teacher: toMini(t),
+    reason: l.fundsReviewReason!,
+    amountCents: amountBy.get(l.id) ?? 0,
+    reports: reports.filter((r) => r.r.lectureId === l.id).map(({ r, s }) => ({ id: r.id, reason: r.reason, details: r.details, student: toMini(s), createdAt: r.createdAt.toISOString() })),
+  }));
+  res.json(body);
+});
+
+router.post("/admin/lectures/:id/funds", async (req, res) => {
+  const { decision, note } = parse(fundsDecisionSchema, req.body);
+  await decideLectureFunds(uuidParam(req.params.id), requireUser(req), decision, note);
+  res.json({ ok: true });
+});
+
+router.post("/admin/reports/:id", async (req, res) => {
+  const { decision, note } = parse(reportDecisionSchema, req.body);
+  await resolveLectureReport(uuidParam(req.params.id), requireUser(req), decision, note);
   res.json({ ok: true });
 });
 

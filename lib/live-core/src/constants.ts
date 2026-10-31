@@ -110,6 +110,35 @@ export type MessageKind = (typeof MESSAGE_KINDS)[number];
 /** Smallest payout a teacher can request, in piasters (EGP 100). */
 export const MIN_PAYOUT_CENTS = 100_00;
 
+/** Cheapest paid class, in piasters: below this the gateway's fee eats the platform's share. */
+export const MIN_PAID_PRICE_CENTS = 50_00;
+
+/** A student can leave a paid class for a full refund until this long before it starts. */
+export const STUDENT_CANCEL_HOURS = 24;
+
+/** A class nobody started this long after its start time is cancelled and refunded. */
+export const NO_SHOW_GRACE_MINUTES = 30;
+
+/** Earnings wait for an administrator unless the class ran this share of its length... */
+export const FUNDS_MIN_LIVE_SHARE = 0.5;
+/** ...and at least one student watched for this long. */
+export const FUNDS_MIN_ATTENDED_SECONDS = 300;
+
+export const FUNDS_REVIEW_LABELS = {
+  short_live: "البث كان أقل من نصف مدة الحصة",
+  no_attendance: "لم يحضر أي طالب 5 دقائق",
+  reported: "طالب أبلغ عن مشكلة في الحصة",
+} as const;
+export type FundsReviewReason = keyof typeof FUNDS_REVIEW_LABELS;
+
+export const REPORT_REASON_LABELS = {
+  not_held: "الحصة لم تُعقد",
+  ended_early: "انتهت قبل موعدها بكثير",
+  technical: "مشكلة في الصوت أو الصورة أو الدخول",
+  other: "سبب آخر",
+} as const;
+export type ReportReason = keyof typeof REPORT_REASON_LABELS;
+
 /** How often a watching student's app reports attendance. */
 export const HEARTBEAT_SECONDS = 30;
 
@@ -122,3 +151,19 @@ export const LIVE_OPEN_MINUTES_BEFORE = 30;
  */
 export const VOTE_MIN_LIVE_SECONDS = 180;
 export const VOTE_MIN_REPLAY_SECONDS = 300;
+
+export const TICKET_CATEGORY_LABELS = {
+  account: "حسابي",
+  payment: "الدفع والاسترداد",
+  lecture: "حصة أو مدرس",
+  technical: "مشكلة تقنية",
+  other: "شيء آخر",
+} as const;
+export type TicketCategory = keyof typeof TICKET_CATEGORY_LABELS;
+
+export const TICKET_STATUS_LABELS = {
+  open: "بانتظار الرد",
+  answered: "تم الرد",
+  closed: "مغلقة",
+} as const;
+export type TicketStatus = keyof typeof TICKET_STATUS_LABELS;

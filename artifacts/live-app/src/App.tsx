@@ -30,6 +30,9 @@ const ParentHome = lazy(() => import('@/pages/parent').then(m => ({ default: m.P
 const AdminOverview = lazy(() => import('@/pages/admin').then(m => ({ default: m.AdminOverview })));
 const AdminPayouts = lazy(() => import('@/pages/admin').then(m => ({ default: m.AdminPayouts })));
 const AdminUsers = lazy(() => import('@/pages/admin').then(m => ({ default: m.AdminUsers })));
+const AdminTickets = lazy(() => import('@/pages/support').then(m => ({ default: m.AdminTickets })));
+const SupportList = lazy(() => import('@/pages/support').then(m => ({ default: m.SupportList })));
+const TicketThread = lazy(() => import('@/pages/support').then(m => ({ default: m.TicketThread })));
 const Account = lazy(() => import('@/pages/account').then(m => ({ default: m.Account })));
 const Notifications = lazy(() => import('@/pages/account').then(m => ({ default: m.Notifications })));
 const NotFound = lazy(() => import('@/pages/not-found').then(m => ({ default: m.NotFound })));
@@ -67,7 +70,7 @@ export function App() {
   const [loc] = useLocation();
   // Keep navigation outside Suspense: a cold page chunk must never replace
   // the rail/bottom bar with a full-screen loading state.
-  const inShell = loc === '/' || /^\/(?:t|s|p|admin)(?:\/|$)/.test(loc) || /^\/(?:me|notifications)$/.test(loc) || /^\/(?:lectures|teachers)\/[^/]+$/.test(loc);
+  const inShell = loc === '/' || /^\/(?:t|s|p|admin)(?:\/|$)/.test(loc) || /^\/(?:me|notifications|support)$/.test(loc) || /^\/(?:lectures|teachers|support)\/[^/]+$/.test(loc);
   const routes = (
     <Suspense fallback={<PageSpinner />}>
       <ScrollToTop />
@@ -107,11 +110,14 @@ export function App() {
         <Route path="/admin/teacher-verifications">{() => <Authed roles={['admin']}><VerificationQueue /></Authed>}</Route>
         <Route path="/admin/teacher-verifications/:id">{p => <Authed roles={['admin']}><VerificationReview id={p.id} /></Authed>}</Route>
         <Route path="/admin/payouts">{() => <Authed roles={['admin']}><AdminPayouts /></Authed>}</Route>
+        <Route path="/admin/tickets">{() => <Authed roles={['admin']}><AdminTickets /></Authed>}</Route>
         <Route path="/admin/users">{() => <Authed roles={['admin']}><AdminUsers /></Authed>}</Route>
 
         <Route path="/lectures/:id">{(p) => <Authed><LectureDetail id={p.id} /></Authed>}</Route>
         <Route path="/me">{() => <Authed><Account /></Authed>}</Route>
         <Route path="/notifications">{() => <Authed><Notifications /></Authed>}</Route>
+        <Route path="/support">{() => <Authed><SupportList /></Authed>}</Route>
+        <Route path="/support/:id">{(p) => <Authed><TicketThread id={p.id} /></Authed>}</Route>
 
         <Route component={NotFound} />
       </Switch>

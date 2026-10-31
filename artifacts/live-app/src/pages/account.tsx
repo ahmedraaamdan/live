@@ -3,7 +3,7 @@ import { ProfileLinksEditor, linkDraft, type LinkDraft } from '@/components/prof
 import { ShareTeacherCard } from '@/components/share-teacher-card';
 import { QueryError } from '@/components/query-error';
 import { useEffect, useState } from 'react';
-import { Bell, Copy, LogOut, Mail, Moon, Palette, Sun, SunMoon } from 'lucide-react';
+import { Bell, Copy, LifeBuoy, LogOut, Mail, Moon, Palette, Sun, SunMoon } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { GRADES, ROLE_LABELS, SUBJECTS, type MeDTO, type NotificationDTO } from '@workspace/live-core';
@@ -170,6 +170,7 @@ export function Account() {
         <List className="mb-6">
           {me.teacher && <ListItem href="/t/verification" leading={<Bell className="size-6 text-on-surface-variant" />} title="توثيق الحساب وحمايته" chevron />}
           <ListItem href="/notifications" leading={<Bell className="size-6 text-on-surface-variant" />} title="التنبيهات" chevron />
+          {me.user.role !== 'admin' && <ListItem href="/support" leading={<LifeBuoy className="size-6 text-on-surface-variant" />} title="الدعم" subtitle="أرسل تذكرة إلى فريق الإدارة" chevron />}
         </List>
         <Button
           variant="danger-text"

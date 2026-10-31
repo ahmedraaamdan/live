@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { and, asc, count, desc, eq, gte, inArray, lt, or, sql } from "drizzle-orm";
-import { db, usersTable, teacherProfilesTable, lecturesTable, lectureVotesTable, bookingsTable, teacherVerificationsTable } from "@workspace/db";
+import { db, usersTable, teacherFollowsTable, teacherProfilesTable, lecturesTable, lectureVotesTable, bookingsTable, teacherVerificationsTable } from "@workspace/db";
 import type { TeacherProfileDTO, TeacherLecturesDTO } from "@workspace/live-core";
 import { requireRole } from "../lib/auth";
 import { badRequest, notFound, param, uuidParam } from "../lib/http";
@@ -15,7 +15,8 @@ async function publicTeacher(id: string) {
 router.get("/teachers/:id", async (req, res) => {
   const id = uuidParam(req.params.id);
   const teacher = await publicTeacher(id);
-  const [profile, [votes], [lessons], [students], verification] = await Promise.all([
+  const viewer = req.user;
+  const [profile, [votes], [lessons], [students], verification, [followers], mine] = await Promise.all([
     db.query.teacherProfilesTable.findFirst({ where: eq(teacherProfilesTable.userId, id) }),
     db.select({ likes: sql<number>`count(*) filter (where ${lectureVotesTable.value} = 1)`, dislikes: sql<number>`count(*) filter (where ${lectureVotesTable.value} = -1)`, raters: sql<number>`count(distinct ${lectureVotesTable.studentId})` })
       .from(lectureVotesTable).innerJoin(lecturesTable, eq(lecturesTable.id, lectureVotesTable.lectureId))
@@ -23,12 +24,14 @@ router.get("/teachers/:id", async (req, res) => {
     db.select({ n: count() }).from(lecturesTable).where(and(eq(lecturesTable.teacherId, id), eq(lecturesTable.status, "ended"))),
     db.select({ n: sql<number>`count(distinct ${bookingsTable.studentId})` }).from(bookingsTable).innerJoin(lecturesTable, eq(lecturesTable.id, bookingsTable.lectureId)).where(and(eq(lecturesTable.teacherId, id), eq(bookingsTable.status, "confirmed"))),
     db.query.teacherVerificationsTable.findFirst({ where: eq(teacherVerificationsTable.teacherId, id) }),
+    db.select({ n: count() }).from(teacherFollowsTable).where(eq(teacherFollowsTable.teacherId, id)),
+    viewer?.role === "student" ? db.query.teacherFollowsTable.findFirst({ where: and(eq(teacherFollowsTable.studentId, viewer.id), eq(teacherFollowsTable.teacherId, id)) }) : undefined,
   ]);
   const likes = Number(votes?.likes ?? 0), dislikes = Number(votes?.dislikes ?? 0), total = likes + dislikes;
   const body: TeacherProfileDTO = {
-    teacher: { id, verified: verification?.status === "approved", name: teacher.name, avatarUrl: teacher.avatarUrl, headline: profile?.headline ?? null, subject: profile?.subject ?? null, bio: profile?.bio ?? "", experience: profile?.experience ?? "", socialLinks: profile?.socialLinks ?? [], certificates: profile?.certificates ?? [] },
+    teacher: { id, followed: Boolean(mine), verified: verification?.status === "approved", name: teacher.name, avatarUrl: teacher.avatarUrl, headline: profile?.headline ?? null, subject: profile?.subject ?? null, bio: profile?.bio ?? "", experience: profile?.experience ?? "", socialLinks: profile?.socialLinks ?? [], certificates: profile?.certificates ?? [] },
     rating: { likes, dislikes, total, positivePercent: total ? Math.round(likes / total * 100) : null, raters: Number(votes?.raters ?? 0) },
-    stats: { completedLessons: Number(lessons?.n ?? 0), students: Number(students?.n ?? 0) },
+    stats: { completedLessons: Number(lessons?.n ?? 0), students: Number(students?.n ?? 0), followers: Number(followers?.n ?? 0) },
   };
   res.json(body);
 });

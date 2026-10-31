@@ -6,6 +6,7 @@ import {
   CalendarDays,
   Home,
   LayoutDashboard,
+  LifeBuoy,
   NotebookPen,
   ShieldCheck,
   UserRound,
@@ -49,6 +50,7 @@ const NAV: Record<Role, NavItem[]> = {
   admin: [
     { href: '/admin', label: 'نظرة عامة', icon: LayoutDashboard },
     { href: '/admin/payouts', label: 'السحوبات', icon: Wallet },
+    { href: '/admin/tickets', label: 'التذاكر', icon: LifeBuoy },
     { href: '/admin/users', label: 'المستخدمين', icon: ShieldCheck },
     { href: '/me', label: 'حسابي', icon: UserRound },
   ],

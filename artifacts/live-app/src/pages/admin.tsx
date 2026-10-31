@@ -1,12 +1,125 @@
 import { VerificationQueueLink } from '@/components/verification-notice';
 import { QueryError } from '@/components/query-error';
 import { useState } from 'react';
-import { Banknote, CheckCircle2, GraduationCap, HandCoins, Landmark, Presentation, Ticket, Users, XCircle } from 'lucide-react';
+import { Banknote, CheckCircle2, GraduationCap, HandCoins, Landmark, Presentation, ShieldAlert, Ticket, Users, XCircle } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { PAYMENT_METHOD_LABELS, PAYOUT_METHOD_LABELS, ROLE_LABELS, type AdminOverviewDTO, type AdminUserDTO, type PayoutDTO, type Role } from '@workspace/live-core';
+import { FUNDS_REVIEW_LABELS, PAYMENT_METHOD_LABELS, PAYOUT_METHOD_LABELS, REPORT_REASON_LABELS, ROLE_LABELS, type AdminOverviewDTO, type AdminUserDTO, type FundReviewDTO, type PayoutDTO, type Role } from '@workspace/live-core';
 import { api, errorMessage } from '@/lib/api';
 import { fmtDateTime, money } from '@/lib/format';
 import { Avatar, Badge, Banner, Button, Card, Chip, EmptyState, List, ListItem, Page, PageSpinner, SectionHeader, Sheet, Stat, StatGrid, TextArea, TopBar, toast } from '@/ui';
+
+const LIST_STEP = 5;
+
+/** Long lists open with a few rows, and grow when asked. */
+function useShowMore<T>(items: T[]) {
+  const [count, setCount] = useState(LIST_STEP);
+  return {
+    visible: items.slice(0, count),
+    more:
+      items.length > count ? (
+        <Button variant="text" block className="mt-2" onClick={() => setCount(count + LIST_STEP)}>
+          عرض المزيد ({items.length - count})
+        </Button>
+      ) : null,
+  };
+}
+
+function RecentPayments({ payments }: { payments: AdminOverviewDTO['recentPayments'] }) {
+  const { visible, more } = useShowMore(payments);
+  if (payments.length === 0) return <EmptyState icon={<Banknote />} title="لا توجد مدفوعات بعد" />;
+  return (
+    <>
+      <List>
+        {visible.map((p) => (
+          <ListItem
+            key={p.id}
+            leading={<Avatar name={p.payer.name} size="sm" />}
+            title={p.lectureTitle}
+            subtitle={`${p.payer.name} ← ${p.teacher.name} · ${p.method ? PAYMENT_METHOD_LABELS[p.method] : ''} · ${fmtDateTime(p.createdAt)}`}
+            trailing={
+              <span className="flex flex-col items-end">
+                <span className="font-num text-title-sm text-on-surface">{money(p.amountCents)}</span>
+                {p.status === 'refunded' && <Badge tone="error">اترجع</Badge>}
+              </span>
+            }
+          />
+        ))}
+      </List>
+      {more}
+    </>
+  );
+}
+
+/** Classes whose earnings wait for a decision: pay the teacher, or give students their money back. */
+function FundReviews() {
+  const qc = useQueryClient();
+  const q = useQuery({ queryKey: ['fund-reviews'], queryFn: () => api<FundReviewDTO[]>('/admin/fund-reviews'), refetchInterval: 60_000 });
+  const refresh = () => {
+    void qc.invalidateQueries({ queryKey: ['fund-reviews'] });
+    void qc.invalidateQueries({ queryKey: ['admin-overview'] });
+  };
+  const decide = useMutation({
+    mutationFn: ({ id, decision }: { id: string; decision: 'release' | 'refund' }) => api(`/admin/lectures/${id}/funds`, { body: { decision } }),
+    onSuccess: (_data, { decision }) => {
+      refresh();
+      toast(decision === 'release' ? 'أصبحت الفلوس متاحة للمدرس' : 'سجّلنا رد قيمة الحصة للطلاب. نفّذ الرد من لوحة بوابة الدفع.');
+    },
+    onError: (e) => toast(errorMessage(e)),
+  });
+  const resolve = useMutation({
+    mutationFn: ({ id, decision }: { id: string; decision: 'refund' | 'dismiss' }) => api(`/admin/reports/${id}`, { body: { decision } }),
+    onSuccess: (_data, { decision }) => {
+      refresh();
+      toast(decision === 'refund' ? 'سجّلنا الرد لهذا الطالب. نفّذ الرد من لوحة بوابة الدفع.' : 'أغلقنا البلاغ');
+    },
+    onError: (e) => toast(errorMessage(e)),
+  });
+  if (!q.data?.length) return null;
+  return (
+    <section className="mb-6">
+      <SectionHeader title={`حصص تحتاج إلى قرار (${q.data.length})`} />
+      <div className="flex flex-col gap-3">
+        {q.data.map((r) => (
+          <Card key={r.lecture.id} variant="outlined">
+            <div className="flex items-start gap-3">
+              <ShieldAlert className="mt-1 size-6 shrink-0 text-warning" />
+              <div className="min-w-0 flex-1">
+                <p className="text-title-md">{r.lecture.title}</p>
+                <p className="text-body-sm text-on-surface-variant">{r.teacher.name} · {fmtDateTime(r.lecture.startsAt)}</p>
+                <p className="mt-2 text-body-md">{FUNDS_REVIEW_LABELS[r.reason]}</p>
+                <p className="mt-1 text-body-sm text-on-surface-variant">
+                  البث {r.lecture.liveMinutes} من {r.lecture.durationMin} دقيقة · حضر {r.lecture.attendees} طالب · المدفوع {money(r.amountCents)}
+                </p>
+              </div>
+            </div>
+            {r.reports.length > 0 && (
+              <div className="mt-3 flex flex-col gap-2">
+                {r.reports.map((report) => (
+                  <div key={report.id} className="rounded-md bg-surface-container p-3">
+                    <p className="text-title-sm">{report.student.name}: {REPORT_REASON_LABELS[report.reason]}</p>
+                    {report.details && <p className="mt-1 whitespace-pre-wrap text-body-sm" data-allow-copy>{report.details}</p>}
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Button size="sm" variant="tonal" disabled={resolve.isPending} onClick={() => resolve.mutate({ id: report.id, decision: 'refund' })}>رد المبلغ لهذا الطالب</Button>
+                      <Button size="sm" variant="text" disabled={resolve.isPending} onClick={() => resolve.mutate({ id: report.id, decision: 'dismiss' })}>رفض البلاغ</Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button size="sm" disabled={decide.isPending} onClick={() => decide.mutate({ id: r.lecture.id, decision: 'release' })}>
+                <CheckCircle2 /> تحويل الفلوس للمدرس
+              </Button>
+              <Button size="sm" variant="outlined" disabled={decide.isPending} onClick={() => decide.mutate({ id: r.lecture.id, decision: 'refund' })}>
+                <XCircle /> رد المبلغ لكل الطلاب
+              </Button>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 export function AdminOverview() {
   const q = useQuery({ queryKey: ['admin-overview'], queryFn: () => api<AdminOverviewDTO>('/admin/overview'), refetchInterval: 60_000 });
@@ -18,6 +131,7 @@ export function AdminOverview() {
       <TopBar title="لوحة الإدارة" large subtitle="الفلوس والنشاط على المنصة" />
       <Page wide>
         <div className="mb-5"><VerificationQueueLink /></div>
+        <FundReviews />
         {d.pendingReviews.length > 0 && <section className="mb-6"><SectionHeader title="معاملات تحتاج إلى مراجعة" /><Banner tone="warning">راجع هذه المعاملات في لوحة بوابة الدفع. لا يُعد الاسترداد مكتملًا حتى يؤكده المزود.</Banner><List className="mt-4">{d.pendingReviews.map(p => <ListItem key={p.id} title={p.lectureTitle} subtitle={`${p.payer.name} · ${money(p.amountCents)} · ${p.id}`} trailing={<Badge tone="warning">{p.refundPending ? 'استرداد قيد التنفيذ' : 'مراجعة المبلغ'}</Badge>} />)}</List></section>}
 
         <StatGrid>
@@ -40,26 +154,7 @@ export function AdminOverview() {
           </section>
           <section className="min-w-0">
             <SectionHeader title="آخر المدفوعات" />
-            {d.recentPayments.length === 0 ? (
-              <EmptyState icon={<Banknote />} title="لا توجد مدفوعات بعد" />
-            ) : (
-              <List>
-                {d.recentPayments.map((p) => (
-                  <ListItem
-                    key={p.id}
-                    leading={<Avatar name={p.payer.name} size="sm" />}
-                    title={p.lectureTitle}
-                    subtitle={`${p.payer.name} ← ${p.teacher.name} · ${p.method ? PAYMENT_METHOD_LABELS[p.method] : ''} · ${fmtDateTime(p.createdAt)}`}
-                    trailing={
-                      <span className="flex flex-col items-end">
-                        <span className="font-num text-title-sm text-on-surface">{money(p.amountCents)}</span>
-                        {p.status === 'refunded' && <Badge tone="error">اترجع</Badge>}
-                      </span>
-                    }
-                  />
-                ))}
-              </List>
-            )}
+            <RecentPayments payments={d.recentPayments} />
           </section>
         </div>
       </Page>
@@ -82,11 +177,12 @@ function PayoutList({ payouts }: { payouts: PayoutDTO[] }) {
     },
     onError: (e) => toast(errorMessage(e)),
   });
+  const { visible, more } = useShowMore(payouts);
   if (payouts.length === 0) return <EmptyState icon={<CheckCircle2 />} title="لا توجد طلبات بانتظار المراجعة" />;
   return (
     <>
       <List>
-        {payouts.map((p) => (
+        {visible.map((p) => (
           <ListItem
             key={p.id}
             onClick={p.status === 'requested' ? () => setOpen(p) : undefined}
@@ -102,6 +198,7 @@ function PayoutList({ payouts }: { payouts: PayoutDTO[] }) {
           />
         ))}
       </List>
+      {more}
       <Sheet
         open={Boolean(open)}
         onOpenChange={(o) => !o && setOpen(null)}
@@ -152,8 +249,9 @@ export function AdminUsers() {
     mutationFn: (u: { id: string; suspended: boolean }) => api(`/admin/users/${u.id}/suspend`, { body: { suspended: u.suspended } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-users'] });
-      toast('اتحدّث الحساب');
+      toast('حدّثنا الحساب');
     },
+    onError: (e) => toast(errorMessage(e)),
   });
   return (
     <>
@@ -178,8 +276,8 @@ export function AdminUsers() {
                 subtitle={`${u.email} · ${ROLE_LABELS[u.role]}${u.role === 'teacher' ? ` · ${u.lectures} حصة` : u.role === 'student' ? ` · ${u.bookings} حجز` : ''}`}
                 trailing={
                   u.role !== 'admin' ? (
-                    <Button size="sm" variant="danger-text" onClick={() => suspend.mutate({ id: u.id, suspended: true })}>
-                      إيقاف
+                    <Button size="sm" variant={u.suspended ? 'tonal' : 'danger-text'} loading={suspend.isPending && suspend.variables?.id === u.id} onClick={() => suspend.mutate({ id: u.id, suspended: !u.suspended })}>
+                      {u.suspended ? 'إعادة التفعيل' : 'إيقاف'}
                     </Button>
                   ) : null
                 }

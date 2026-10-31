@@ -1,4 +1,4 @@
-/* Lesson pages: warm editorial paper, a clear booking hierarchy, restrained ink shadows. */
+/* Lesson pages: clean editorial page, a clear booking hierarchy, restrained ink shadows. */
 .lesson-page { min-height:100dvh; background:var(--background); color:var(--on-surface); direction:rtl; }
 .lesson-nav { max-width:1240px; margin:auto; padding:calc(var(--safe-top) + 24px) 40px 24px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--outline-variant); }
 .lesson-nav a { text-decoration:none; }.lesson-back { display:flex; gap:9px; align-items:center; font:inherit; font-size:.8rem; cursor:pointer; background:transparent; border:0; color:var(--on-surface-variant); padding:10px; }

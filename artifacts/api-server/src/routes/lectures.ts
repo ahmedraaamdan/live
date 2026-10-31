@@ -15,14 +15,15 @@ import {
   usersTable,
   type Lecture,
 } from "@workspace/db";
-import { lectureInputSchema, splitBooking, type AttendanceDTO, type BookingDTO, type BookResult, type StudentHomeDTO, type TeacherDashboardDTO } from "@workspace/live-core";
-import { assertOwner, bookedStudentIds, getLecture } from "../lib/access";
+import { STUDENT_CANCEL_HOURS, bookingInputSchema, lectureInputSchema, lectureReportSchema, splitBooking, type AttendanceDTO, type BookingDTO, type BookResult, type StudentHomeDTO, type TeacherDashboardDTO } from "@workspace/live-core";
+import { assertOwner, bookedStudentIds, canCancelBooking, getLecture } from "../lib/access";
 import { requireRole, requireUser } from "../lib/auth";
-import { failPayment, onBookingConfirmed, refundLecture } from "../lib/bookings";
+import { announceReschedule, failPayment, onBookingConfirmed, parentsOf, refundBooking, settleCancelledLecture } from "../lib/bookings";
 import { shortCode } from "../lib/codes";
 import { lectureDTO, lectureDTOs, toMini } from "../lib/dto";
-import { sendLectureCancelled } from "../lib/emails";
+import { sendBookingCancelled } from "../lib/emails";
 import { env, paymentConfigured } from "../lib/env";
+import { fileLectureReport } from "../lib/funds";
 import { teacherBalances, type Tx } from "../lib/ledger";
 import { badRequest, conflict, notFound, param, parse, uuidParam } from "../lib/http";
 import { logger } from "../lib/logger";
@@ -237,10 +238,15 @@ router.patch("/lectures/:id", async (req, res) => {
     .select({ n: count() })
     .from(bookingsTable)
     .where(and(eq(bookingsTable.lectureId, lecture.id), eq(bookingsTable.status, "confirmed")))) as [{ n: number }];
-  if (Number(n) > 0 && input.priceCents !== lecture.priceCents) throw badRequest("فيه طلاب حجزوا، مينفعش تغيّر السعر دلوقتي");
+  const booked = Number(n);
+  if (booked > 0 && input.priceCents !== lecture.priceCents) throw badRequest("فيه طلاب حجزوا، مينفعش تغيّر السعر دلوقتي");
+  if (booked > 0 && !input.publish) throw badRequest("فيه طلاب حجزوا هذه الحصة، فلا يمكن إرجاعها إلى مسودة. إذا لن تقدمها، ألغها ليُرد لهم ما دفعوه.");
+  if (booked > 0 && input.capacity != null && input.capacity < booked) throw badRequest(`حجز ${booked} طالبًا هذه الحصة، فلا يمكن جعل المقاعد أقل من ذلك.`);
   const startsAt = new Date(input.startsAt);
+  const moved = startsAt.getTime() !== lecture.startsAt.getTime();
+  if (moved && startsAt.getTime() < Date.now() - 5 * 60_000) throw badRequest("الميعاد ده فات، اختار ميعاد جاي");
   // Editing the text of a class that already holds its slot needs no new room.
-  const needsRoom = input.publish && (lecture.status === "draft" || startsAt.getTime() !== lecture.startsAt.getTime() || input.durationMin !== lecture.durationMin);
+  const needsRoom = input.publish && (lecture.status === "draft" || moved || input.durationMin !== lecture.durationMin);
   const updated = await db.transaction(async (tx) => {
     if (needsRoom) await assertRoomFree(tx, startsAt, input.durationMin, lecture.id);
     const [row] = await tx
@@ -258,13 +264,16 @@ router.patch("/lectures/:id", async (req, res) => {
         listed: input.listed,
         status: input.publish ? "scheduled" : "draft",
         // A new time means a new reminder.
-        reminderSentAt: startsAt.getTime() === lecture.startsAt.getTime() ? lecture.reminderSentAt : null,
+        reminderSentAt: moved ? null : lecture.reminderSentAt,
+        rescheduledAt: moved && booked > 0 ? new Date() : lecture.rescheduledAt,
         updatedAt: new Date(),
       })
-      .where(eq(lecturesTable.id, lecture.id))
+      .where(and(eq(lecturesTable.id, lecture.id), inArray(lecturesTable.status, ["draft", "scheduled"])))
       .returning();
-    return row!;
+    if (!row) throw badRequest("تغيرت حالة الحصة ولا يمكن تعديلها الآن");
+    return row;
   });
+  if (moved && booked > 0) await announceReschedule(updated, lecture.startsAt);
   res.json(await lectureDTO(updated, user));
 });
 
@@ -275,13 +284,8 @@ router.post("/lectures/:id/cancel", async (req, res) => {
   if (!["draft", "scheduled"].includes(lecture.status)) throw badRequest("مينفعش تلغي حصة بدأت أو خلصت");
   const [cancelled] = await db.update(lecturesTable).set({ status: "cancelled", updatedAt: new Date() }).where(and(eq(lecturesTable.id, lecture.id), inArray(lecturesTable.status, ["draft", "scheduled"]))).returning();
   if (!cancelled) throw badRequest("تغيرت حالة الحصة ولا يمكن إلغاؤها الآن");
-  const studentIds = await refundLecture(lecture.id);
-  if (studentIds.length) {
-    const students = await db.select().from(usersTable).where(inArray(usersTable.id, studentIds));
-    await notify(studentIds, { kind: "cancelled", title: "أُلغيت الحصة", body: `${lecture.title} — يمكنك متابعة حالة عملية الدفع من حسابك`, link: `/lectures/${lecture.id}` });
-    void sendLectureCancelled(students, lecture);
-  }
-  res.json(await lectureDTO(cancelled!, user));
+  await settleCancelledLecture(cancelled);
+  res.json(await lectureDTO(cancelled, user));
 });
 
 router.get("/lectures/:id/bookings", async (req, res) => {
@@ -336,16 +340,20 @@ router.get("/lectures/:id/attendance", async (req, res) => {
 // ---------------------------------------------------------------- booking
 
 router.post("/lectures/:id/book", async (req, res) => {
-  const user = requireRole(req, "student");
+  const student = requireRole(req, "student");
   const lectureId = uuidParam(req.params.id);
+  const { phone } = parse(bookingInputSchema, req.body);
+  // The checkout needs a number: the booking step can add one without leaving the page.
+  const user = phone && phone !== student.phone ? (await db.update(usersTable).set({ phone }).where(eq(usersTable.id, student.id)).returning())[0]! : student;
   const { lecture, booking, alreadyConfirmed } = await db.transaction(async tx => {
     // Capacity checks and seat reservation must use the same lock across students.
     const [lecture] = await tx.select().from(lecturesTable).where(eq(lecturesTable.id, lectureId)).for("update");
     if (!lecture) throw notFound();
     const existing = await tx.query.bookingsTable.findFirst({ where: and(eq(bookingsTable.lectureId, lecture.id), eq(bookingsTable.studentId, user.id)) });
     if (existing?.status === "confirmed") return { lecture, booking: existing, alreadyConfirmed: true };
-    if (!["scheduled", "live"].includes(lecture.status) || endsAt(lecture) < new Date()) throw badRequest("الحجز مغلق لهذه الحصة");
-    if (lecture.priceCents > 0 && provider.name === "easykash" && !user.phone?.trim()) throw badRequest("أضف رقم هاتفك من صفحة حسابي قبل متابعة الدفع.", "phone_required");
+    const [teacher] = await tx.select({ suspended: usersTable.suspended }).from(usersTable).where(eq(usersTable.id, lecture.teacherId));
+    if (!["scheduled", "live"].includes(lecture.status) || endsAt(lecture) < new Date() || teacher?.suspended) throw badRequest("الحجز مغلق لهذه الحصة");
+    if (lecture.priceCents > 0 && provider.name === "easykash" && !user.phone?.trim()) throw badRequest("أضف رقم هاتفك لمتابعة الدفع.", "phone_required");
     if (lecture.priceCents > 0 && !paymentConfigured) throw badRequest("الدفع الإلكتروني غير متاح حاليًا. لم يُنشأ حجز أو تُحجز أموال.", "payments_unavailable");
     if (lecture.capacity) {
       const holdSince = new Date(Date.now() - PENDING_HOLD_MIN * 60_000);
@@ -399,6 +407,31 @@ router.post("/lectures/:id/book", async (req, res) => {
     checkoutUrl: checkout.checkoutUrl,
   };
   res.status(201).json(body);
+});
+
+/** A student leaves a class they booked, within the cancellation window. */
+router.post("/lectures/:id/booking/cancel", async (req, res) => {
+  const user = requireRole(req, "student");
+  const lecture = await getLecture(uuidParam(req.params.id));
+  const booking = await db.query.bookingsTable.findFirst({ where: and(eq(bookingsTable.lectureId, lecture.id), eq(bookingsTable.studentId, user.id), eq(bookingsTable.status, "confirmed")) });
+  if (!booking) throw badRequest("ليس لديك حجز مؤكد في هذه الحصة.");
+  if (!canCancelBooking(lecture, booking.confirmedAt)) throw badRequest(`إلغاء الحجز متاح حتى ${STUDENT_CANCEL_HOURS} ساعة قبل موعد الحصة.`, "cancel_closed");
+  await refundBooking(booking.id, "إلغاء الطالب للحجز", "student cancelled");
+  const parents = await parentsOf(user.id);
+  await notify([user.id], { kind: "cancelled", title: "ألغينا حجزك", body: `${lecture.title}${lecture.priceCents > 0 ? " — يمكنك متابعة حالة عملية الدفع من حسابك" : ""}`, link: `/lectures/${lecture.id}` });
+  await notify(parents.ids, { kind: "cancelled", title: `ألغى ${user.name} حجزه`, body: lecture.title, link: `/p/children/${user.id}` });
+  await notify([lecture.teacherId], { kind: "cancelled", title: `ألغى ${user.name} حجزه`, body: lecture.title, link: `/lectures/${lecture.id}` });
+  void sendBookingCancelled(user, lecture);
+  res.json(await lectureDTO(lecture, user));
+});
+
+/** A student reports a problem with a finished class while its earnings are on hold. */
+router.post("/lectures/:id/report", async (req, res) => {
+  const user = requireRole(req, "student");
+  const input = parse(lectureReportSchema, req.body);
+  const id = uuidParam(req.params.id);
+  await fileLectureReport(id, user, input.reason, input.details);
+  res.status(201).json(await lectureDTO(await getLecture(id), user));
 });
 
 function bookingDTO(b: typeof bookingsTable.$inferSelect): BookingDTO {
