@@ -1,3 +1,6 @@
+import { useIsFetching } from '@tanstack/react-query';
+import { PageSpinner } from './feedback';
+import { AccountMenu, ThemeToggle } from '@/components/account-menu';
 import { AccountSwitchTools } from '@/components/account-switch';
 import { useLayoutEffect, useState, type ReactNode } from 'react';
 import { ArrowRight } from 'lucide-react';
@@ -62,7 +65,7 @@ export function TopBar({
             <CollapsedTitle className="gl-collapsed-title truncate text-title-lg">{title}</CollapsedTitle>
           </div>
           {actions && <div className="flex items-center gap-1">{actions}</div>}
-          <AccountSwitchTools />
+          <ThemeToggle /><AccountMenu /><AccountSwitchTools />
         </div>
       </header>
       {large && (
@@ -77,7 +80,8 @@ export function TopBar({
 
 /** The scrolling body of a screen: centred, padded, clear of the nav bar. */
 export function Page({ children, className, wide }: { children: ReactNode; className?: string; wide?: boolean }) {
-  return <main className={cn('gl-page mx-auto w-full px-4 pb-nav md:px-6 lg:pb-12', wide ? 'max-w-[var(--content-max)]' : 'max-w-3xl', className)}>{children}</main>;
+  const pending = useIsFetching({ predicate: query => query.state.status === 'pending' && query.getObserversCount() > 0 });
+  return <main aria-busy={pending > 0} className={cn('gl-page gl-data-page mx-auto w-full px-4 pb-nav md:px-6 lg:pb-12', wide ? 'max-w-[var(--content-max)]' : 'max-w-3xl', className)}><div className={pending ? 'gl-data-pending' : undefined}>{children}</div>{pending > 0 && <div className="gl-data-loader"><PageSpinner /></div>}</main>;
 }
 
 /** Bottom action bar for a screen's main CTA (thumb zone), above the nav bar on phones. */

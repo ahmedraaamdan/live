@@ -1,3 +1,4 @@
+import { ErrorBoundary } from '@/components/error-boundary';
 import { AccountSwitchBanner } from '@/components/account-switch';
 import { QueryError } from '@/components/query-error';
 import { lazy, Suspense, useLayoutEffect, type ReactNode } from 'react';
@@ -115,6 +116,6 @@ export function App() {
       </Switch>
     </Suspense>
   );
-  const content = me && inShell ? <AppShell>{routes}</AppShell> : routes;
+  const content = me && inShell ? <AppShell><ErrorBoundary key={loc}>{routes}</ErrorBoundary></AppShell> : routes;
   return <div className={me?.impersonation ? 'gl-impersonating' : undefined}><AccountSwitchBanner />{content}</div>;
 }

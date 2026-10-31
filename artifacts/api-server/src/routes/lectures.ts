@@ -310,9 +310,9 @@ router.post("/lectures/:id/book", async (req, res) => {
     // Capacity checks and seat reservation must use the same lock across students.
     const [lecture] = await tx.select().from(lecturesTable).where(eq(lecturesTable.id, lectureId)).for("update");
     if (!lecture) throw notFound();
-    if (!["scheduled", "live"].includes(lecture.status) || endsAt(lecture) < new Date()) throw badRequest("الحجز مغلق لهذه الحصة");
     const existing = await tx.query.bookingsTable.findFirst({ where: and(eq(bookingsTable.lectureId, lecture.id), eq(bookingsTable.studentId, user.id)) });
     if (existing?.status === "confirmed") return { lecture, booking: existing, alreadyConfirmed: true };
+    if (!["scheduled", "live"].includes(lecture.status) || endsAt(lecture) < new Date()) throw badRequest("الحجز مغلق لهذه الحصة");
     if (lecture.priceCents > 0 && provider.name === "easykash" && !user.phone?.trim()) throw badRequest("أضف رقم هاتفك من صفحة حسابي قبل متابعة الدفع.", "phone_required");
     if (lecture.priceCents > 0 && !paymentConfigured) throw badRequest("الدفع الإلكتروني غير متاح حاليًا. لم يُنشأ حجز أو تُحجز أموال.", "payments_unavailable");
     if (lecture.capacity) {
@@ -331,7 +331,7 @@ router.post("/lectures/:id/book", async (req, res) => {
   const free = lecture.priceCents === 0;
 
   if (free) {
-    void onBookingConfirmed(booking!.id);
+    void onBookingConfirmed(booking!.id).catch(err => logger.error({ err, bookingId: booking!.id }, "Booking notification failed after confirmation"));
     const body: BookResult = { booking: bookingDTO(booking!), payment: null, checkoutUrl: null };
     return void res.status(201).json(body);
   }

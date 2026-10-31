@@ -35,6 +35,7 @@ export function Account() {
   const [uploading, setUploading] = useState(0);
   const [shareProfile, setShareProfile] = useState(false);
   const mediaBusy = (busy: boolean) => setUploading(n => Math.max(0, n + (busy ? 1 : -1)));
+  useEffect(() => { const sync = () => setThemeState(getTheme()); const settings = () => document.getElementById('account-settings')?.scrollIntoView({ block: 'start' }); window.addEventListener('gl:theme', sync); window.addEventListener('gl:settings-open', settings); if (new URLSearchParams(window.location.search).get('section') === 'settings') settings(); return () => { window.removeEventListener('gl:theme', sync); window.removeEventListener('gl:settings-open', settings); }; }, []);
   const [parentEmail, setParentEmail] = useState(me.student?.parentEmail ?? '');
   const save = useMutation({
     mutationFn: () =>
@@ -148,7 +149,7 @@ export function Account() {
           </Button>
         </Card>
 
-        <Card className="mb-4 flex flex-col gap-3">
+        <Card className="mb-4 flex flex-col gap-3" id="account-settings">
           <p className="flex items-center gap-2 text-title-md">
             <Palette className="size-5" /> الشكل
           </p>

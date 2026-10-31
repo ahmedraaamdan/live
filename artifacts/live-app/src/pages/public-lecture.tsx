@@ -1,12 +1,13 @@
 import { useCapabilities } from '@/lib/capabilities';
 import { BookOpen, CalendarClock, Check, Clock, CreditCard, Radio, ShieldCheck, ThumbsUp, Users } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { gradeLabel, subjectLabel, type BookResult, type LectureDTO } from '@workspace/live-core';
 import { Countdown } from '@/components/bits';
 import { lectureEnded } from '@/components/lecture-card';
 import { approvalPct } from '@/components/vote';
-import { api, errorMessage } from '@/lib/api';
+import { requestBooking, cacheConfirmedBooking } from '@/lib/booking-cache';
+import { ApiError, api, errorMessage } from '@/lib/api';
 import { fmtDay, fmtDuration, fmtTime, money } from '@/lib/format';
 import { openCheckout } from '@/lib/platform';
 import { useSession } from '@/lib/session';
@@ -19,16 +20,26 @@ import '@/styles/lesson.css';
 export function PublicLecture({ params }: { params: { code: string } }) {
   const code = params.code.toUpperCase();
   const capabilities = useCapabilities();
+  const qc = useQueryClient();
   const { me } = useSession();
   const [, navigate] = useLocation();
-  const q = useQuery({ queryKey: ['public-lecture', code, me?.user.id], queryFn: () => api<LectureDTO>(`/l/${code}`) });
+  const q = useQuery({ queryKey: ['public-lecture', code, me?.user.id], queryFn: () => api<LectureDTO>(`/l/${code}`), refetchInterval: 15_000 });
   const book = useMutation({
-    mutationFn: (id: string) => api<BookResult>(`/lectures/${id}/book`, { method: 'POST' }),
+    mutationFn: (id: string) => requestBooking(id, me?.user.id ?? ''),
     onSuccess: async (r) => {
       if (r.checkoutUrl && r.payment) await openCheckout(r.checkoutUrl);
-      else if (r.booking.status === 'confirmed') navigate(`/lectures/${r.booking.lectureId}?booked=1`);
+      else if (r.booking.status === 'confirmed' && q.data) {
+        await cacheConfirmedBooking(qc, q.data, r.booking as typeof r.booking & { status: 'confirmed' });
+        toast('تم تأكيد حجزك');
+        navigate(q.data.status === 'live' ? `/live/${r.booking.lectureId}` : `/lectures/${r.booking.lectureId}?booked=1`);
+      }
     },
-    onError: (e) => toast(errorMessage(e)),
+    onError: async (e) => {
+      if (e instanceof ApiError && (e.status === 0 || e.status >= 500)) {
+        try { const current = await api<LectureDTO>(`/l/${code}`); if (current.booking?.status === 'confirmed') { await cacheConfirmedBooking(qc, current, { id: current.booking.id, status: 'confirmed' }); toast('حجزك مؤكّد'); navigate(current.status === 'live' ? `/live/${current.id}` : `/lectures/${current.id}?booked=1`); return; } } catch { /* Preserve the original error; never repeat a charge automatically. */ }
+      }
+      toast(errorMessage(e));
+    },
   });
 
   if (q.isPending) return <PageSpinner />;

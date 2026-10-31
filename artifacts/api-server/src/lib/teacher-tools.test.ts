@@ -106,6 +106,13 @@ test("teacher portfolios, cover ownership, reusable homework and attendance-gate
     check("template update succeeds", (await call(`/homework-templates/${templateId}`, teacherToken!, { ...templateBody, instructions: "Updated template" }, "PATCH")).status === 200);
     check("published assignment is independent of later template edits", (await call(`/assignments/${assignment.data.id}`, teacherToken!)).data.instructions === templateBody.instructions);
     check("template deletion does not delete published assignment", (await call(`/homework-templates/${templateId}`, teacherToken!, undefined, "DELETE")).status === 200 && (await call(`/assignments/${assignment.data.id}`, teacherToken!)).status === 200);
+    const [limited] = await db.insert(lecturesTable).values({ teacherId: teacher!.id, code: `load${suffix}`, title: "اختبار الحجز المتزامن", subject: "physics", grade: "g12", startsAt: new Date(Date.now() + 86400000), durationMin: 60, priceCents: 0, capacity: 8 }).returning();
+    const visitors = await db.insert(usersTable).values(Array.from({ length: 32 }, (_, i) => ({ role: "student" as const, name: `Load fixture ${i}`, email: `load-${suffix}-${i}@audit.gahez`, passwordHash: "unused" }))).returning();
+    const visitTokens = await Promise.all(visitors.map(u => createSession(u.id)));
+    const attempts = await Promise.all(visitTokens.flatMap(token => [call(`/lectures/${limited!.id}/book`, token, {}), call(`/lectures/${limited!.id}/book`, token, {})]));
+    const stored = await db.select().from(bookingsTable).where(eq(bookingsTable.lectureId, limited!.id));
+    check("64 concurrent repeated requests neither oversell nor duplicate a booking", stored.length === 8 && new Set(stored.map(b => b.studentId)).size === 8 && stored.every(b => b.status === "confirmed"));
+    check("concurrent retries return confirmed bookings or explicit capacity errors", attempts.every(a => (a.status === 200 || a.status === 201) ? a.data.booking.status === "confirmed" : a.status === 409));
     console.log(`${checks} teacher-tools and live-rating checks passed`);
   } finally {
     server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve()));

@@ -1,3 +1,4 @@
+import { logger } from "../lib/logger";
 /** Uploads, notifications, public config and the dev outbox. */
 import express, { Router } from "express";
 import { readdir, readFile as readText } from "node:fs/promises";
@@ -17,6 +18,19 @@ const router = Router();
 router.get("/config", (_req, res) => {
   const body: PublicConfigDTO = { paymentProvider: env.payment.provider, liveConfigured, paymentConfigured, recordingConfigured, liveParticipantLimit: env.livekit.maxParticipants || null, liveRoomLimit: env.livekit.maxRooms || null, feeBps: env.feeBps, appUrl: env.appUrl };
   res.json(body);
+});
+
+const clientErrorLimits = new Map<string, { until: number; count: number }>();
+router.post("/client-errors", (req, res) => {
+  const user = requireUser(req);
+  const now = Date.now();
+  const rate = clientErrorLimits.get(user.id);
+  if (rate && rate.until > now && rate.count >= 10) return void res.status(202).json({ ok: true });
+  if (clientErrorLimits.size > 5000) for (const [id, item] of clientErrorLimits) if (item.until < now) clientErrorLimits.delete(id);
+  clientErrorLimits.set(user.id, { until: rate && rate.until > now ? rate.until : now + 300000, count: rate && rate.until > now ? rate.count + 1 : 1 });
+  const clean = (value: unknown, max: number) => (typeof value === 'string' ? value : '').slice(0, max).replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[email]').replace(/Bearer\s+[^\s]+/gi, 'Bearer [redacted]');
+  logger.error({ userId: user.id, clientMessage: clean(req.body?.message, 400), clientStack: clean(req.body?.stack, 2000), clientPath: clean(req.body?.path, 160).split('?')[0] }, "Client render failure");
+  res.status(202).json({ ok: true });
 });
 
 // ---------------------------------------------------------------- uploads

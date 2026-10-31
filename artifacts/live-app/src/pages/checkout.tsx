@@ -1,8 +1,9 @@
+import { cacheConfirmedBooking } from '@/lib/booking-cache';
 import { useEffect, useState } from 'react';
 import { Apple, CheckCircle2, CreditCard, FlaskConical, Smartphone, XCircle } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { PAYMENT_METHOD_LABELS, type PaymentDTO, type PaymentMethod } from '@workspace/live-core';
+import { PAYMENT_METHOD_LABELS, type PaymentDTO, type PaymentMethod, type LectureDTO } from '@workspace/live-core';
 import { Confetti } from '@/components/bits';
 import { api, errorMessage } from '@/lib/api';
 import { cn } from '@/lib/cn';
@@ -30,6 +31,9 @@ export function Checkout({ id }: { id: string }) {
       qc.invalidateQueries({ queryKey: ['student-home'] });
       qc.invalidateQueries({ queryKey: ['lecture', p.lectureId] });
       qc.invalidateQueries({ queryKey: ['me'] });
+      qc.invalidateQueries({ queryKey: ['feed'] });
+      qc.invalidateQueries({ queryKey: ['lectures'] });
+      void api<LectureDTO>(`/lectures/${p.lectureId}`).then(lecture => { if (lecture.booking?.status === 'confirmed') return cacheConfirmedBooking(qc, lecture, { id: lecture.booking.id, status: 'confirmed' }); return undefined; }).catch(() => undefined);
     }
   }, [p?.status, p?.lectureId, qc]);
 
