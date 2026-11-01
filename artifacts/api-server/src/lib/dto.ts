@@ -15,6 +15,7 @@ import {
   studentProfilesTable,
   teacherFollowsTable,
   teacherProfilesTable,
+  teacherVerificationsTable,
   uploadsTable,
   userSecurityTable,
   usersTable,
@@ -143,9 +144,10 @@ export async function lectureDTOs(lectures: Lecture[], viewer: User | null, opts
 
   const [teachers, seats, mine, recs, votes, myVotes, myAttendance] = await Promise.all([
     db
-      .select({ id: usersTable.id, name: usersTable.name, avatarUrl: usersTable.avatarUrl, headline: teacherProfilesTable.headline, subject: teacherProfilesTable.subject })
+      .select({ id: usersTable.id, name: usersTable.name, avatarUrl: usersTable.avatarUrl, headline: teacherProfilesTable.headline, subject: teacherProfilesTable.subject, verification: teacherVerificationsTable.status })
       .from(usersTable)
       .leftJoin(teacherProfilesTable, eq(teacherProfilesTable.userId, usersTable.id))
+      .leftJoin(teacherVerificationsTable, eq(teacherVerificationsTable.teacherId, usersTable.id))
       .where(inArray(usersTable.id, teacherIds)),
     db
       .select({ lectureId: bookingsTable.lectureId, n: count() })
@@ -237,7 +239,7 @@ export async function lectureDTOs(lectures: Lecture[], viewer: User | null, opts
       listed: l.listed,
       liveStartedAt: iso(l.liveStartedAt),
       liveEndedAt: iso(l.liveEndedAt),
-      teacher: { id: l.teacherId, name: t?.name ?? "", avatarUrl: t?.avatarUrl ?? null, headline: t?.headline ?? null, subject: t?.subject ?? null, followed: followedSet.has(l.teacherId) },
+      teacher: { id: l.teacherId, name: t?.name ?? "", avatarUrl: t?.avatarUrl ?? null, headline: t?.headline ?? null, subject: t?.subject ?? null, followed: followedSet.has(l.teacherId), verified: t?.verification === "approved" },
       seatsTaken: seatsBy.get(l.id) ?? 0,
       saved: savedSet.has(l.id),
       booking: booking

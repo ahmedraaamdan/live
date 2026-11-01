@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { and, eq, gt, ne } from "drizzle-orm";
 import { z } from "zod/v4";
-import { db, securityChallengesTable, userSecurityTable, sessionsTable, usersTable, teacherVerificationsTable } from "@workspace/db";
+import { db, securityChallengesTable, userSecurityTable, sessionsTable, usersTable } from "@workspace/db";
 import { bearer, createSession, requireRole, sha256, verifyPassword } from "../lib/auth";
 import { badRequest, parse, unauthorized } from "../lib/http";
 import { enforce, LIMITS } from "../lib/rate-limit";
@@ -53,10 +53,7 @@ router.post("/me/security/mfa/disable", async (req, res) => {
   const { code, password } = parse(codeSchema.extend({ password: z.string().max(500) }), req.body);
   if (!(await verifyPassword(password, user.passwordHash))) throw badRequest("كلمة المرور غير صحيحة");
   const result = await consumeMfa(user.id, code); if (!result.ok) throw badRequest(result.error);
-  await db.transaction(async tx => {
-    await tx.update(userSecurityTable).set({ totpSecretEnc: null, totpEnabledAt: null, recoveryHashes: [], pendingTotpSecretEnc: null, pendingTotpExpiresAt: null }).where(eq(userSecurityTable.userId, user.id));
-    await tx.update(teacherVerificationsTable).set({ status: "needs_changes", note: "أُوقفت المصادقة الثنائية. أعد تفعيلها ثم أرسل طلب التوثيق مجددًا.", reviewedAt: new Date() }).where(eq(teacherVerificationsTable.teacherId, user.id));
-  });
+  await db.update(userSecurityTable).set({ totpSecretEnc: null, totpEnabledAt: null, recoveryHashes: [], pendingTotpSecretEnc: null, pendingTotpExpiresAt: null }).where(eq(userSecurityTable.userId, user.id));
   res.json({ ok: true });
 });
 export default router;

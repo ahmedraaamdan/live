@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { and, desc, eq, gt, ilike, or } from "drizzle-orm";
+import { and, desc, eq, gt, ilike, isNull, or } from "drizzle-orm";
 import { accountSwitchesTable, db, sessionsTable, usersTable } from "@workspace/db";
 import { bearer, destroySession, randomToken, requireSuperAdmin, requireUser, sha256 } from "../lib/auth";
 import { loadMe, toUser } from "../lib/dto";
@@ -11,7 +11,7 @@ router.get("/auth/switch/users", async (req, res) => {
   const actor = requireSuperAdmin(req);
   const query = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 100) : "";
   const pattern = `%${query.replace(/[\\%_]/g, "\\$&")}%`;
-  const rows = await db.select().from(usersTable).where(query ? or(ilike(usersTable.name, pattern), ilike(usersTable.email, pattern), ilike(usersTable.phone, pattern)) : undefined).orderBy(desc(usersTable.createdAt)).limit(50);
+  const rows = await db.select().from(usersTable).where(and(isNull(usersTable.deletedAt), query ? or(ilike(usersTable.name, pattern), ilike(usersTable.email, pattern), ilike(usersTable.phone, pattern)) : undefined)).orderBy(desc(usersTable.createdAt)).limit(50);
   res.json(rows.filter(u => u.id !== actor.id).map(u => ({ ...toUser(u), suspended: u.suspended })));
 });
 router.post("/auth/switch/:id/start", async (req, res) => {

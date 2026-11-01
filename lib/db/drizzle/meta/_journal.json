@@ -71,6 +71,13 @@
       "when": 1793411270488,
       "tag": "0009_tired_reaper",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793571926470,
+      "tag": "0010_smiling_zarek",
+      "breakpoints": true
     }
   ]
 }

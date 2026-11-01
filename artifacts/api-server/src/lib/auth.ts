@@ -67,6 +67,9 @@ export function bearer(req: Request): string | null {
   return null;
 }
 
+/** Writing "last seen" once in a while is enough, and keeps reads from becoming writes. */
+const LAST_SEEN_EVERY_MS = 5 * 60_000;
+
 /** Attaches req.user when a valid token is present; never rejects. */
 export const authenticate: RequestHandler = async (req, _res, next) => {
   const token = bearer(req);
@@ -86,7 +89,12 @@ export const authenticate: RequestHandler = async (req, _res, next) => {
       req.impersonation = { actor: parent.user, switchId: row.session.switchId, parentHash: parent.session.tokenHash };
       if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) _res.on("finish", () => logger.info({ actorId: parent.user.id, targetId: row.user.id, switchId: row.session.switchId, method: req.method, path: req.path, status: _res.statusCode }, "Account switch action"));
     }
-  } else if (row && !row.session.actorTokenHash && !row.user.suspended) req.user = row.user;
+  } else if (row && !row.session.actorTokenHash && !row.user.suspended) {
+    req.user = row.user;
+    if (!row.user.lastSeenAt || Date.now() - row.user.lastSeenAt.getTime() > LAST_SEEN_EVERY_MS) {
+      void db.update(usersTable).set({ lastSeenAt: new Date() }).where(eq(usersTable.id, row.user.id)).catch((err: unknown) => logger.warn({ err }, "last seen update failed"));
+    }
+  }
   next();
 };
 

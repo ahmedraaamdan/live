@@ -70,7 +70,7 @@ export function TeacherHome() {
             <EmptyState
               icon={<CalendarPlus />}
               title="جدولك بانتظار أول حصة"
-              body="أضف موضوع الحصة وموعدها وسعرها، ثم شارك رابط الحجز مع طلابك."
+              body="ابدأ بحصة مجانية: أضف الموضوع والموعد، وابعت اللينك لطلابك."
               action={
                 <Button size="lg" onClick={() => navigate('/t/lectures/new')}>
                   <CalendarPlus /> إنشاء حصة

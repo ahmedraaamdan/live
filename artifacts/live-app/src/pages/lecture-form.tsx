@@ -5,7 +5,7 @@ import { QueryError } from '@/components/query-error';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useLocation } from 'wouter';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { GRADES, SUBJECTS, lectureInputSchema, splitBooking, type LectureDTO } from '@workspace/live-core';
+import { GRADES, SUBJECTS, TRIAL_MAX_STUDENTS, lectureInputSchema, splitBooking, type LectureDTO } from '@workspace/live-core';
 import { ShareLectureSheet } from '@/components/bits';
 import { api, errorMessage } from '@/lib/api';
 import { money, toLocalInput } from '@/lib/format';
@@ -80,11 +80,11 @@ export function LectureForm({ id }: { id?: string }) {
 
   if (verification.isPending) return <PageSpinner />;
   if (verification.isError) return <><TopBar title="توثيق الحساب" back /><Page><QueryError error={verification.error} retry={verification.refetch} /></Page></>;
-  if (verification.data.status !== 'approved') return <><TopBar title="قبل أول حصة" back /><Page><Card className="flex flex-col gap-4"><h1 className="text-headline-md">وثّق حسابك أولًا.</h1><p>يتاح إنشاء الحصص وتعديلها بعد استكمال التوثيق وموافقة السوبر أدمن.</p><Button onClick={() => navigate('/t/verification')}>متابعة توثيق الحساب</Button></Card></Page></>;
+  const trial = verification.data.status !== 'approved';
   if (id && existing.isPending) return <PageSpinner />;
 
   if (id && existing.isError && !existing.data) return <><TopBar title="تعديل الحصة" back /><Page><QueryError error={existing.error} retry={existing.refetch} /></Page></>;
-  const priceCents = Math.round(Number(form.priceEGP || 0) * 100);
+  const priceCents = trial ? 0 : Math.round(Number(form.priceEGP || 0) * 100);
   const { teacherCents } = splitBooking(priceCents);
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm({ ...form, [k]: e.target.value });
 
@@ -103,7 +103,7 @@ export function LectureForm({ id }: { id?: string }) {
       priceCents,
       capacity: form.capacity ? Number(form.capacity) : null,
       publish: form.publish,
-      listed: form.listed,
+      listed: trial ? false : form.listed,
     };
     const v = lectureInputSchema.safeParse(body);
     if (!v.success) return setError(v.error.issues[0]?.message ?? null);
@@ -117,6 +117,11 @@ export function LectureForm({ id }: { id?: string }) {
       <Page>
         <form id="lecture-form" onSubmit={submit} className="flex flex-col gap-6 pb-24 lg:pb-0" noValidate>
           {error && <Banner tone="error">{error}</Banner>}
+          {trial && (
+            <Banner tone="info" action={<Button variant="text" size="sm" onClick={() => navigate('/t/verification')}>وثّق حسابك</Button>}>
+              حصة تجريبية: مجانية، باللينك بس، وحتى {TRIAL_MAX_STUDENTS} طالب. وثّق حسابك عشان تفتح الحصص المدفوعة والظهور في الرئيسية.
+            </Banner>
+          )}
           <Card className="flex flex-col gap-5">
             <MediaUpload purpose="cover" value={form.coverUrl || null} onBusyChange={setUploadingCover} onChange={url => setForm(current => ({ ...current, coverUrl: url ?? '' }))} />
             <TextField label="عنوان الحصة" value={form.title} onChange={set('title')} placeholder="الكهربية التيارية: قانون أوم" maxLength={120} />
@@ -142,7 +147,7 @@ export function LectureForm({ id }: { id?: string }) {
           </Card>
 
           <Card className="flex flex-col gap-5">
-            <div>
+            {!trial && <div>
               <p className="mb-2 text-label-lg">سعر الحصة</p>
               <div className="mb-3 flex flex-wrap gap-2">
                 {PRICES.map((p) => (
@@ -166,21 +171,21 @@ export function LectureForm({ id }: { id?: string }) {
                   هيوصلك <span className="font-num text-title-sm text-success">{money(teacherCents)}</span> عن كل طالب، بعد عمولة المنصة 10%.
                 </p>
               )}
-            </div>
-            <TextField label="أقصى عدد طلاب" type="number" inputMode="numeric" min={1} value={form.capacity} onChange={set('capacity')} ltr placeholder="دون حد أقصى" hint="اتركه فارغًا إذا لم تحدد عددًا أقصى" />
+            </div>}
+            <TextField label="أقصى عدد طلاب" type="number" inputMode="numeric" min={1} value={form.capacity} onChange={set('capacity')} ltr placeholder={trial ? String(TRIAL_MAX_STUDENTS) : 'دون حد أقصى'} hint={trial ? `الحصة التجريبية حتى ${TRIAL_MAX_STUDENTS} طالب` : 'اتركه فارغًا إذا لم تحدد عددًا أقصى'} />
             <Switch checked={form.publish} onChange={(v) => setForm({ ...form, publish: v })} label="افتح الحجز" description={form.publish ? 'الرابط متاح ويمكن للطلاب الحجز' : 'مسودة: لا تظهر إلا لك'} />
-            <Switch
+            {!trial && <Switch
               checked={form.listed}
               onChange={(v) => setForm({ ...form, listed: v })}
               label="اظهر في الصفحة الرئيسية"
               description={form.listed ? 'طلاب جداد يقدروا يلاقوها ويحجزوا' : 'باللينك بس: لطلابك وبس'}
-            />
+            />}
           </Card>
         </form>
       </Page>
       <ActionBar>
         <Button type="submit" form="lecture-form" size="lg" block loading={save.isPending} disabled={uploadingCover}>
-          {id ? 'حفظ التعديلات' : 'إنشاء الحصة'}
+          {id ? 'حفظ التعديلات' : trial ? 'إنشاء الحصة التجريبية' : 'إنشاء الحصة'}
         </Button>
       </ActionBar>
       {created && (

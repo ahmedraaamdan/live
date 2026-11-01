@@ -113,6 +113,41 @@ export const MIN_PAYOUT_CENTS = 100_00;
 /** Cheapest paid class, in piasters: below this the gateway's fee eats the platform's share. */
 export const MIN_PAID_PRICE_CENTS = 50_00;
 
+/** Before review a teacher can run free classes shared by link only: this many open at once... */
+export const TRIAL_MAX_OPEN_LECTURES = 3;
+/** ...for this many students each. */
+export const TRIAL_MAX_STUDENTS = 15;
+/** A free class shared by link only needs no reviewed identity; anything paid or public does. */
+export const isTrialLecture = (lecture: { priceCents: number; listed: boolean }) => lecture.priceCents === 0 && !lecture.listed;
+
+export const VERIFICATION_DOCUMENT_LABELS = { national_id: "البطاقة الشخصية", syndicate_card: "كارنيه النقابة" } as const;
+export type VerificationDocumentType = keyof typeof VERIFICATION_DOCUMENT_LABELS;
+
+/** How far an account has come, furthest step last within each role. */
+export const USER_STEP_LABELS = {
+  signed_up: "سجّل بس",
+  lecture_created: "أنشأ حصة",
+  went_live: "بدأ بث",
+  verification_changes: "التوثيق محتاج تعديل",
+  verification_rejected: "التوثيق مرفوض",
+  verification_sent: "بعت التوثيق",
+  verified: "موثّق",
+  paid_booking: "أول حجز مدفوع",
+  paid_class: "عمل حصة مدفوعة",
+  booked: "حجز حصة",
+  attended: "حضر حصة",
+  linked_child: "ربط ابنه",
+  none: "لا ينطبق",
+} as const;
+export type UserStepKey = keyof typeof USER_STEP_LABELS;
+
+/** An active teacher ran a paid class this recently, for at least this many paying students. */
+export const ACTIVE_TEACHER_DAYS = 30;
+export const ACTIVE_TEACHER_MIN_STUDENTS = 5;
+
+/** Typed by the owner to confirm erasing accounts. */
+export const DELETE_CONFIRM_WORD = "احذف";
+
 /** A student can leave a paid class for a full refund until this long before it starts. */
 export const STUDENT_CANCEL_HOURS = 24;
 

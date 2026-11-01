@@ -29,7 +29,7 @@ const ChildDetail = lazy(() => import('@/pages/parent').then(m => ({ default: m.
 const ParentHome = lazy(() => import('@/pages/parent').then(m => ({ default: m.ParentHome })));
 const AdminOverview = lazy(() => import('@/pages/admin').then(m => ({ default: m.AdminOverview })));
 const AdminPayouts = lazy(() => import('@/pages/admin').then(m => ({ default: m.AdminPayouts })));
-const AdminUsers = lazy(() => import('@/pages/admin').then(m => ({ default: m.AdminUsers })));
+const AdminUsers = lazy(() => import('@/pages/admin-users').then(m => ({ default: m.AdminUsers })));
 const AdminTickets = lazy(() => import('@/pages/support').then(m => ({ default: m.AdminTickets })));
 const SupportList = lazy(() => import('@/pages/support').then(m => ({ default: m.SupportList })));
 const TicketThread = lazy(() => import('@/pages/support').then(m => ({ default: m.TicketThread })));

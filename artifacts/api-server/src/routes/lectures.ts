@@ -1,5 +1,5 @@
 import { EasykashValidationError } from "../lib/payments/easykash";
-import { assertVerifiedTeacher } from "../lib/teacher-verification";
+import { assertCanRunLecture, assertTrialRoom, isVerifiedTeacher } from "../lib/teacher-verification";
 import { assertOwnedMediaUrl } from "../lib/profile-media";
 import { Router } from "express";
 import { and, asc, count, desc, eq, gte, inArray, lt, ne, or, sql } from "drizzle-orm";
@@ -14,8 +14,9 @@ import {
   submissionsTable,
   usersTable,
   type Lecture,
+  type User,
 } from "@workspace/db";
-import { STUDENT_CANCEL_HOURS, bookingInputSchema, lectureInputSchema, lectureReportSchema, splitBooking, type AttendanceDTO, type BookingDTO, type BookResult, type StudentHomeDTO, type TeacherDashboardDTO } from "@workspace/live-core";
+import { STUDENT_CANCEL_HOURS, TRIAL_MAX_STUDENTS, bookingInputSchema, lectureInputSchema, lectureReportSchema, splitBooking, type AttendanceDTO, type BookingDTO, type BookResult, type StudentHomeDTO, type TeacherDashboardDTO } from "@workspace/live-core";
 import { assertOwner, bookedStudentIds, canCancelBooking, getLecture } from "../lib/access";
 import { requireRole, requireUser } from "../lib/auth";
 import { announceReschedule, failPayment, onBookingConfirmed, parentsOf, refundBooking, settleCancelledLecture } from "../lib/bookings";
@@ -173,16 +174,26 @@ router.get("/student/home", async (req, res) => {
 
 // ---------------------------------------------------------------- one lecture
 
+/** The most students a class can seat: what the teacher asked for, within the live limit and the trial limit. */
+async function seatLimit(user: User, asked: number | null | undefined) {
+  const room = env.livekit.maxParticipants > 1 ? env.livekit.maxParticipants - 1 : null;
+  const capacity = asked ?? room;
+  if (user.role !== "teacher" || (await isVerifiedTeacher(user.id))) return capacity;
+  return capacity == null ? TRIAL_MAX_STUDENTS : Math.min(capacity, TRIAL_MAX_STUDENTS);
+}
+
 router.post("/lectures", async (req, res) => {
   const user = requireRole(req, "teacher");
-  await assertVerifiedTeacher(user);
   const input = parse(lectureInputSchema, req.body);
+  await assertCanRunLecture(user, input);
+  await assertTrialRoom(user);
   await assertOwnedMediaUrl(user.id, input.coverUrl, true);
   if (env.livekit.maxParticipants > 1 && input.capacity != null && input.capacity > env.livekit.maxParticipants - 1) throw badRequest(`حد التجربة الحالي ${env.livekit.maxParticipants - 1} طالبًا للحصة`);
   const startsAt = new Date(input.startsAt);
   if (startsAt.getTime() < Date.now() - 5 * 60_000) throw badRequest("الميعاد ده فات، اختار ميعاد جاي");
   // Before the transaction: it queries outside it, and must not wait on it.
   const code = await uniqueLectureCode();
+  const capacity = await seatLimit(user, input.capacity);
   const lecture = await db.transaction(async (tx) => {
     if (input.publish) await assertRoomFree(tx, startsAt, input.durationMin);
     const [row] = await tx
@@ -198,7 +209,7 @@ router.post("/lectures", async (req, res) => {
         startsAt,
         durationMin: input.durationMin,
         priceCents: input.priceCents,
-        capacity: input.capacity ?? (env.livekit.maxParticipants > 1 ? env.livekit.maxParticipants - 1 : null),
+        capacity,
         listed: input.listed,
         status: input.publish ? "scheduled" : "draft",
       })
@@ -227,11 +238,11 @@ router.get("/lectures/:id", async (req, res) => {
 
 router.patch("/lectures/:id", async (req, res) => {
   const user = requireRole(req, "teacher", "admin");
-  await assertVerifiedTeacher(user);
   const lecture = await getLecture(uuidParam(req.params.id));
   assertOwner(user, lecture);
   if (!["draft", "scheduled"].includes(lecture.status)) throw badRequest("مينفعش تعدّل حصة بدأت أو خلصت");
   const input = parse(lectureInputSchema, req.body);
+  await assertCanRunLecture(user, input);
   await assertOwnedMediaUrl(user.id, input.coverUrl, true);
   if (env.livekit.maxParticipants > 1 && input.capacity != null && input.capacity > env.livekit.maxParticipants - 1) throw badRequest(`حد التجربة الحالي ${env.livekit.maxParticipants - 1} طالبًا للحصة`);
   const [{ n }] = (await db
@@ -247,6 +258,9 @@ router.patch("/lectures/:id", async (req, res) => {
   if (moved && startsAt.getTime() < Date.now() - 5 * 60_000) throw badRequest("الميعاد ده فات، اختار ميعاد جاي");
   // Editing the text of a class that already holds its slot needs no new room.
   const needsRoom = input.publish && (lecture.status === "draft" || moved || input.durationMin !== lecture.durationMin);
+  // Before the transaction: it queries outside it, and must not wait on it.
+  const capacity = await seatLimit(user, input.capacity);
+  if (booked > 0 && capacity != null && capacity < booked) throw badRequest(`حجز ${booked} طالبًا هذه الحصة، فلا يمكن جعل المقاعد أقل من ذلك.`);
   const updated = await db.transaction(async (tx) => {
     if (needsRoom) await assertRoomFree(tx, startsAt, input.durationMin, lecture.id);
     const [row] = await tx
@@ -260,7 +274,7 @@ router.patch("/lectures/:id", async (req, res) => {
         startsAt,
         durationMin: input.durationMin,
         priceCents: input.priceCents,
-        capacity: input.capacity ?? (env.livekit.maxParticipants > 1 ? env.livekit.maxParticipants - 1 : null),
+        capacity,
         listed: input.listed,
         status: input.publish ? "scheduled" : "draft",
         // A new time means a new reminder.

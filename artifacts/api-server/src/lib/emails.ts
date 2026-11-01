@@ -283,6 +283,21 @@ export async function sendTicketOpened(user: User, subject: string, body: string
   await sendMail({ to: "support@gahez.space", replyTo: user.email, subject: `تذكرة: ${subject}`, ...mail });
 }
 
+/** Tells the owners a teacher waits for review, so nobody sits unanswered behind the admin bell. */
+export async function sendVerificationRequest(to: Array<Pick<User, "email">>, teacher: User) {
+  if (to.length === 0) return;
+  const mail = renderEmail({
+    product: "live",
+    robot: "desk",
+    preheader: `${teacher.name} مستني مراجعة التوثيق.`,
+    title: "طلب توثيق مدرس جديد",
+    intro: `<strong>${esc(teacher.name)}</strong> بعت بياناته للتوثيق. راجعه النهارده عشان يقدر يبدأ حصصه المدفوعة.`,
+    cta: { label: "راجع الطلب", url: link(`/admin/teacher-verifications/${teacher.id}`) },
+    note: "وصلك الإيميل ده لأنك مسؤول مراجعة توثيق المدرسين.",
+  });
+  await sendMail({ to: to.map((u) => u.email), subject: `طلب توثيق: ${teacher.name}`, ...mail });
+}
+
 export async function sendTicketAnswered(user: User, subject: string, ticketId: string) {
   const mail = renderEmail({
     product: "live",

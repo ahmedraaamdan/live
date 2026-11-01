@@ -1,4 +1,6 @@
 import { QueryError } from '@/components/query-error';
+import { useTeacherVerification } from '@/components/verification-notice';
+import { useLocation } from 'wouter';
 import { useState } from 'react';
 import { ArrowDownToLine, ArrowUpFromLine, Clock, Info, RotateCcw, Wallet as WalletIcon } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -18,6 +20,8 @@ const ENTRY: Record<WalletEntryDTO['kind'], { label: string; icon: React.ReactNo
 
 export function WalletPage() {
   const qc = useQueryClient();
+  const [, navigate] = useLocation();
+  const verification = useTeacherVerification();
   const q = useQuery({ queryKey: ['wallet'], queryFn: () => api<WalletDTO>('/wallet') });
   const [tab, setTab] = useState<'moves' | 'payouts'>('moves');
   const [open, setOpen] = useState(false);
@@ -38,6 +42,7 @@ export function WalletPage() {
   if (!q.data) return <><TopBar title="المحفظة" back /><Page><QueryError error={q.error} retry={q.refetch} /></Page></>;
   const w = q.data;
   const feePct = w.feeBps / 100;
+  const canWithdraw = verification.data?.status === 'approved' && verification.data.security.mfaEnabled;
 
   const submit = () => {
     const body = { amountCents: Math.round(Number(form.amount) * 100), method: form.method, account: form.account };
@@ -69,7 +74,7 @@ export function WalletPage() {
               size="lg"
               variant="filled"
               className="mt-6 bg-primary !text-white hover:bg-primary/90 shadow-glow font-bold"
-              disabled={w.availableCents < MIN_PAYOUT_CENTS}
+              disabled={w.availableCents < MIN_PAYOUT_CENTS || (verification.isSuccess && !canWithdraw)}
               onClick={() => {
                 setForm({ ...form, amount: String(w.availableCents / 100) });
                 setError(null);
@@ -80,6 +85,11 @@ export function WalletPage() {
             </Button>
           </div>
         </Card>
+        {verification.isSuccess && !canWithdraw && (
+          <Banner tone="info" className="mt-3" action={<Button variant="text" size="sm" onClick={() => navigate('/t/verification')}>جهّز حسابك</Button>}>
+            قبل أول سحب لازم حسابك يتوثّق وتفعّل المصادقة الثنائية، عشان محدش غيرك يقدر يسحب فلوسك.
+          </Banner>
+        )}
         <p className="mt-3 flex gap-2 text-body-sm text-on-surface-variant">
           <Info className="mt-0.5 size-4 shrink-0" />
           فلوس كل حصة بتبقى متاحة بعد ما الحصة تخلص بيوم (عشان لو حصلت مشكلة نقدر نرجّع للطالب). ولو البث كان أقل من نص مدة الحصة أو ما حضرش أي طالب، الفلوس بتتراجع الأول قبل ما تتحول. عمولة المنصة {feePct}% من سعر الحصة.

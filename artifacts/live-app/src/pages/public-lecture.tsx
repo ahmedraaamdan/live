@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { BookOpen, CalendarClock, Check, Clock, CreditCard, Radio, ShieldCheck, ThumbsUp, Users } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { STUDENT_CANCEL_HOURS, gradeLabel, subjectLabel, type LectureDTO } from '@workspace/live-core';
+import { STUDENT_CANCEL_HOURS, gradeLabel, isTrialLecture, subjectLabel, type LectureDTO } from '@workspace/live-core';
 import { Countdown } from '@/components/bits';
 import { lectureEnded } from '@/components/lecture-card';
 import { approvalPct } from '@/components/vote';
@@ -128,6 +128,7 @@ export function PublicLecture({ params }: { params: { code: string } }) {
               <h1>{l.title}</h1>
               <div className="lesson-byline"><Avatar name={l.teacher.name} src={l.teacher.avatarUrl} /><div><span>مع المدرس</span><strong dir="auto">{l.teacher.name}</strong></div>{pct != null && <span className="lesson-approval"><ThumbsUp size={15} /> {pct}% من التقييمات إيجابية</span>}</div>
             </div>
+            {isTrialLecture(l) && !l.teacher.verified && <Banner tone="info" className="lesson-trial-note">حصة تجريبية مجانية. حساب المدرس لسه قيد التوثيق.</Banner>}
             <LessonArtwork subject={l.subject} label={subjectLabel(l.subject)} coverUrl={l.coverUrl} />
             <section className="lesson-about">
               <span className="lesson-kicker">قبل أن نبدأ</span><h2>ما الذي ينتظرك في الحصة؟</h2>
