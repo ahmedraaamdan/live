@@ -16,6 +16,7 @@ import type {
   TicketCategory,
   TicketStatus,
   Role,
+  UserStepKey,
   WalletEntryKind,
 } from "./constants";
 
@@ -40,6 +41,8 @@ export interface TeacherMini extends PersonMini {
   subject: string | null;
   /** The viewing student follows this teacher. */
   followed?: boolean;
+  /** The platform reviewed this teacher's identity. */
+  verified?: boolean;
 }
 
 export interface MeDTO {
@@ -334,6 +337,34 @@ export interface AdminUserDTO extends UserDTO {
   lectures: number;
   bookings: number;
   suspended: boolean;
+  /** Last time they used the app themselves. */
+  lastSeenAt: string | null;
+  /** Where they last signed in from, for example "أندرويد · من جوه فيسبوك". */
+  device: string | null;
+  /** The teacher's subject or the student's grade. */
+  detail: string | null;
+  /** Null for anyone who isn't a teacher. */
+  verification: TeacherVerificationDTO["status"] | null;
+  /** The furthest step they reached. */
+  step: { key: UserStepKey; at: string };
+  /** Ran a paid class recently, for enough paying students. */
+  active: boolean;
+  /** Money the platform holds for a teacher, available or pending. */
+  balanceCents: number;
+}
+
+export interface AdminUserDetailDTO {
+  user: AdminUserDTO;
+  timeline: Array<{ key: UserStepKey; at: string }>;
+  sessions: Array<{ device: string; at: string; support: boolean }>;
+  lectures: Array<{ id: string; title: string; status: LectureStatus; startsAt: string; priceCents: number; bookings: number }>;
+  bookings: Array<{ lectureId: string; title: string; status: BookingStatus; pricePaidCents: number; createdAt: string }>;
+  security: { google: string | null; facebook: string | null; mfaEnabled: boolean } | null;
+}
+
+export type AdminUserBulkOutcome = "suspended" | "restored" | "deleted" | "erased" | "skipped";
+export interface AdminUsersBulkResult {
+  results: Array<{ id: string; name: string; outcome: AdminUserBulkOutcome; reason?: string }>;
 }
 
 export interface NotificationDTO {
@@ -399,7 +430,7 @@ export interface AccountSecurityDTO { google: { email: string } | null; facebook
 export interface TeacherVerificationDTO {
   status: "not_submitted" | "pending" | "approved" | "rejected" | "needs_changes";
   security: AccountSecurityDTO;
-  details: { fullName: string; phone: string; subject: string; governorate: string; qualification: string; experienceYears: number; membershipNumber: string; frontDocumentId: string; backDocumentId: string } | null;
+  details: { fullName: string; phone: string; subject: string; governorate: string; qualification: string; experienceYears: number; documentType: "national_id" | "syndicate_card"; membershipNumber: string; pageUrl: string; frontDocumentId: string; backDocumentId: string } | null;
   note: string; submittedAt: string | null; reviewedAt: string | null;
 }
 export interface VerificationQueueItem { teacher: PersonMini & { email: string }; status: TeacherVerificationDTO["status"]; fullName: string; subject: string; submittedAt: string }

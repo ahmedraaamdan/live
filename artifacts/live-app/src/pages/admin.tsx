@@ -3,10 +3,10 @@ import { QueryError } from '@/components/query-error';
 import { useState } from 'react';
 import { Banknote, CheckCircle2, GraduationCap, HandCoins, Landmark, Presentation, ShieldAlert, Ticket, Users, XCircle } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { FUNDS_REVIEW_LABELS, PAYMENT_METHOD_LABELS, PAYOUT_METHOD_LABELS, REPORT_REASON_LABELS, ROLE_LABELS, type AdminOverviewDTO, type AdminUserDTO, type FundReviewDTO, type PayoutDTO, type Role } from '@workspace/live-core';
+import { FUNDS_REVIEW_LABELS, PAYMENT_METHOD_LABELS, PAYOUT_METHOD_LABELS, REPORT_REASON_LABELS, type AdminOverviewDTO, type FundReviewDTO, type PayoutDTO } from '@workspace/live-core';
 import { api, errorMessage } from '@/lib/api';
 import { fmtDateTime, money } from '@/lib/format';
-import { Avatar, Badge, Banner, Button, Card, Chip, EmptyState, List, ListItem, Page, PageSpinner, SectionHeader, Sheet, Stat, StatGrid, TextArea, TopBar, toast } from '@/ui';
+import { Avatar, Badge, Banner, Button, Card, EmptyState, List, ListItem, Page, PageSpinner, SectionHeader, Sheet, Stat, StatGrid, TextArea, TopBar, toast } from '@/ui';
 
 const LIST_STEP = 5;
 
@@ -237,55 +237,6 @@ export function AdminPayouts() {
     <>
       <TopBar title="السحوبات" large />
       <Page>{q.isPending ? <PageSpinner /> : q.isError ? <QueryError error={q.error} retry={q.refetch} /> : <PayoutList payouts={q.data ?? []} />}</Page>
-    </>
-  );
-}
-
-export function AdminUsers() {
-  const [role, setRole] = useState<Role | ''>('');
-  const qc = useQueryClient();
-  const q = useQuery({ queryKey: ['admin-users', role], queryFn: () => api<AdminUserDTO[]>(`/admin/users${role ? `?role=${role}` : ''}`) });
-  const suspend = useMutation({
-    mutationFn: (u: { id: string; suspended: boolean }) => api(`/admin/users/${u.id}/suspend`, { body: { suspended: u.suspended } }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['admin-users'] });
-      toast('حدّثنا الحساب');
-    },
-    onError: (e) => toast(errorMessage(e)),
-  });
-  return (
-    <>
-      <TopBar title="المستخدمين" large />
-      <Page>
-        <div className="scrollbar-none mb-4 flex items-center gap-2 overflow-x-auto py-2">
-          {(['', 'teacher', 'student', 'parent', 'admin'] as const).map((r) => (
-            <Chip key={r || 'all'} selected={role === r} onClick={() => setRole(r)}>
-              {r ? ROLE_LABELS[r] : 'الكل'}
-            </Chip>
-          ))}
-        </div>
-        {q.isError ? <QueryError error={q.error} retry={q.refetch} /> : q.isPending ? (
-          <PageSpinner />
-        ) : (
-          <List>
-            {q.data?.map((u) => (
-              <ListItem
-                key={u.id}
-                leading={<Avatar name={u.name} src={u.avatarUrl} />}
-                title={u.name}
-                subtitle={`${u.email} · ${ROLE_LABELS[u.role]}${u.role === 'teacher' ? ` · ${u.lectures} حصة` : u.role === 'student' ? ` · ${u.bookings} حجز` : ''}`}
-                trailing={
-                  u.role !== 'admin' ? (
-                    <Button size="sm" variant={u.suspended ? 'tonal' : 'danger-text'} loading={suspend.isPending && suspend.variables?.id === u.id} onClick={() => suspend.mutate({ id: u.id, suspended: !u.suspended })}>
-                      {u.suspended ? 'إعادة التفعيل' : 'إيقاف'}
-                    </Button>
-                  ) : null
-                }
-              />
-            ))}
-          </List>
-        )}
-      </Page>
     </>
   );
 }

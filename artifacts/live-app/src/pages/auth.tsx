@@ -116,7 +116,7 @@ export function Signup() {
     mutationFn: (body: unknown) => api<AuthResult>('/auth/signup', { body }),
     onSuccess: (r) => {
       signIn(r);
-      navigate(r.me.user.role === 'teacher' ? '/t/verification' : next ?? homePath(r.me.user.role), { replace: true });
+      navigate(next ?? homePath(r.me.user.role), { replace: true });
     },
     onError: (e) => setError(errorMessage(e)),
   });

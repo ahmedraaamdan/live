@@ -12,6 +12,10 @@ export const usersTable = pgTable("users", {
   passwordHash: text("password_hash").notNull(),
   avatarUrl: text("avatar_url"),
   suspended: boolean("suspended").notNull().default(false),
+  /** Last time this person used the app themselves; support account switches don't count. */
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
+  /** The account was erased: its personal data is gone, and the row stays only for class and money records. */
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

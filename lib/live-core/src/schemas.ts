@@ -175,13 +175,22 @@ export const teacherVerificationInputSchema = z.object({
   phone: z.string().trim().min(10, { message: "أدخل رقم هاتف صحيحًا" }).max(25),
   subject: z.string().trim().min(2, { message: "أدخل تخصصك" }).max(80),
   governorate: z.string().trim().min(2, { message: "أدخل المحافظة" }).max(80),
-  qualification: z.string().trim().min(5, { message: "أدخل المؤهل والجهة المانحة" }).max(300),
-  experienceYears: z.coerce.number().int().min(0).max(70),
-  membershipNumber: z.string().trim().min(2, { message: "أدخل رقم عضوية النقابة" }).max(60),
-  frontDocumentId: z.uuid({ message: "ارفع الوجه الأمامي للكارنيه" }),
-  backDocumentId: z.uuid({ message: "ارفع الوجه الخلفي للكارنيه" }),
-}).refine(value => value.frontDocumentId !== value.backDocumentId, { message: "ارفع صورتين مختلفتين لوجهي الكارنيه" });
+  qualification: z.string().trim().max(300).default(""),
+  experienceYears: z.coerce.number().int().min(0).max(70).default(0),
+  documentType: z.enum(["national_id", "syndicate_card"], { message: "اختر نوع المستند" }).default("national_id"),
+  membershipNumber: z.string().trim().max(60).default(""),
+  pageUrl: z.string().trim().max(300).default("").transform(value => value && !/^https?:\/\//i.test(value) ? `https://${value}` : value).refine(value => !value || /^https?:\/\/[^\s/]+\.[^\s]+$/i.test(value), { message: "اكتب لينك صفحتك كامل، أو سيبه فاضي" }),
+  frontDocumentId: z.uuid({ message: "ارفع الوجه الأمامي للمستند" }),
+  backDocumentId: z.uuid({ message: "ارفع الوجه الخلفي للمستند" }),
+}).refine(value => value.frontDocumentId !== value.backDocumentId, { message: "ارفع صورتين مختلفتين لوجهي المستند" });
 export type TeacherVerificationInput = z.infer<typeof teacherVerificationInputSchema>;
+
+export const adminUsersBulkSchema = z.object({
+  action: z.enum(["suspend", "restore", "delete"]),
+  ids: z.array(z.uuid()).min(1, { message: "اختر مستخدم واحد على الأقل" }).max(500, { message: "اختر 500 مستخدم بالكتير في المرة" }),
+  confirm: z.string().optional(),
+});
+export const adminUsersExportSchema = z.object({ ids: z.array(z.uuid()).max(5000).optional() });
 export const verificationReviewSchema = z.object({ submittedAt: z.iso.datetime({ offset: true }), action: z.enum(["approve", "reject", "changes"]), note: z.string().trim().max(2000).default("") }).refine(value => value.action === "approve" || value.note.length >= 5, { message: "اكتب سبب الرفض أو التعديل المطلوب" });
 
 export const ticketInputSchema = z.object({

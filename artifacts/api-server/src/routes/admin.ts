@@ -1,13 +1,13 @@
 import { Router } from "express";
 import { and, asc, count, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { attendanceTable, bookingsTable, db, lectureReportsTable, lecturesTable, paymentsTable, payoutsTable, usersTable, walletEntriesTable } from "@workspace/db";
-import { FUNDS_MIN_ATTENDED_SECONDS, fundsDecisionSchema, payoutDecisionSchema, reportDecisionSchema, type AdminOverviewDTO, type AdminUserDTO, type FundReviewDTO, type PaymentMethod, type Role } from "@workspace/live-core";
+import { FUNDS_MIN_ATTENDED_SECONDS, fundsDecisionSchema, payoutDecisionSchema, reportDecisionSchema, type AdminOverviewDTO, type FundReviewDTO, type PaymentMethod } from "@workspace/live-core";
 import { recordAdminAction } from "../lib/audit";
-import { isSuperAdmin, requireUser, roleGate } from "../lib/auth";
-import { toMini, toPayout, toUser } from "../lib/dto";
+import { requireUser, roleGate } from "../lib/auth";
+import { toMini, toPayout } from "../lib/dto";
 import { sendPayoutUpdate } from "../lib/emails";
 import { decideLectureFunds, resolveLectureReport } from "../lib/funds";
-import { badRequest, forbidden, notFound, parse, uuidParam } from "../lib/http";
+import { badRequest, notFound, parse, uuidParam } from "../lib/http";
 import { notify } from "../lib/notify";
 
 const router = Router();
@@ -33,7 +33,7 @@ router.get("/admin/overview", async (_req, res) => {
       .from(payoutsTable)
       .where(eq(payoutsTable.status, "paid"))
       .then((r) => Number(r[0]?.v ?? 0)),
-    db.select({ role: usersTable.role, n: count() }).from(usersTable).groupBy(usersTable.role),
+    db.select({ role: usersTable.role, n: count() }).from(usersTable).where(isNull(usersTable.deletedAt)).groupBy(usersTable.role),
     db.select({ n: count() }).from(lecturesTable),
     db.select({ n: count() }).from(bookingsTable).where(eq(bookingsTable.status, "confirmed")),
     db
@@ -121,46 +121,6 @@ router.post("/admin/payouts/:id", async (req, res) => {
   if (teacher) void sendPayoutUpdate(teacher, payout.amountCents, status, note);
   const [updated] = await db.select().from(payoutsTable).where(eq(payoutsTable.id, id));
   res.json(toPayout(updated!, teacher ? toMini(teacher) : null));
-});
-
-router.get("/admin/users", async (req, res) => {
-  const role = typeof req.query.role === "string" ? (req.query.role as Role) : undefined;
-  const users = await db
-    .select()
-    .from(usersTable)
-    .where(role ? eq(usersTable.role, role) : undefined)
-    .orderBy(desc(usersTable.createdAt))
-    .limit(300);
-  const ids = users.map((u) => u.id);
-  const [lec, book] = ids.length
-    ? await Promise.all([
-        db.select({ id: lecturesTable.teacherId, n: count() }).from(lecturesTable).where(inArray(lecturesTable.teacherId, ids)).groupBy(lecturesTable.teacherId),
-        db
-          .select({ id: bookingsTable.studentId, n: count() })
-          .from(bookingsTable)
-          .where(and(inArray(bookingsTable.studentId, ids), eq(bookingsTable.status, "confirmed")))
-          .groupBy(bookingsTable.studentId),
-      ])
-    : [[], []];
-  const l = new Map(lec.map((x) => [x.id, Number(x.n)]));
-  const b = new Map(book.map((x) => [x.id, Number(x.n)]));
-  const body: AdminUserDTO[] = users.map((u) => ({ ...toUser(u), lectures: l.get(u.id) ?? 0, bookings: b.get(u.id) ?? 0, suspended: u.suspended }));
-  res.json(body);
-});
-
-router.post("/admin/users/:id/suspend", async (req, res) => {
-  const actor = requireUser(req);
-  const id = uuidParam(req.params.id);
-  const suspended = Boolean(req.body?.suspended);
-  if (id === actor.id) throw badRequest("لا يمكنك إيقاف حسابك.");
-  const target = await db.query.usersTable.findFirst({ where: eq(usersTable.id, id) });
-  if (!target) throw notFound();
-  if (isSuperAdmin(target)) throw forbidden("لا يمكن إيقاف حساب المالك.");
-  await db.transaction(async (tx) => {
-    await tx.update(usersTable).set({ suspended }).where(eq(usersTable.id, id));
-    await recordAdminAction(tx, actor.id, suspended ? "user.suspend" : "user.restore", id);
-  });
-  res.json({ ok: true });
 });
 
 // ---------------------------------------------------------------- earnings under review

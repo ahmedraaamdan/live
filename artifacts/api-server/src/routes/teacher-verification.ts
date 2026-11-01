@@ -3,10 +3,11 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { and, count, desc, eq, gte, inArray } from "drizzle-orm";
-import { db, verificationDocumentsTable, teacherVerificationsTable, userSecurityTable, usersTable, verificationReviewsTable } from "@workspace/db";
+import { db, verificationDocumentsTable, teacherVerificationsTable, usersTable, verificationReviewsTable } from "@workspace/db";
 import { teacherVerificationInputSchema, verificationReviewSchema, type VerificationAdminDetail } from "@workspace/live-core";
 import { isSuperAdmin, requireRole, requireUser } from "../lib/auth";
-import { accountSecurity, requireOwner, verificationDTO } from "../lib/teacher-verification";
+import { sendVerificationRequest } from "../lib/emails";
+import { requireOwner, verificationDTO } from "../lib/teacher-verification";
 import { badRequest, conflict, notFound, parse, uuidParam } from "../lib/http";
 import { env } from "../lib/env";
 import { saveFile } from "../lib/storage";
@@ -16,8 +17,6 @@ const router = Router();
 router.get("/teacher/verification", async (req, res) => { const user = requireRole(req, "teacher"); res.json(await verificationDTO(user.id, !req.impersonation)); });
 router.post("/teacher/verification/documents", (req,_res,next)=>{requireRole(req,"teacher");next();}, express.raw({ type: () => true, limit: "8mb" }), async (req, res) => {
   const user = requireRole(req, "teacher");
-  const security = await accountSecurity(user.id);
-  if (!security.mfaEnabled || !(security.google || security.facebook)) throw badRequest("اربط حساب Google أو فيسبوك وفعّل المصادقة الثنائية أولًا");
   const mime = String(req.headers["content-type"] ?? "").split(";")[0]!.trim();
   const data = req.body as Buffer;
   if (!Buffer.isBuffer(data) || !data.length) throw badRequest("اختر صورة واضحة للكارنيه");
@@ -40,8 +39,6 @@ router.get("/teacher/verification/documents/:id", async (req, res) => {
 router.post("/teacher/verification/submit", async (req,res) => {
   const user = requireRole(req,"teacher"), input = parse(teacherVerificationInputSchema,req.body);
   await db.transaction(async tx => {
-    const [security] = await tx.select().from(userSecurityTable).where(eq(userSecurityTable.userId,user.id)).for("update");
-    if (!security?.totpEnabledAt || !security.totpSecretEnc || !(security.googleSubject || security.facebookSubject)) throw badRequest("اربط Google أو فيسبوك وفعّل المصادقة الثنائية أولًا");
     const docs = await tx.select().from(verificationDocumentsTable).where(and(eq(verificationDocumentsTable.ownerId,user.id),inArray(verificationDocumentsTable.id,[input.frontDocumentId,input.backDocumentId])));
     if(docs.length!==2) throw badRequest("ارفع صورتي الكارنيه من حسابك");
     const current = await tx.query.teacherVerificationsTable.findFirst({where:eq(teacherVerificationsTable.teacherId,user.id)});
@@ -51,7 +48,9 @@ router.post("/teacher/verification/submit", async (req,res) => {
     await tx.insert(verificationReviewsTable).values({teacherId:user.id,actorId:user.id,action:"submitted"});
   });
   const admins = await db.select().from(usersTable).where(and(eq(usersTable.role,"admin"),eq(usersTable.suspended,false)));
-  await notify(admins.filter(isSuperAdmin).map(u=>u.id),{kind:"verification",title:"طلب توثيق مدرس جديد",body:user.name,link:`/admin/teacher-verifications/${user.id}`});
+  const owners=admins.filter(isSuperAdmin);
+  await notify(owners.map(u=>u.id),{kind:"verification",title:"طلب توثيق مدرس جديد",body:user.name,link:`/admin/teacher-verifications/${user.id}`});
+  void sendVerificationRequest(owners,user);
   res.json(await verificationDTO(user.id,!req.impersonation));
 });
 router.get("/admin/teacher-verifications",async(req,res)=>{
@@ -73,16 +72,14 @@ router.post("/admin/teacher-verifications/:id/review",async(req,res)=>{
   const owner=requireOwner(req),id=uuidParam(req.params.id),input=parse(verificationReviewSchema,req.body);
   const status=input.action==="approve"?"approved":input.action==="reject"?"rejected":"needs_changes";
   await db.transaction(async tx=>{
-    const [security]=await tx.select().from(userSecurityTable).where(eq(userSecurityTable.userId,id)).for("update");
     const [request]=await tx.select().from(teacherVerificationsTable).where(eq(teacherVerificationsTable.teacherId,id)).for("update");
     if(!request||request.status!=="pending")throw conflict("الطلب ليس قيد المراجعة الآن");
     if(request.submittedAt.toISOString()!==input.submittedAt)throw conflict("تغيّر الطلب. حدّث الصفحة وراجعه من جديد.");
-    if(input.action==="approve"&&(!security?.totpEnabledAt||!security.totpSecretEnc||!(security.googleSubject||security.facebookSubject)))throw badRequest("لم تكتمل متطلبات حماية حساب المدرس");
     const user=await tx.query.usersTable.findFirst({where:eq(usersTable.id,id)});if(input.action==="approve"&&(!user||user.suspended||user.role!=="teacher"))throw badRequest("حساب المدرس غير متاح للموافقة");
     await tx.update(teacherVerificationsTable).set({status,note:input.note,reviewedAt:new Date(),reviewerId:owner.id}).where(eq(teacherVerificationsTable.teacherId,id));
     await tx.insert(verificationReviewsTable).values({teacherId:id,actorId:owner.id,action:status,note:input.note});
   });
-  await notify([id],{kind:"verification",title:status==="approved"?"تم توثيق حسابك":status==="rejected"?"لم يُقبل طلب التوثيق":"طلب التوثيق يحتاج إلى تعديل",body:input.note||"يمكنك الآن إنشاء حصصك وبدء البث.",link:"/t/verification"});
+  await notify([id],{kind:"verification",title:status==="approved"?"تم توثيق حسابك":status==="rejected"?"لم يُقبل طلب التوثيق":"طلب التوثيق يحتاج إلى تعديل",body:input.note||"تقدر دلوقتي تعمل حصص مدفوعة وتظهر في الرئيسية.",link:"/t/verification"});
   res.json(await verificationDTO(id));
 });
 export default router;

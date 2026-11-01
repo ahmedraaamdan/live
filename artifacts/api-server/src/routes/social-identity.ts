@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { and, eq, gt, lt } from "drizzle-orm";
-import { db, securityChallengesTable, sessionsTable, userSecurityTable, usersTable, teacherVerificationsTable } from "@workspace/db";
+import { db, securityChallengesTable, sessionsTable, userSecurityTable, usersTable } from "@workspace/db";
 import { bearer, requireRole, sha256 } from "../lib/auth";
 import { requireDirectAccount } from "../lib/teacher-verification";
 import { authorizationUrl, brokerState, exchangeIdentity, providerConfig, validBrokerState, type SocialProvider } from "../lib/social-identity";
@@ -39,13 +39,8 @@ router.get("/auth/social/:provider/callback",async(req,res)=>{
  try{
   const identity=await exchangeIdentity(service,code,payload.nonce,payload.verifier);
   const fields=service==="google"?{googleSubject:identity.subject,googleEmail:identity.email}:{facebookSubject:identity.subject,facebookName:identity.name,facebookEmail:identity.email||null};
-  // Unique provider subjects prevent one social identity from verifying multiple teacher accounts.
-  await db.transaction(async tx => {
-    const [previous] = await tx.select().from(userSecurityTable).where(eq(userSecurityTable.userId,user.id)).for("update");
-    const oldSubject = service === "google" ? previous?.googleSubject : previous?.facebookSubject;
-    await tx.insert(userSecurityTable).values({userId:user.id,...fields}).onConflictDoUpdate({target:userSecurityTable.userId,set:fields});
-    if(oldSubject && oldSubject !== identity.subject) await tx.update(teacherVerificationsTable).set({status:"needs_changes",note:"تغيّر الحساب الاجتماعي المرتبط. راجع بياناتك وأعد إرسال طلب التوثيق.",reviewedAt:new Date()}).where(eq(teacherVerificationsTable.teacherId,user.id));
-  });
+  // Unique provider subjects stop one social identity from linking to several teacher accounts.
+  await db.insert(userSecurityTable).values({userId:user.id,...fields}).onConflictDoUpdate({target:userSecurityTable.userId,set:fields});
   return void finish("linked");
  }catch{return void finish("failed");}
 });

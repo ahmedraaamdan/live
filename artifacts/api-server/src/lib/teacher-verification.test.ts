@@ -21,9 +21,8 @@ test("teacher identity review, private documents and enforced two-factor login",
  const png=Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2IX8AAAAASUVORK5CYII=","base64");
  const upload=async(token:string)=>{const response=await fetch(base+"/teacher/verification/documents",{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"image/png","X-Filename":"card.png"},body:png});return{status:response.status,data:await response.json() as any};};
  try{
-  const lecture={title:"حصة موثقة",subject:"physics",grade:"g12",startsAt:new Date(Date.now()+86400000).toISOString(),durationMin:90,priceCents:0};
-  check("new teachers cannot schedule",(await call("/lectures",teacherToken,lecture)).status===403);
-  check("teacher cannot upload private cards before security steps",(await upload(teacherToken!)).status===400);
+  const lecture={title:"حصة موثقة",subject:"physics",grade:"g12",startsAt:new Date(Date.now()+86400000).toISOString(),durationMin:90,priceCents:10000};
+  check("new teachers cannot schedule a paid class",(await call("/lectures",teacherToken,lecture)).status===403);
   check("MFA setup requires password",(await call("/me/security/mfa/setup",teacherToken,{password:"wrong-password"})).status===400);
   const setup=await call("/me/security/mfa/setup",teacherToken,{password});check("authenticator setup supplies secret and local otpauth URI",setup.status===200&&setup.data.secret.length>=32&&setup.data.uri.startsWith("otpauth://"));
   const enabled=await call("/me/security/mfa/confirm",teacherToken,{code:totp(setup.data.secret,Math.floor(Date.now()/30000))});check("MFA activation gives one-use recovery codes",enabled.status===200&&enabled.data.recoveryCodes.length===10);
@@ -34,7 +33,7 @@ test("teacher identity review, private documents and enforced two-factor login",
   login=await call("/auth/login",undefined,{email:teacher!.email,password});check("used recovery code cannot be reused",(await call("/auth/mfa",undefined,{challenge:login.data.challenge,code:firstCode})).status===400);
   // Provider JWT validation is tested separately with real signed JWTs. No provider bypass exists in production routes.
   await db.update(userSecurityTable).set({googleSubject:`verification-${suffix}`,googleEmail:teacher!.email}).where(eq(userSecurityTable.userId,teacher!.id));
-  const front=await upload(teacherToken!),back=await upload(teacherToken!);check("private card upload works after both security steps",front.status===201&&back.status===201&&front.data.id!==back.data.id);
+  const front=await upload(teacherToken!),back=await upload(teacherToken!);check("private card upload works",front.status===201&&back.status===201&&front.data.id!==back.data.id);
   const document=await db.query.verificationDocumentsTable.findFirst({where:eq(verificationDocumentsTable.id,front.data.id)});const disk=await readFile(path.join(dir,"uploads",document!.storageKey));check("membership-card bytes are encrypted on disk",!disk.equals(png)&&!disk.subarray(0,8).equals(png.subarray(0,8)));
   check("private documents are absent from public upload endpoint",(await call(`/uploads/${front.data.id}`)).status===404);
   const privateGet=async(token?:string)=>fetch(base+`/teacher/verification/documents/${front.data.id}`,{headers:token?{Authorization:`Bearer ${token}`}:{}});
@@ -43,7 +42,7 @@ test("teacher identity review, private documents and enforced two-factor login",
   const ownerView=await privateGet(ownerToken);check("super owner can inspect decrypted image with no-store caching",ownerView.status===200&&ownerView.headers.get("cache-control")==="private, no-store"&&Buffer.from(await ownerView.arrayBuffer()).equals(png));
   const input={fullName:"أحمد محمد رمضان",phone:"01012345678",subject:"الفيزياء",governorate:"القاهرة",qualification:"بكالوريوس العلوم والتربية",experienceYears:7,membershipNumber:"fixture-123",frontDocumentId:front.data.id,backDocumentId:back.data.id};
   let submitted=await call("/teacher/verification/submit",teacherToken,input);check("complete verification enters review without self-approval",submitted.status===200&&submitted.data.status==="pending");
-  check("pending review still cannot schedule",(await call("/lectures",teacherToken,lecture)).status===403);
+  check("pending review still cannot schedule a paid class",(await call("/lectures",teacherToken,lecture)).status===403);
   check("pending application cannot be silently replaced",(await call("/teacher/verification/submit",teacherToken,input)).status===409);
   check("review queue is super-owner only",(await call("/admin/teacher-verifications",adminToken)).status===403&&(await call("/admin/teacher-verifications",studentToken)).status===403);
   const queue=await call("/admin/teacher-verifications",ownerToken);check("owner sees pending review and exact count",queue.status===200&&queue.data.counts.pending===1&&queue.data.items[0].teacher.id===teacher!.id);
@@ -57,8 +56,9 @@ test("teacher identity review, private documents and enforced two-factor login",
   const approved=await call(`/admin/teacher-verifications/${teacher!.id}/review`,ownerToken,{action:"approve",submittedAt:submitted.data.submittedAt});check("owner approval is required before scheduling",approved.status===200&&approved.data.status==="approved");
   const created=await call("/lectures",teacherToken,lecture);check("approved teacher can schedule",created.status===201);
   const publicProfile=await call(`/teachers/${teacher!.id}`);check("public profile shows verification without leaking legal identity",publicProfile.data.teacher.verified===true&&!JSON.stringify(publicProfile.data).includes(input.membershipNumber)&&!JSON.stringify(publicProfile.data).includes(front.data.id));
-  const disabled=await call("/me/security/mfa/disable",teacherToken,{password,code:enabled.data.recoveryCodes[1]});check("disabling MFA removes verified scheduling eligibility",disabled.status===200&&(await call("/teacher/verification",teacherToken)).data.status==="needs_changes"&&(await call("/lectures",teacherToken,lecture)).status===403);
-  check("unverified teacher cannot get scheduled publishing token",(await call(`/lectures/${created.data.id}/live/token`,teacherToken,{})).status===403);
+  const disabled=await call("/me/security/mfa/disable",teacherToken,{password,code:enabled.data.recoveryCodes[1]});check("turning off two-factor keeps the review, and only blocks withdrawing",disabled.status===200&&(await call("/teacher/verification",teacherToken)).data.status==="approved"&&(await call("/lectures",teacherToken,lecture)).status===201&&(await call("/wallet/payouts",teacherToken,{amountCents:10000,method:"instapay",account:"01000000000"})).status===403);
+  const paidByOther=await db.insert(lecturesTable).values({teacherId:other!.id,code:"UNVRF1",title:"مدفوعة",subject:"physics",grade:"g12",startsAt:new Date(Date.now()+3600000),durationMin:60,priceCents:10000,status:"scheduled"}).returning();
+  check("unverified teacher cannot get a publishing token for a paid class",(await call(`/lectures/${paidByOther[0]!.id}/live/token`,otherToken,{})).status===403);
   await db.update(lecturesTable).set({status:"live",liveStartedAt:new Date()}).where(eq(lecturesTable.id,created.data.id));check("already running class can continue during rollout",(await call(`/lectures/${created.data.id}/live/token`,teacherToken,{})).status===200);
   const reviewHistory=await call(`/admin/teacher-verifications/${teacher!.id}`,ownerToken);check("review actions retain history",reviewHistory.data.history.some((h:any)=>h.action==="approved")&&reviewHistory.data.history.some((h:any)=>h.action==="needs_changes"));
   console.log(`${checks} verification, privacy and two-factor checks passed`);

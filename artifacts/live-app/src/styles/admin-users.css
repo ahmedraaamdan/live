@@ -1,0 +1,69 @@
+/* The administrators' accounts sheet: dense rows, sticky header and first columns. */
+.users-page { max-width: 112rem !important; display: flex; flex-direction: column; gap: 12px; }
+
+.users-summary { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: .85rem; color: var(--on-surface-variant); }
+.users-summary b { font-family: var(--font-num); font-size: 1.15rem; color: var(--on-surface); margin-inline-end: 2px; }
+.users-summary-goal b { color: var(--primary); }
+
+.users-toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; }
+.users-toolbar > * { min-width: 0; }
+.users-search { flex: 1 1 260px; }
+
+/* Floats over the sheet: if it pushed the rows down, the next tick would land on the wrong person. */
+.users-bulk { position: fixed; z-index: 60; inset-inline: 16px; bottom: calc(var(--nav-height) + var(--safe-bottom, 0px) + 12px); display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 14px; background: var(--secondary-container); color: var(--on-secondary-container); box-shadow: var(--shadow-e3, 0 8px 24px rgb(0 0 0 / .2)); }
+@media (min-width: 1024px) { .users-bulk { bottom: 16px; inset-inline-start: calc(var(--rail-width) + 16px); } }
+.users-bulk strong { margin-inline-end: 8px; }
+.users-page.has-selection { padding-bottom: 120px; }
+
+.users-sheet { overflow: auto; max-height: calc(100dvh - 300px); min-height: 280px; border: 1px solid var(--outline-variant); border-radius: 12px; background: var(--surface-container-lowest); }
+.users-table { width: 100%; min-width: 1320px; border-collapse: separate; border-spacing: 0; font-size: .84rem; }
+.users-table th, .users-table td { padding: 6px 10px; text-align: start; white-space: nowrap; border-bottom: 1px solid var(--outline-variant); border-inline-end: 1px solid var(--outline-variant); background: var(--surface-container-lowest); vertical-align: middle; }
+.users-table th:last-child, .users-table td:last-child { border-inline-end: 0; }
+.users-table thead th { position: sticky; top: 0; z-index: 3; background: var(--surface-container-high); font-weight: 700; font-size: .78rem; color: var(--on-surface-variant); }
+.users-table thead button { display: inline-flex; align-items: center; gap: 4px; font: inherit; color: inherit; background: none; border: 0; padding: 4px 0; cursor: pointer; }
+.users-table thead svg { width: 14px; height: 14px; }
+.users-table tbody tr:hover td { background: var(--surface-container-low); }
+.users-table tr.is-selected td { background: var(--secondary-container); }
+.users-table tr.is-suspended .users-name span { text-decoration: line-through; opacity: .7; }
+.users-table input[type="checkbox"] { -webkit-appearance: none; appearance: none; display: grid; place-content: center; width: 18px; height: 18px; margin: auto; border: 1.5px solid var(--outline); border-radius: 5px; background: var(--surface-container-lowest); cursor: pointer; }
+.users-table input[type="checkbox"]:checked { background: var(--primary); border-color: var(--primary); }
+.users-table input[type="checkbox"]:checked::after { content: ""; width: 9px; height: 5px; margin-top: -2px; border-bottom: 2px solid var(--on-primary); border-left: 2px solid var(--on-primary); transform: rotate(-45deg); }
+.users-table input[type="checkbox"]:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* First two columns stay in view while the sheet scrolls sideways. */
+.users-col-check { position: sticky; inset-inline-start: 0; z-index: 2; width: 42px; min-width: 42px; padding-inline: 8px !important; }
+.users-col-name { position: sticky; inset-inline-start: 42px; z-index: 2; min-width: 220px; max-width: 280px; box-shadow: inset -1px 0 0 var(--outline-variant); }
+.users-table thead .users-col-check, .users-table thead .users-col-name { z-index: 4; }
+.users-col-menu { width: 44px; text-align: center !important; padding-inline: 2px !important; }
+
+.users-name { display: flex; align-items: center; gap: 8px; width: 100%; font: inherit; font-weight: 600; color: var(--on-surface); background: none; border: 0; padding: 0; cursor: pointer; text-align: start; }
+.users-name > span:not(.gl-badge) { overflow: hidden; text-overflow: ellipsis; }
+.users-name:hover > span:not(.gl-badge) { color: var(--primary); }
+.users-email { text-align: end !important; }
+.users-empty { color: var(--on-surface-variant); opacity: .7; }
+.users-phone { display: inline-flex; align-items: center; gap: 8px; }
+.users-phone a { display: inline-flex; color: var(--success); }
+.users-phone svg { width: 16px; height: 16px; }
+
+.users-pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: .85rem; color: var(--on-surface-variant); }
+
+@media (min-width: 768px) { .users-details.gl-sheet { width: min(92vw, 46rem); } }
+.users-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px 20px; }
+.users-facts dt { font-size: .75rem; color: var(--on-surface-variant); }
+.users-facts dd { font-size: .92rem; overflow-wrap: anywhere; text-align: start; }
+.users-timeline { display: flex; flex-direction: column; gap: 6px; margin: 0; padding-inline-start: 18px; list-style: decimal; font-size: .9rem; }
+.users-timeline li { padding-inline-start: 4px; }
+.users-timeline li > * { display: inline; }
+.users-timeline time { margin-inline-start: 10px; font-size: .8rem; color: var(--on-surface-variant); }
+.users-flags { display: flex; flex-direction: column; gap: 6px; font-size: .9rem; overflow-wrap: anywhere; }
+.users-flags li { display: flex; align-items: center; gap: 8px; }
+.users-flags svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--primary); }
+.users-mini-list { display: flex; flex-direction: column; font-size: .88rem; }
+.users-mini-list li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; padding: 8px 0; border-bottom: 1px solid var(--outline-variant); }
+.users-mini-list li:last-child { border-bottom: 0; }
+.users-mini-list button { font: inherit; font-weight: 600; color: var(--on-surface); background: none; border: 0; padding: 0; text-align: start; cursor: pointer; }
+.users-mini-list span { color: var(--on-surface-variant); }
+.lesson-trial-note { margin-block: 12px; }
+
+/* On a phone the bar stays one swipeable line, so it never hides the sheet. */
+@media (max-width: 767px) { .users-bulk { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; } .users-bulk > * { flex-shrink: 0; } .users-sheet { max-height: 62dvh; } }

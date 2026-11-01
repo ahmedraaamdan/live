@@ -1,4 +1,4 @@
-import { assertVerifiedTeacher } from "../lib/teacher-verification";
+import { assertCanRunLecture } from "../lib/teacher-verification";
 import { Router } from "express";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import {
@@ -61,7 +61,7 @@ router.post("/lectures/:id/live/start", async (req, res) => {
   const lecture = await getLecture(uuidParam(req.params.id));
   assertOwner(user, lecture);
   if (lecture.status === "live") return void res.json(await lectureDTO(lecture, user));
-  await assertVerifiedTeacher(user);
+  await assertCanRunLecture(user, lecture);
   if (lecture.status !== "scheduled") throw badRequest("الحصة دي مش متاحة للبث");
   if (lecture.startsAt.getTime() - Date.now() > LIVE_OPEN_MINUTES_BEFORE * 60_000) {
     throw badRequest(`تقدر تبدأ البث قبل الميعاد بـ${LIVE_OPEN_MINUTES_BEFORE} دقيقة بس`);
@@ -129,7 +129,7 @@ router.post("/lectures/:id/live/token", async (req, res) => {
   const user = requireUser(req);
   const lecture = await getLecture(uuidParam(req.params.id));
   const host = user.role === "teacher" && user.id === lecture.teacherId;
-  if (host && lecture.status !== "live") await assertVerifiedTeacher(user);
+  if (host && lecture.status !== "live") await assertCanRunLecture(user, lecture);
   if (!host) {
     if (user.role !== "student") throw forbidden("البث للطلاب الحاجزين بس");
     await assertAccess(user, lecture);
@@ -204,7 +204,7 @@ router.post("/lectures/:id/messages", async (req, res) => {
   enforce(LIMITS.message, user.id, "ترسل رسائل بسرعة كبيرة. انتظر قليلًا ثم حاول مجددًا.");
   const input = parse(messageInputSchema, req.body);
   const host = user.role === "teacher" && user.id === lecture.teacherId;
-  if (host && lecture.status !== "live") await assertVerifiedTeacher(user);
+  if (host && lecture.status !== "live") await assertCanRunLecture(user, lecture);
   // Students ask or comment; only the teacher answers.
   const kind = host ? (input.parentId ? "answer" : "comment") : input.kind === "answer" ? "question" : input.kind;
   const [m] = await db

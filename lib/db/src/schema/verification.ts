@@ -27,6 +27,7 @@ export const teacherVerificationsTable = pgTable("teacher_verifications", {
   status: text("status").$type<"pending" | "approved" | "rejected" | "needs_changes">().notNull(),
   fullName: text("full_name").notNull(), phone: text("phone").notNull(), subject: text("subject").notNull(), governorate: text("governorate").notNull(),
   qualification: text("qualification").notNull(), experienceYears: integer("experience_years").notNull(), membershipNumber: text("membership_number").notNull(),
+  documentType: text("document_type").$type<"national_id" | "syndicate_card">().notNull().default("syndicate_card"), pageUrl: text("page_url").notNull().default(""),
   frontDocumentId: uuid("front_document_id").notNull().references(() => verificationDocumentsTable.id), backDocumentId: uuid("back_document_id").notNull().references(() => verificationDocumentsTable.id),
   note: text("note").notNull().default(""), submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
   reviewedAt: timestamp("reviewed_at", { withTimezone: true }), reviewerId: uuid("reviewer_id").references(() => usersTable.id),

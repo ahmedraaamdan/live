@@ -8,7 +8,7 @@ import { env } from "../lib/env";
 import { badRequest, forbidden, parse } from "../lib/http";
 import { teacherBalances } from "../lib/ledger";
 import { notify } from "../lib/notify";
-import { assertVerifiedTeacher } from "../lib/teacher-verification";
+import { assertCanWithdraw } from "../lib/teacher-verification";
 import { and } from "drizzle-orm";
 
 const router = Router();
@@ -49,7 +49,7 @@ router.get("/wallet", async (req, res) => {
 router.post("/wallet/payouts", async (req, res) => {
   const user = requireRole(req, "teacher");
   if (req.impersonation) throw forbidden("لا يمكن طلب سحب أثناء تبديل الحساب");
-  await assertVerifiedTeacher(user);
+  await assertCanWithdraw(user);
   const input = parse(payoutRequestSchema, req.body);
   await db.transaction(async (tx) => {
     // Lock a row that always exists, including before the first payout request.
