@@ -46,8 +46,7 @@
 @media (prefers-reduced-motion:reduce){.gt-loop .gt-knob{animation:none;transform:${ON}}}
 .gt-cover{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;background:var(--gt-bg)}
 .gt-chip{position:fixed;z-index:2147483000;top:calc(env(safe-area-inset-top,0px) + 14px);left:0;right:0;width:max-content;margin-inline:auto;padding:9px 13px;border:2px solid var(--gt-line);border-radius:999px;background:var(--gt-bg);box-shadow:3px 4px 0 var(--gt-line);pointer-events:none;will-change:transform}
-html.gt-pull,html.gt-pull body{overscroll-behavior-y:none}
-html.gt-pulling{overflow:hidden!important}`;
+html.gt-pull,html.gt-pull body{overscroll-behavior-y:none}`;
   document.head.append(style);
 
   const toggle = (width) => {
@@ -186,7 +185,7 @@ html.gt-pulling{overflow:hidden!important}`;
 
   /* ---------------------------------------------------------- pull to refresh */
 
-  if (!('ontouchstart' in window) || !CSS.supports('overscroll-behavior-y', 'contain')) return;
+  if (!('ontouchstart' in window)) return;
   document.documentElement.classList.add('gt-pull');
 
   const REACH = 70;
@@ -241,23 +240,28 @@ html.gt-pulling{overflow:hidden!important}`;
     const dx = e.touches[0].clientX - track.x;
     const dy = e.touches[0].clientY - track.y0;
     if (!track.chip) {
-      if (document.scrollingElement.scrollTop > 0 || dy < -8 || Math.abs(dx) > 12) track = null;
-      else if (dy > 10) {
+      if (document.scrollingElement.scrollTop > 0 || dy < -8 || Math.abs(dx) > 12) {
+        track = null;
+        return;
+      }
+      // Hold the page from the first move down: once iOS starts a scroll, it can no longer be stopped.
+      if (dy > Math.abs(dx) && e.cancelable) e.preventDefault();
+      if (dy > 10) {
         track.y0 += dy;
         track.t = toggle(56);
         track.chip = chipOf(track.t);
         track.chip.style.transform = `translateY(${-REACH}px)`;
         document.body.append(track.chip);
-        // The listeners are passive, so without this the finger moving back up scrolls the page.
-        document.documentElement.classList.add('gt-pulling');
         // A target removed mid-touch keeps its events, but they stop bubbling up to these listeners.
         e.target.addEventListener('touchend', letGo, { once: true, passive: true });
         e.target.addEventListener('touchcancel', abandon, { once: true, passive: true });
       }
       return;
     }
+    // Keeps the page still for the whole pull, including the finger moving back up.
+    if (e.cancelable) e.preventDefault();
     pullTo(Math.max(0, dy) * 0.55);
-  }, { passive: true });
+  }, { passive: false });
 
   const letGo = async () => {
     const pull = track;
@@ -265,7 +269,6 @@ html.gt-pulling{overflow:hidden!important}`;
     if (!pull?.chip) return;
     const from = `translateY(${pull.y}px)`;
     if (!pull.armed) {
-      document.documentElement.classList.remove('gt-pulling');
       await play(pull.chip, [{ transform: from }, { transform: 'translateY(-96px)' }], 180, 'cubic-bezier(.55, 0, 1, .45)').finished;
       pull.chip.remove();
       return;
@@ -288,7 +291,6 @@ html.gt-pulling{overflow:hidden!important}`;
     } catch {
       // Nothing was stored, then.
     }
-    document.documentElement.classList.remove('gt-pulling');
     pull.chip.remove();
   };
 
