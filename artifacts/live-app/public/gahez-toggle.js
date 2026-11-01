@@ -226,6 +226,11 @@ html.gt-pulling{overflow:hidden!important}`;
   };
 
   addEventListener('touchstart', (e) => {
+    // A second finger ends the pull. So does the next touch, if this one's end never arrived.
+    if (track?.chip) {
+      abandon();
+      return;
+    }
     track = null;
     if (e.touches.length !== 1 || document.scrollingElement.scrollTop > 0 || blocked(e.target)) return;
     track = { x: e.touches[0].clientX, y0: e.touches[0].clientY, t: null, chip: null, y: -REACH, armed: false };
@@ -245,6 +250,9 @@ html.gt-pulling{overflow:hidden!important}`;
         document.body.append(track.chip);
         // The listeners are passive, so without this the finger moving back up scrolls the page.
         document.documentElement.classList.add('gt-pulling');
+        // A target removed mid-touch keeps its events, but they stop bubbling up to these listeners.
+        e.target.addEventListener('touchend', letGo, { once: true, passive: true });
+        e.target.addEventListener('touchcancel', abandon, { once: true, passive: true });
       }
       return;
     }
@@ -273,11 +281,22 @@ html.gt-pulling{overflow:hidden!important}`;
     pull.t.el.classList.add('gt-loop');
     await wait(180);
     location.reload();
+    // Still here means something refused the reload, so give the page back.
+    await wait(8000);
+    try {
+      sessionStorage.removeItem(FLAG);
+    } catch {
+      // Nothing was stored, then.
+    }
+    document.documentElement.classList.remove('gt-pulling');
+    pull.chip.remove();
+  };
+
+  const abandon = () => {
+    if (track) track.armed = false;
+    letGo();
   };
 
   addEventListener('touchend', letGo, { passive: true });
-  addEventListener('touchcancel', () => {
-    if (track) track.armed = false;
-    letGo();
-  }, { passive: true });
+  addEventListener('touchcancel', abandon, { passive: true });
 })();
