@@ -24,6 +24,7 @@ import {
   Sheet,
   Skeleton,
   Spinner,
+  ToggleLoader,
   Stat,
   StatGrid,
   Switch,
@@ -244,6 +245,7 @@ export function DesignSystem() {
             <Badge tone="error">متأخر</Badge>
             <Badge tone="outline">مسودة</Badge>
             <Spinner className="text-primary" />
+            <ToggleLoader size={48} />
           </div>
           <div className="mt-5 grid items-center gap-6 md:grid-cols-3">
             <ProgressBar value={0.68} />

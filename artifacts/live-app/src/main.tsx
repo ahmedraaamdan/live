@@ -1,6 +1,6 @@
 import './lib/content-protection';
 import './lib/install-prompt';
-import { StrictMode } from 'react';
+import { StrictMode, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Router } from 'wouter';
@@ -10,6 +10,7 @@ import './styles/playful.css';
 import './styles/teacher-tools.css';
 import { App } from './App';
 import { ApiError } from './lib/api';
+import { bootSettled } from './lib/boot';
 import { initNative } from './lib/native';
 import { SessionProvider } from './lib/session';
 import { ErrorBoundary } from './components/error-boundary';
@@ -28,6 +29,12 @@ const queryClient = new QueryClient({
 
 void initNative();
 
+// Outside the error boundary: a crashed first screen must still lift the cover.
+function BootSignal() {
+  useEffect(bootSettled, []);
+  return null;
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
@@ -37,6 +44,7 @@ createRoot(document.getElementById('root')!).render(
             <App />
           </ErrorBoundary>
           <Toaster />
+          <BootSignal />
         </SessionProvider>
       </Router>
     </QueryClientProvider>

@@ -1,6 +1,7 @@
-import { useEffect, useState, type HTMLAttributes, type ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type HTMLAttributes, type ReactNode } from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { AlertCircle, CheckCircle2, Info, TriangleAlert } from 'lucide-react';
+import { holdBoot } from '@/lib/boot';
 import { cn } from '@/lib/cn';
 
 export function Spinner({ className }: { className?: string }) {
@@ -12,10 +13,21 @@ export function Spinner({ className }: { className?: string }) {
   );
 }
 
+/** The G as a switch, working. Styled by public/gahez-toggle.js, as the page-load one is. */
+export function ToggleLoader({ size = 72, className }: { size?: number; className?: string }) {
+  return (
+    <span className={cn('gt gt-loop', className)} style={{ '--gt-w': `${size}px` } as CSSProperties} aria-hidden="true">
+      <i className="gt-fill" />
+      <i className="gt-knob" />
+    </span>
+  );
+}
+
 export function PageSpinner() {
   const [slow, setSlow] = useState(false);
   useEffect(() => { const timer = window.setTimeout(() => setSlow(true), 180); return () => window.clearTimeout(timer); }, []);
-  return <div className="app-loading-surface" role="status" aria-label="جارٍ تحميل الصفحة"><span className="app-loading-orbit" aria-hidden="true"><i /></span><span className="app-loading-caption">{slow ? 'نجهّز مساحتك…' : ''}</span></div>;
+  useEffect(() => holdBoot(), []);
+  return <div className="app-loading-surface" role="status" aria-label="جارٍ تحميل الصفحة"><ToggleLoader /><span className="app-loading-caption">{slow ? 'نجهّز مساحتك…' : ''}</span></div>;
 }
 
 export function Skeleton({ className }: { className?: string }) {
