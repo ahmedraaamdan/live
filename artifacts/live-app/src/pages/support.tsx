@@ -126,13 +126,13 @@ export function TicketThread({ id }: { id: string }) {
     onError: (e) => toast(errorMessage(e)),
   });
   const close = useMutation({ mutationFn: () => api<TicketDetailDTO>(`/tickets/${id}/close`, { method: 'POST' }), onSuccess: done, onError: (e) => toast(errorMessage(e)) });
-  if (q.isPending) return <PageSpinner />;
-  if (!q.data) return <><TopBar title="التذكرة" back /><Page><QueryError error={q.error} retry={q.refetch} /></Page></>;
   useEffect(() => {
     if (q.data) {
       void qc.invalidateQueries({ queryKey: ['me'] });
     }
   }, [q.data, qc]);
+  if (q.isPending) return <PageSpinner />;
+  if (!q.data) return <><TopBar title="التذكرة" back /><Page><QueryError error={q.error} retry={q.refetch} /></Page></>;
 
   const t = q.data;
   const asAdmin = me.user.role === 'admin';
