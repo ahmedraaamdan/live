@@ -46,7 +46,8 @@
 @media (prefers-reduced-motion:reduce){.gt-loop .gt-knob{animation:none;transform:${ON}}}
 .gt-cover{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;background:var(--gt-bg)}
 .gt-chip{position:fixed;z-index:2147483000;top:calc(env(safe-area-inset-top,0px) + 14px);left:0;right:0;width:max-content;margin-inline:auto;padding:9px 13px;border:2px solid var(--gt-line);border-radius:999px;background:var(--gt-bg);box-shadow:3px 4px 0 var(--gt-line);pointer-events:none;will-change:transform}
-html.gt-pull,html.gt-pull body{overscroll-behavior-y:none}`;
+html.gt-pull,html.gt-pull body{overscroll-behavior-y:none}
+html.gt-pulling{overflow:hidden!important}`;
   document.head.append(style);
 
   const toggle = (width) => {
@@ -242,6 +243,8 @@ html.gt-pull,html.gt-pull body{overscroll-behavior-y:none}`;
         track.chip = chipOf(track.t);
         track.chip.style.transform = `translateY(${-REACH}px)`;
         document.body.append(track.chip);
+        // The listeners are passive, so without this the finger moving back up scrolls the page.
+        document.documentElement.classList.add('gt-pulling');
       }
       return;
     }
@@ -254,6 +257,7 @@ html.gt-pull,html.gt-pull body{overscroll-behavior-y:none}`;
     if (!pull?.chip) return;
     const from = `translateY(${pull.y}px)`;
     if (!pull.armed) {
+      document.documentElement.classList.remove('gt-pulling');
       await play(pull.chip, [{ transform: from }, { transform: 'translateY(-96px)' }], 180, 'cubic-bezier(.55, 0, 1, .45)').finished;
       pull.chip.remove();
       return;
