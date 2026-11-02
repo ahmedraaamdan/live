@@ -15,7 +15,7 @@
 .users-bulk strong { margin-inline-end: 8px; }
 .users-page.has-selection { padding-bottom: 120px; }
 
-.users-sheet { overflow: auto; max-height: calc(100dvh - 300px); min-height: 280px; border: 1px solid var(--outline-variant); border-radius: 12px; background: var(--surface-container-lowest); }
+.users-sheet { overflow: auto; -webkit-overflow-scrolling: touch; max-height: calc(100dvh - 300px); min-height: 280px; border: 1px solid var(--outline-variant); border-radius: 12px; background: var(--surface-container-lowest); }
 .users-table { width: 100%; min-width: 1320px; border-collapse: separate; border-spacing: 0; font-size: .84rem; }
 .users-table th, .users-table td { padding: 6px 10px; text-align: start; white-space: nowrap; border-bottom: 1px solid var(--outline-variant); border-inline-end: 1px solid var(--outline-variant); background: var(--surface-container-lowest); vertical-align: middle; }
 .users-table th:last-child, .users-table td:last-child { border-inline-end: 0; }
@@ -35,6 +35,24 @@
 .users-col-name { position: sticky; inset-inline-start: 42px; z-index: 2; min-width: 220px; max-width: 280px; box-shadow: inset -1px 0 0 var(--outline-variant); }
 .users-table thead .users-col-check, .users-table thead .users-col-name { z-index: 4; }
 .users-col-menu { width: 44px; text-align: center !important; padding-inline: 2px !important; }
+
+/* On mobile and tablet, let the entire sheet scroll freely without fixed name columns */
+@media (max-width: 1023px) {
+  .users-col-check,
+  .users-col-name {
+    position: static !important;
+    inset-inline-start: auto !important;
+    box-shadow: none !important;
+  }
+  .users-table thead .users-col-check,
+  .users-table thead .users-col-name {
+    position: sticky !important;
+    top: 0 !important;
+    inset-inline-start: auto !important;
+    z-index: 3 !important;
+    box-shadow: none !important;
+  }
+}
 
 .users-name { display: flex; align-items: center; gap: 8px; width: 100%; font: inherit; font-weight: 600; color: var(--on-surface); background: none; border: 0; padding: 0; cursor: pointer; text-align: start; }
 .users-name > span:not(.gl-badge) { overflow: hidden; text-overflow: ellipsis; }

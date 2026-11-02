@@ -1,7 +1,7 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useLocation } from 'wouter';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowDown, ArrowUp, CheckCircle2, ChevronLeft, ChevronRight, Copy, Download, Eye, FileCheck2, KeyRound, LogIn, MessageCircle, MoreVertical, RotateCcw, Search, ShieldOff, Trash2, Users, XCircle } from 'lucide-react';
+import { ArrowDown, ArrowUp, CheckCircle2, Copy, Download, Eye, FileCheck2, KeyRound, LogIn, MessageCircle, MoreVertical, RotateCcw, Search, ShieldOff, Trash2, Users, XCircle } from 'lucide-react';
 import { ACTIVE_TEACHER_MIN_STUDENTS, DELETE_CONFIRM_WORD, LECTURE_STATUS_LABELS, ROLE_LABELS, USER_STEP_LABELS, type AdminUserDTO, type AdminUserDetailDTO, type AdminUsersBulkResult, type BookingStatus, type Role, type UserStepKey } from '@workspace/live-core';
 import { QueryError } from '@/components/query-error';
 import { api, apiUrl, authHeaders, errorMessage } from '@/lib/api';
@@ -10,7 +10,7 @@ import { fmtDateTime, fmtShortDate, money } from '@/lib/format';
 import { homePath, useMe, useSession } from '@/lib/session';
 import { ActionMenu, Avatar, Badge, Banner, Button, Chip, EmptyState, IconButton, Page, PageSpinner, Select, Sheet, TextField, TopBar, toast } from '@/ui';
 
-const PAGE_SIZE = 50;
+const BATCH_SIZE = 50;
 const ACTIVE_TARGET = 100;
 const STEP_ORDER = Object.keys(USER_STEP_LABELS) as UserStepKey[];
 const VERIFICATION: Record<NonNullable<AdminUserDTO['verification']>, { label: string; tone: 'success' | 'warning' | 'error' | 'primary' | undefined }> = {
@@ -177,7 +177,7 @@ export function AdminUsers() {
   const [step, setStep] = useState('');
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'createdAt', dir: -1 });
-  const [page, setPage] = useState(0);
+  const [displayLimit, setDisplayLimit] = useState(BATCH_SIZE);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [details, setDetails] = useState<string | null>(null);
   const [removing, setRemoving] = useState<AdminUserDTO[] | null>(null);
@@ -201,9 +201,34 @@ export function AdminUsers() {
       return (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'ar')) * sort.dir;
     });
   }, [all, role, status, step, search, sort]);
-  const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  const current = Math.min(page, pages - 1);
-  const visible = rows.slice(current * PAGE_SIZE, (current + 1) * PAGE_SIZE);
+  const visible = useMemo(() => rows.slice(0, displayLimit), [rows, displayLimit]);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  const loadMore = useCallback(() => {
+    setDisplayLimit((prev) => (prev < rows.length ? Math.min(prev + BATCH_SIZE, rows.length) : prev));
+  }, [rows.length]);
+
+  const onSheetScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 350) {
+      loadMore();
+    }
+  };
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          loadMore();
+        }
+      },
+      { rootMargin: '350px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loadMore]);
   const chosen = useMemo(() => all.filter((u) => selected.has(u.id)), [all, selected]);
   const allChosen = rows.length > 0 && rows.every((u) => selected.has(u.id));
   const filtering = Boolean(role || status || step || search.trim());
@@ -235,7 +260,7 @@ export function AdminUsers() {
   });
 
   const changeSort = (key: SortKey) => {
-    setPage(0);
+    setDisplayLimit(BATCH_SIZE);
     setSort((s) => (s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: key === 'createdAt' || key === 'lastSeenAt' ? -1 : 1 }));
   };
   const toggle = (id: string) => setSelected((s) => {
@@ -305,16 +330,16 @@ export function AdminUsers() {
             <div className="users-toolbar">
               <div className="scrollbar-none flex items-center gap-2 overflow-x-auto py-1">
                 {(['', 'teacher', 'student', 'parent', 'admin'] as const).map((r) => (
-                  <Chip key={r || 'all'} selected={role === r} onClick={() => { setRole(r); setStep(''); setPage(0); }}>
+                  <Chip key={r || 'all'} selected={role === r} onClick={() => { setRole(r); setStep(''); setDisplayLimit(BATCH_SIZE); }}>
                     {r ? ROLE_LABELS[r] : 'الكل'} <span className="font-num">({counts[r] ?? 0})</span>
                   </Chip>
                 ))}
               </div>
             </div>
             <div className="users-toolbar">
-              <TextField containerClassName="users-search" aria-label="بحث" placeholder="دوّر بالاسم أو الإيميل أو الموبايل" value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} trailing={<span className="grid place-items-center px-3 text-on-surface-variant [&_svg]:size-5"><Search /></span>} />
-              <Select aria-label="آخر خطوة" value={step} onChange={(e) => { setStep(e.target.value); setPage(0); }} placeholder="" options={[{ value: '', label: 'كل الخطوات' }, ...stepsInUse.map((key) => ({ value: key, label: USER_STEP_LABELS[key] }))]} />
-              <Select aria-label="الحالة" value={status} onChange={(e) => { setStatus(e.target.value); setPage(0); }} placeholder="" options={[{ value: '', label: 'كل الحالات' }, { value: 'active', label: 'شغال' }, { value: 'suspended', label: 'موقوف' }]} />
+              <TextField containerClassName="users-search" aria-label="بحث" placeholder="دوّر بالاسم أو الإيميل أو الموبايل" value={search} onChange={(e) => { setSearch(e.target.value); setDisplayLimit(BATCH_SIZE); }} trailing={<span className="grid place-items-center px-3 text-on-surface-variant [&_svg]:size-5"><Search /></span>} />
+              <Select aria-label="آخر خطوة" value={step} onChange={(e) => { setStep(e.target.value); setDisplayLimit(BATCH_SIZE); }} placeholder="" options={[{ value: '', label: 'كل الخطوات' }, ...stepsInUse.map((key) => ({ value: key, label: USER_STEP_LABELS[key] }))]} />
+              <Select aria-label="الحالة" value={status} onChange={(e) => { setStatus(e.target.value); setDisplayLimit(BATCH_SIZE); }} placeholder="" options={[{ value: '', label: 'كل الحالات' }, { value: 'active', label: 'شغال' }, { value: 'suspended', label: 'موقوف' }]} />
               {owner && (
                 <Button variant="tonal" loading={exporting && selected.size === 0} onClick={() => void exportUsers(filtering ? rows.map((u) => u.id) : undefined)}>
                   <Download /> تصدير Excel ({filtering ? rows.length : all.length})
@@ -337,7 +362,7 @@ export function AdminUsers() {
             {rows.length === 0 ? (
               <EmptyState icon={<Users />} title="مفيش مستخدمين بالفلتر ده" body="غيّر البحث أو الفلتر." />
             ) : (
-              <div className="users-sheet" data-allow-copy>
+              <div className="users-sheet" onScroll={onSheetScroll} data-allow-copy>
                 <table className="users-table">
                   <thead>
                     <tr>
@@ -386,18 +411,11 @@ export function AdminUsers() {
                     ))}
                   </tbody>
                 </table>
+                <div ref={sentinelRef} className="h-4 w-full" aria-hidden="true" />
               </div>
             )}
 
-            {rows.length > 0 && (
-              <div className="users-pager">
-                <span className="font-num">{current * PAGE_SIZE + 1}–{Math.min((current + 1) * PAGE_SIZE, rows.length)} من {rows.length}</span>
-                <div className="flex gap-1">
-                  <IconButton label="الصفحة السابقة" size="sm" disabled={current === 0} onClick={() => setPage(current - 1)}><ChevronRight /></IconButton>
-                  <IconButton label="الصفحة التالية" size="sm" disabled={current >= pages - 1} onClick={() => setPage(current + 1)}><ChevronLeft /></IconButton>
-                </div>
-              </div>
-            )}
+
           </>
         )}
       </Page>
