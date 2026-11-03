@@ -35,8 +35,8 @@ function upsertLink(rel: string, href: string) {
 const JSON_LD_ID = 'route-jsonld';
 
 /** Site-wide share card, public/og.png. Keep in step with scripts/generate-seo-html.mjs. */
-export const DEFAULT_OG_IMAGE = `${siteConfig.siteUrl}/og.png`;
-const DEFAULT_OG_IMAGE_ALT = 'جاهز Live — مركزك التعليمي، أينما كنت.';
+export const DEFAULT_OG_IMAGE = `${siteConfig.siteUrl}/og.png?v=2`;
+const DEFAULT_OG_IMAGE_ALT = 'جاهز Live — السنتر جالك لحد البيت.';
 
 /**
  * Sets document.title, meta description, canonical, and Open Graph/Twitter

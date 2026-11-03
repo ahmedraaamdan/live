@@ -33,8 +33,8 @@ import { createServer } from 'vite';
 
 const SITE_URL = 'https://live.gahez.space';
 const BRAND = 'جاهز Live';
-const OG_IMAGE = `${SITE_URL}/og.png`;
-const OG_IMAGE_ALT = 'جاهز Live — مركزك التعليمي، أينما كنت.';
+const OG_IMAGE = `${SITE_URL}/og.png?v=2`;
+const OG_IMAGE_ALT = 'جاهز Live — السنتر جالك لحد البيت.';
 const HOME_CRUMB = { label: 'الرئيسية', path: '/' };
 
 /**
