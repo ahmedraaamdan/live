@@ -65,18 +65,7 @@ export function TeacherProfile({ id }: { id: string }) {
 
   return (
     <>
-      <TopBar
-        title="ملف المدرس"
-        back
-        actions={
-          <>
-            {me?.user.role === 'student' && <FollowTeacherButton teacherId={id} followed={t.followed} />}
-            <Button size="sm" variant="tonal" onClick={() => setShare(true)}>
-              <Share2 /> مشاركة
-            </Button>
-          </>
-        }
-      />
+      <TopBar title="ملف المدرس" back />
       <Page className="teacher-profile-page">
         <section className="teacher-profile-hero">
           <div className="teacher-profile-decoration" aria-hidden="true">
@@ -118,6 +107,13 @@ export function TeacherProfile({ id }: { id: string }) {
             </span>
           </div>
         </section>
+
+        <div className="teacher-profile-actions">
+          {me?.user.role === 'student' && <FollowTeacherButton teacherId={id} followed={t.followed} className="flex-1" />}
+          <Button size="sm" variant="tonal" className="flex-1" onClick={() => setShare(true)}>
+            <Share2 /> مشاركة
+          </Button>
+        </div>
 
         <section className="teacher-profile-rating" aria-label="تقييم المدرس">
           <div>
