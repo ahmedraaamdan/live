@@ -63,7 +63,7 @@ export function StudentHome() {
 
   return (
     <>
-      <TopBar title={`${greeting()}، ${me.user.name.split(' ')[0]}`} large subtitle="ما الذي تريد تعلّمه اليوم؟" actions={<NotificationsButton />} />
+      <TopBar title={`${greeting()}، ${me.user.name.split(' ').slice(0, 2).join(' ')}`} large subtitle="ما الذي تريد تعلّمه اليوم؟" actions={<NotificationsButton />} />
       <Page wide>
         {home.isError && <QueryError error={home.error} retry={home.refetch} />}
         {feed.isError && <QueryError error={feed.error} retry={feed.refetch} />}

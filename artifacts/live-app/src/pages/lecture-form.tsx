@@ -105,7 +105,7 @@ export function LectureForm({ id }: { id?: string }) {
       priceCents,
       capacity: form.capacity ? Number(form.capacity) : null,
       publish: form.publish,
-      listed: trial ? false : form.listed,
+      listed: form.listed,
     };
     const v = lectureInputSchema.safeParse(body);
     if (!v.success) return setError(v.error.issues[0]?.message ?? null);
@@ -121,7 +121,7 @@ export function LectureForm({ id }: { id?: string }) {
           {error && <Banner tone="error">{error}</Banner>}
           {trial && (
             <Banner tone="info" action={<Button variant="text" size="sm" onClick={() => navigate('/t/verification')}>وثّق حسابك</Button>}>
-              حصة تجريبية: مجانية، باللينك بس، وحتى {TRIAL_MAX_STUDENTS} طالب. وثّق حسابك عشان تفتح الحصص المدفوعة والظهور في الرئيسية.
+              حصة مجانية حتى {TRIAL_MAX_STUDENTS} طالب. وثّق حسابك عشان تفتح الحصص المدفوعة وزيادة عدد الطلاب.
             </Banner>
           )}
           <Card className="flex flex-col gap-5">
@@ -174,20 +174,20 @@ export function LectureForm({ id }: { id?: string }) {
                 </p>
               )}
             </div>}
-            <TextField label="أقصى عدد طلاب" type="number" inputMode="numeric" min={1} value={form.capacity} onChange={set('capacity')} ltr placeholder={trial ? String(TRIAL_MAX_STUDENTS) : 'دون حد أقصى'} hint={trial ? `الحصة التجريبية حتى ${TRIAL_MAX_STUDENTS} طالب` : 'اتركه فارغًا إذا لم تحدد عددًا أقصى'} />
+            <TextField label="أقصى عدد طلاب" type="number" inputMode="numeric" min={1} value={form.capacity} onChange={set('capacity')} ltr placeholder={trial ? String(TRIAL_MAX_STUDENTS) : 'دون حد أقصى'} hint={trial ? `حتى ${TRIAL_MAX_STUDENTS} طالب قبل التوثيق` : 'اتركه فارغًا إذا لم تحدد عددًا أقصى'} />
             <Switch checked={form.publish} onChange={(v) => setForm({ ...form, publish: v })} label="افتح الحجز" description={form.publish ? 'الرابط متاح ويمكن للطلاب الحجز' : 'مسودة: لا تظهر إلا لك'} />
-            {!trial && <Switch
+            <Switch
               checked={form.listed}
               onChange={(v) => setForm({ ...form, listed: v })}
               label="اظهر في الصفحة الرئيسية"
               description={form.listed ? 'طلاب جداد يقدروا يلاقوها ويحجزوا' : 'باللينك بس: لطلابك وبس'}
-            />}
+            />
           </Card>
         </form>
       </Page>
       <ActionBar>
         <Button type="submit" form="lecture-form" size="lg" block loading={save.isPending} disabled={uploadingCover}>
-          {id ? 'حفظ التعديلات' : trial ? 'إنشاء الحصة التجريبية' : 'إنشاء الحصة'}
+          {id ? 'حفظ التعديلات' : 'إنشاء الحصة'}
         </Button>
       </ActionBar>
       {created && (

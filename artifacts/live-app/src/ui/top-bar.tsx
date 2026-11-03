@@ -51,24 +51,24 @@ export function TopBar({
           className,
         )}
       >
-        <div className="mx-auto flex h-14 md:h-16 max-w-[var(--content-max)] items-center gap-1 px-2 md:px-4">
+        <div className="mx-auto flex min-h-14 md:min-h-16 max-w-[var(--content-max)] items-center gap-1.5 px-3 py-2 md:gap-2 md:px-4">
           {back && (
-            <IconButton label="رجوع" onClick={goBack}>
+            <IconButton label="رجوع" onClick={goBack} className="shrink-0">
               <ArrowRight />
             </IconButton>
           )}
-          <div className="min-w-0 flex-1 px-1.5 md:px-2">
-            <h1 className="gl-collapsed-title truncate text-base md:text-title-lg font-bold">{title}</h1>
+          <div className="min-w-0 flex-1 pe-1">
+            <h1 className="gl-collapsed-title line-clamp-2 md:truncate text-base md:text-title-lg font-bold leading-snug">{title}</h1>
+            {subtitle && !scrolled && (
+              <p className="mt-0.5 line-clamp-1 text-xs text-on-surface-variant md:text-body-sm">{subtitle}</p>
+            )}
           </div>
-          {actions && <div className="flex items-center gap-1">{actions}</div>}
-          <ThemeToggle /><AccountMenu /><AccountSwitchTools />
+          <div className="gl-topbar-actions flex shrink-0 items-center gap-1">
+            {actions && <div className="flex items-center gap-1">{actions}</div>}
+            <ThemeToggle /><AccountMenu /><AccountSwitchTools />
+          </div>
         </div>
       </header>
-      {subtitle && (
-        <div className="mx-auto max-w-[var(--content-max)] px-4 pt-1 pb-2 md:px-6">
-          <p className="text-body-sm text-on-surface-variant">{subtitle}</p>
-        </div>
-      )}
     </>
   );
 }

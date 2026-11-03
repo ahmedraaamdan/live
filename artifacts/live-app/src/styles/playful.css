@@ -35,7 +35,8 @@ h1.text-headline-lg { font-size: 2.3rem; line-height: 1.25; } h2.text-headline-m
 @media (max-width: 360px) { .gl-welcome,.gl-auth { padding-inline: 17px; }.gl-welcome-header .gl-logo > svg,.gl-auth-header .gl-logo > svg { height: 19px; }.gl-welcome-header .gl-logo > span:first-of-type,.gl-auth-header .gl-logo > span:first-of-type { font-size: 1rem; }.gl-welcome-login { font-size: 1rem; padding: 8px 11px; }.gl-welcome-copy h1 { font-size: 2.8rem; }.gl-welcome-features { gap: 10px; font-size: .61rem; }.gl-auth-paper { padding: 24px 17px; }.gl-auth-header > a:last-child { font-size: .61rem; }.gl-auth-paper h1 { font-size: 2.35rem; }.gl-role-card { padding-inline: 13px; gap: 12px; }.gl-role-card p { font-size: .71rem; } }
 @media (prefers-reduced-motion: reduce) { .gl-button,.gl-role-card { transition: none; }.gl-button:hover,.gl-role-card:hover { transform: none; } }
 
-.gl-topbar .gl-collapsed-title { font-family: var(--gl-display); font-size: 1.5rem; }
+.gl-topbar .gl-collapsed-title { font-family: var(--gl-display); font-size: 1.45rem; }
+@media (max-width: 839px) { .gl-topbar .gl-collapsed-title { font-size: 1.2rem; } }
 
 /* Casual-copy protection; form editing remains available. */
 body { -webkit-user-select: none; user-select: none; }

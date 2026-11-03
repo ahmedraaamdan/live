@@ -68,7 +68,7 @@ test("admin accounts sheet, export, removal and teacher trial classes", async ()
     check("trial classes seat a limited number of students", trial.data.capacity === 15);
     check("a large trial class is cut to the limit", (await call("/lectures", freshToken, classAt(0, false, { capacity: 500 }))).data.capacity === 15);
     check("a new teacher cannot charge before review", (await call("/lectures", freshToken, classAt(10000, false))).status === 403);
-    check("a new teacher cannot appear on the home feed before review", (await call("/lectures", freshToken, classAt(0, true))).status === 403);
+    check("a new teacher cannot charge on the home feed before review", (await call("/lectures", freshToken, classAt(10000, true))).status === 403);
     check("a third open trial class is allowed", (await call("/lectures", freshToken, classAt(0, false))).status === 201);
     check("a fourth open trial class is refused", (await call("/lectures", freshToken, classAt(0, false))).status === 400);
     check("a trial class cannot be turned paid before review", (await call(`/lectures/${trial.data.id}`, freshToken, { ...classAt(10000, false), publish: true }, "PATCH")).status === 403);

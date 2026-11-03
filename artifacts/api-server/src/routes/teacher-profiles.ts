@@ -45,7 +45,7 @@ router.get("/teachers/:id/lectures", async (req, res) => {
   const endsAt = sql`${lecturesTable.startsAt} + ${lecturesTable.durationMin} * interval '1 minute'`;
   const active = and(inArray(lecturesTable.status, ["scheduled", "live"]), or(eq(lecturesTable.status, "live"), sql`${endsAt} > ${new Date()}`));
   const past = or(eq(lecturesTable.status, "ended"), and(eq(lecturesTable.status, "scheduled"), sql`${endsAt} <= ${new Date()}`));
-  const rows = await db.select().from(lecturesTable).where(and(eq(lecturesTable.teacherId, id), eq(lecturesTable.listed, true), period === "upcoming" ? active : past)).orderBy(period === "upcoming" ? asc(lecturesTable.startsAt) : desc(lecturesTable.startsAt), asc(lecturesTable.id)).limit(13).offset(offset);
+  const rows = await db.select().from(lecturesTable).where(and(eq(lecturesTable.teacherId, id), or(eq(lecturesTable.listed, true), eq(lecturesTable.priceCents, 0)), period === "upcoming" ? active : past)).orderBy(period === "upcoming" ? asc(lecturesTable.startsAt) : desc(lecturesTable.startsAt), asc(lecturesTable.id)).limit(13).offset(offset);
   const body: TeacherLecturesDTO = { items: await lectureDTOs(rows.slice(0, 12), req.user ?? null), nextOffset: rows.length > 12 ? offset + 12 : null };
   res.json(body);
 });

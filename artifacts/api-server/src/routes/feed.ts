@@ -53,7 +53,7 @@ router.get("/feed", async (req, res) => {
       .innerJoin(usersTable, eq(usersTable.id, lecturesTable.teacherId))
       .where(
         and(
-          eq(lecturesTable.listed, true),
+          or(eq(lecturesTable.listed, true), eq(lecturesTable.priceCents, 0)),
           eq(usersTable.suspended, false),
           subject ? eq(lecturesTable.subject, subject) : undefined,
           gradeFilter ? eq(lecturesTable.grade, gradeFilter) : undefined,

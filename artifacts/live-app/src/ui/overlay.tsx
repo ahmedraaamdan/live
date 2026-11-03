@@ -64,7 +64,7 @@ export function Sheet({
   );
 }
 
-export function ActionMenu({ trigger, items }: { trigger: ReactNode; items: Array<{ label: string; icon?: ReactNode; onSelect: () => void; danger?: boolean; count?: number }> }) {
+export function ActionMenu({ trigger, items }: { trigger: ReactNode; items: Array<{ label: string; icon?: ReactNode; onSelect: () => void; danger?: boolean; count?: number; disabled?: boolean }> }) {
   return (
     <Menu.Root dir="rtl" modal={false}>
       <Menu.Trigger asChild>{trigger}</Menu.Trigger>
@@ -73,9 +73,9 @@ export function ActionMenu({ trigger, items }: { trigger: ReactNode; items: Arra
           {items.map((it) => (
             <Menu.Item
               key={it.label}
-              onSelect={it.onSelect}
+              disabled={it.disabled} onSelect={it.onSelect}
               className={cn(
-                'state-layer flex h-12 cursor-pointer items-center gap-3 px-4 text-body-lg outline-none data-[highlighted]:bg-surface-container [&_svg]:size-5',
+                'state-layer flex h-12 cursor-pointer items-center gap-3 px-4 text-body-lg outline-none data-[highlighted]:bg-surface-container data-[disabled]:pointer-events-none data-[disabled]:opacity-40 [&_svg]:size-5',
                 it.danger ? 'text-error' : 'text-on-surface',
               )}
             >

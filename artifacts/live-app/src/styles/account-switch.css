@@ -2,4 +2,4 @@
 
 .account-switch-banner > span { min-width:0; flex:1; overflow-wrap:anywhere; }.gl-impersonating .gl-shell,.gl-impersonating .gl-app-content { min-height:calc(100dvh - var(--account-switch-height)); }
 
-.account-switch-tools .account-tool-button { color:var(--primary); font-family:var(--font-sans); font-size:.7rem; gap:7px; white-space:nowrap; min-height:44px; }.account-tool-button > svg { width:19px; height:19px; }@media(max-width:599px) { .account-tool-label { display:none; }.account-switch-tools .account-tool-button { min-width:44px; padding-inline:10px; } }
+.account-switch-tools .account-tool-button { color:var(--primary); font-family:var(--font-sans); font-size:.7rem; gap:7px; white-space:nowrap; min-height:44px; }.account-tool-button > svg { width:19px; height:19px; }@media(max-width:599px) { .account-tool-label { display:none; }.account-switch-tools .account-tool-button { min-width:38px; min-height:38px; padding-inline:8px; }.account-switch-tools .account-tool-logout,.account-switch-tools .account-tool-acting { display:none; } }

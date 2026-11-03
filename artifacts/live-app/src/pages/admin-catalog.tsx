@@ -1,11 +1,11 @@
 import { useState, type FormEvent } from 'react';
-import { ArrowDown, ArrowUp, BookOpen, Check, GraduationCap, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, BookOpen, Check, GraduationCap, MoreVertical, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { DEFAULT_GRADES, DEFAULT_SUBJECTS, setCatalog, type CatalogDTO, type CatalogItem } from '@workspace/live-core';
 import { QueryError } from '@/components/query-error';
 import { api, errorMessage } from '@/lib/api';
 import { useCatalog } from '@/lib/catalog';
-import { Badge, Banner, Button, Card, IconButton, List, ListItem, Page, PageSpinner, SectionHeader, Segmented, Sheet, TextField, TopBar, toast } from '@/ui';
+import { ActionMenu, Badge, Banner, Button, Card, IconButton, List, ListItem, Page, PageSpinner, SectionHeader, Segmented, Sheet, TextField, TopBar, toast } from '@/ui';
 
 type Kind = 'subjects' | 'grades';
 
@@ -181,6 +181,7 @@ export function AdminCatalog() {
 
           <section className="min-w-0">
             <SectionHeader
+              className="flex-wrap gap-2"
               title={tab === 'subjects' ? `قائمة المواد الدراسية (${subjects.length})` : `قائمة الصفوف الدراسية (${grades.length})`}
               action={
                 <Button variant="text" size="sm" disabled={save.isPending} onClick={() => setConfirmReset(tab)}>
@@ -204,40 +205,78 @@ export function AdminCatalog() {
                     </span>
                   }
                   trailing={
-                    <div className="flex items-center gap-1">
-                      <IconButton
-                        size="sm"
-                        label={`تحريك ${item.label} لأعلى`}
-                        disabled={idx === 0 || save.isPending}
-                        onClick={() => handleMove(idx, -1)}
-                      >
-                        <ArrowUp />
-                      </IconButton>
-                      <IconButton
-                        size="sm"
-                        label={`تحريك ${item.label} لأسفل`}
-                        disabled={idx === activeItems.length - 1 || save.isPending}
-                        onClick={() => handleMove(idx, 1)}
-                      >
-                        <ArrowDown />
-                      </IconButton>
-                      <IconButton
-                        size="sm"
-                        label={`تعديل ${item.label}`}
-                        disabled={save.isPending}
-                        onClick={() => setEditing({ kind: tab, item, label: item.label })}
-                      >
-                        <Pencil />
-                      </IconButton>
-                      <IconButton
-                        size="sm"
-                        label={`حذف ${item.label}`}
-                        disabled={activeItems.length <= 1 || save.isPending}
-                        onClick={() => setDeleting({ kind: tab, item })}
-                      >
-                        <Trash2 className="text-error" />
-                      </IconButton>
-                    </div>
+                    <>
+                      <div className="md:hidden">
+                        <ActionMenu
+                          trigger={
+                            <IconButton size="sm" label={`إجراءات ${item.label}`} disabled={save.isPending}>
+                              <MoreVertical />
+                            </IconButton>
+                          }
+                          items={[
+                            {
+                              label: 'تحريك لأعلى',
+                              icon: <ArrowUp />,
+                              disabled: idx === 0 || save.isPending,
+                              onSelect: () => handleMove(idx, -1),
+                            },
+                            {
+                              label: 'تحريك لأسفل',
+                              icon: <ArrowDown />,
+                              disabled: idx === activeItems.length - 1 || save.isPending,
+                              onSelect: () => handleMove(idx, 1),
+                            },
+                            {
+                              label: 'تعديل الاسم',
+                              icon: <Pencil />,
+                              disabled: save.isPending,
+                              onSelect: () => setEditing({ kind: tab, item, label: item.label }),
+                            },
+                            {
+                              label: 'حذف',
+                              icon: <Trash2 />,
+                              danger: true,
+                              disabled: activeItems.length <= 1 || save.isPending,
+                              onSelect: () => setDeleting({ kind: tab, item }),
+                            },
+                          ]}
+                        />
+                      </div>
+                      <div className="hidden items-center gap-1 md:flex">
+                        <IconButton
+                          size="sm"
+                          label={`تحريك ${item.label} لأعلى`}
+                          disabled={idx === 0 || save.isPending}
+                          onClick={() => handleMove(idx, -1)}
+                        >
+                          <ArrowUp />
+                        </IconButton>
+                        <IconButton
+                          size="sm"
+                          label={`تحريك ${item.label} لأسفل`}
+                          disabled={idx === activeItems.length - 1 || save.isPending}
+                          onClick={() => handleMove(idx, 1)}
+                        >
+                          <ArrowDown />
+                        </IconButton>
+                        <IconButton
+                          size="sm"
+                          label={`تعديل ${item.label}`}
+                          disabled={save.isPending}
+                          onClick={() => setEditing({ kind: tab, item, label: item.label })}
+                        >
+                          <Pencil />
+                        </IconButton>
+                        <IconButton
+                          size="sm"
+                          label={`حذف ${item.label}`}
+                          disabled={activeItems.length <= 1 || save.isPending}
+                          onClick={() => setDeleting({ kind: tab, item })}
+                        >
+                          <Trash2 className="text-error" />
+                        </IconButton>
+                      </div>
+                    </>
                   }
                 />
               ))}

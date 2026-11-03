@@ -1,6 +1,6 @@
 import { StudyWallpaper } from '@/components/study-illustration';
 import '@/styles/mobile-app.css';
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import {
   Bell,
   BookOpen,
@@ -69,9 +69,48 @@ function useActive() {
  */
 export function AppShell({ children }: { children: ReactNode }) {
   const me = useMe();
+  const [loc] = useLocation();
   const items = NAV[me.user.role];
   const isActive = useActive();
   const unread = me.unreadNotifications;
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const primaryItem = items[0]!;
+  const restItems = items.slice(1);
+
+  useEffect(() => {
+    const activeEl = scrollRef.current?.querySelector<HTMLElement>('[aria-current="page"]');
+    activeEl?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+  }, [loc]);
+
+  const renderBottomLink = (item: NavItem, className?: string) => {
+    const on = isActive(item);
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        className={cn('flex flex-col items-center justify-center gap-1', className)}
+        aria-current={on ? 'page' : undefined}
+      >
+        <span className="relative">
+          <span
+            className={cn(
+              'state-layer grid h-8 w-16 place-items-center rounded-full transition-[background-color,width] duration-300 ease-standard',
+              on ? 'bg-secondary-container text-on-secondary-container' : 'w-12 text-on-surface-variant',
+            )}
+          >
+            <item.icon className="size-6" strokeWidth={on ? 2.4 : 2} />
+          </span>
+          {item.href === '/notifications' && <CountDot count={unread} />}
+          {item.href === '/admin/tickets' && <CountDot count={me.unreadSupport ?? 0} />}
+          {item.href === '/me' && !unread && (me.unreadSupport ?? 0) > 0 && <CountDot count={me.unreadSupport ?? 0} />}
+        </span>
+        <span className={cn('whitespace-nowrap text-label-md', on ? 'text-on-surface' : 'text-on-surface-variant')}>
+          {item.label}
+        </span>
+      </Link>
+    );
+  };
 
   return (
     <div className="gl-shell min-h-dvh lg:ps-[var(--rail-width)]">
@@ -101,33 +140,21 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <div className="gl-app-content">{children}</div>
 
-      {/* Navigation bar: compact and medium windows */}
+      {/* Navigation bar: compact and medium windows (pinned primary tab + swipeable remaining tabs) */}
       <nav
         aria-label="التنقل"
         className="gl-nav-bottom fixed inset-x-0 bottom-0 z-40 border-t border-outline-variant bg-surface-container-low/95 pb-safe backdrop-blur-xl lg:hidden"
       >
         <div className="mx-auto flex h-[var(--nav-height)] max-w-xl items-stretch">
-          {items.map((item) => {
-            const on = isActive(item);
-            return (
-              <Link key={item.href} href={item.href} className="flex flex-1 flex-col items-center justify-center gap-1" aria-current={on ? 'page' : undefined}>
-                <span className="relative">
-                  <span
-                    className={cn(
-                      'state-layer grid h-8 w-16 place-items-center rounded-full transition-[background-color,width] duration-300 ease-standard',
-                      on ? 'bg-secondary-container text-on-secondary-container' : 'w-12 text-on-surface-variant',
-                    )}
-                  >
-                    <item.icon className="size-6" strokeWidth={on ? 2.4 : 2} />
-                  </span>
-                  {item.href === '/notifications' && <CountDot count={unread} />}
-                {item.href === '/admin/tickets' && <CountDot count={me.unreadSupport ?? 0} />}
-                {item.href === '/me' && !unread && (me.unreadSupport ?? 0) > 0 && <CountDot count={me.unreadSupport ?? 0} />}
-                </span>
-                <span className={cn('text-label-md', on ? 'text-on-surface' : 'text-on-surface-variant')}>{item.label}</span>
-              </Link>
-            );
-          })}
+          {renderBottomLink(primaryItem, 'min-w-[5.25rem] shrink-0 border-e border-outline-variant/60 px-3')}
+          <div
+            ref={scrollRef}
+            className="scrollbar-none flex min-w-0 flex-1 snap-x snap-mandatory items-stretch overflow-x-auto overscroll-x-contain touch-pan-x"
+          >
+            {restItems.map((item) =>
+              renderBottomLink(item, 'min-w-[5.75rem] flex-1 shrink-0 snap-start px-2.5'),
+            )}
+          </div>
         </div>
       </nav>
     </div>
@@ -138,9 +165,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 export function NotificationsButton() {
   const me = useMe();
   return (
-    <Link href="/notifications" className="relative grid size-11 place-items-center rounded-full text-on-surface-variant transition-colors hover:text-on-surface" aria-label="التنبيهات">
+    <Link href="/notifications" className="relative grid size-9 md:size-11 place-items-center rounded-full text-on-surface-variant transition-colors hover:text-on-surface" aria-label="التنبيهات">
       <span className="state-layer absolute inset-0 rounded-full" />
-      <Bell className="relative z-10 size-6" />
+      <Bell className="relative z-10 size-5 md:size-6" />
       <CountDot count={me.unreadNotifications} className="top-1 end-1" />
     </Link>
   );

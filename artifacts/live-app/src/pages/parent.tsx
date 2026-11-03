@@ -50,7 +50,7 @@ export function ParentHome() {
 
   return (
     <>
-      <TopBar title={`أهلاً ${me.user.name.split(' ')[0]}`} large subtitle="متابعة أولادك أول بأول" actions={<NotificationsButton />} />
+      <TopBar title={`أهلاً ${me.user.name.split(' ').slice(0, 2).join(' ')}`} large subtitle="متابعة أولادك أول بأول" actions={<NotificationsButton />} />
       <Page>
         {q.isError && <QueryError error={q.error} retry={q.refetch} />}
         {q.isPending && <div className="skeleton h-56 rounded-xl" />}

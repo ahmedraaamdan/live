@@ -136,7 +136,7 @@ export const TRIAL_MAX_OPEN_LECTURES = 3;
 /** ...for this many students each. */
 export const TRIAL_MAX_STUDENTS = 15;
 /** A free class shared by link only needs no reviewed identity; anything paid or public does. */
-export const isTrialLecture = (lecture: { priceCents: number; listed: boolean }) => lecture.priceCents === 0 && !lecture.listed;
+export const isTrialLecture = (lecture: { priceCents: number; listed?: boolean }) => lecture.priceCents === 0;
 
 export const VERIFICATION_DOCUMENT_LABELS = { national_id: "البطاقة الشخصية", syndicate_card: "كارنيه النقابة" } as const;
 export type VerificationDocumentType = keyof typeof VERIFICATION_DOCUMENT_LABELS;

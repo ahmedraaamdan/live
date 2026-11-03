@@ -31,7 +31,7 @@ export function TeacherHome() {
       <TopBar title={`${greeting()}، ${me.user.name.split(' ').slice(0, 2).join(' ')}`} large subtitle="ملخص حصصك ونشاطك اليوم" actions={<NotificationsButton />} />
       <Page wide>
         <VerificationNotice />
-        {capabilities.data?.liveParticipantLimit && <div className="mb-5"><Banner tone="info">وضع التجربة: حتى {capabilities.data.liveParticipantLimit - 1} طالبًا في الحصة، و{capabilities.data.liveRoomLimit} حصة مباشرة في الوقت نفسه. التسجيل غير مفعّل في هذه المرحلة.</Banner></div>}
+
         {capabilities.data && (!capabilities.data.liveConfigured || !capabilities.data.paymentConfigured) && <div className="mb-5"><Banner tone="warning">{!capabilities.data.liveConfigured && 'خدمة البث لم تُفعّل بعد. '}{!capabilities.data.paymentConfigured && 'الحجز المدفوع غير متاح حاليًا. '}يمكنك تجهيز الحصص والواجبات، وسيتيح مسؤول المنصة الخدمات بعد ربطها.</Banner></div>}
         {/* Hero: the next lecture, with the one action that matters right now. */}
         {q.isError ? <QueryError error={q.error} retry={q.refetch} /> : q.isPending ? (
