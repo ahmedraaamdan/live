@@ -7,6 +7,7 @@ import { SeoContentSection } from '@/components/marketing/seo-content-section';
 import { useSeo } from '@/hooks/use-seo';
 import { routes } from '@/lib/routes';
 import { breadcrumbJsonLd } from '@/lib/structured-data';
+import { openSignup } from '@/lib/signup';
 import { subjects, teachers } from '@/data/classes';
 
 export default function Teachers() {
@@ -65,7 +66,7 @@ export default function Teachers() {
             ) : (
               <div className="teacher-directory-grid">
                 {filtered.map((teacher) => (
-                  <TeacherDirectoryCard key={teacher.id} teacher={teacher} followed={followed.has(teacher.id)} onFollow={() => toggleFollow(teacher.id, teacher.name)} />
+                  <TeacherDirectoryCard key={teacher.id} teacher={teacher} followed={followed.has(teacher.id)} onFollow={() => openSignup('student')} />
                 ))}
               </div>
             )}

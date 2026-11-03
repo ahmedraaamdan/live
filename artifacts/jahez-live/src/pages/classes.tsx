@@ -49,7 +49,7 @@ function ClassRow({
             key={`${title}-${item.id}`}
             item={item}
             followed={followed.has(item.teacherId)}
-            onFollow={() => onFollow(item.teacherId, item.teacher)}
+            onFollow={() => openSignup('student')}
             onAction={() => onAction(item)}
           />
         ))}

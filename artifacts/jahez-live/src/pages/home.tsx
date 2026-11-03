@@ -110,7 +110,7 @@ export default function Home() {
                     animate={{ y: 0 }}
                     transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
                   >
-                    حصتك جاهزة؟
+                    السنتر جالك
                   </motion.span>
                 </span>
                 <span className="hero-line hero-accent">
@@ -123,7 +123,7 @@ export default function Home() {
                       ease: [0.16, 1, 0.3, 1],
                     }}
                   >
-                    تعلّم من مكانك<span className="hero-period">.</span>
+                    لحد البيت<span className="hero-period">.</span>
                   </motion.span>
                 </span>
               </h1>
@@ -248,7 +248,7 @@ export default function Home() {
                     <ClassCard
                       item={item}
                       followed={followed.has(item.teacherId)}
-                      onFollow={() => follow(item.teacherId)}
+                      onFollow={() => openSignup("student")}
                       onAction={() => openSignup("student")}
                     />
                   </div>
@@ -272,7 +272,7 @@ export default function Home() {
                       <ClassCard
                         item={item}
                         followed={followed.has(item.teacherId)}
-                        onFollow={() => follow(item.teacherId)}
+                        onFollow={() => openSignup("student")}
                         onAction={() => openSignup("student")}
                       />
                     </motion.div>
@@ -366,7 +366,7 @@ export default function Home() {
                     </span>
                     <button
                       className={`studio-follow ${followed.has(teacher.id) ? "is-followed" : ""}`}
-                      onClick={() => follow(teacher.id)}
+                      onClick={() => openSignup("student")}
                       aria-pressed={followed.has(teacher.id)}
                       aria-label={`${followed.has(teacher.id) ? "إلغاء متابعة" : "متابعة"} ${teacher.name}`}
                     >
