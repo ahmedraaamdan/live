@@ -125,3 +125,12 @@ export const notificationsTable = pgTable(
 export type User = typeof usersTable.$inferSelect;
 export type TeacherProfile = typeof teacherProfilesTable.$inferSelect;
 export type StudentProfile = typeof studentProfilesTable.$inferSelect;
+
+/** Platform-wide configuration managed by administrators (such as the subjects and grades catalog). */
+export const platformSettingsTable = pgTable("platform_settings", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type PlatformSetting = typeof platformSettingsTable.$inferSelect;

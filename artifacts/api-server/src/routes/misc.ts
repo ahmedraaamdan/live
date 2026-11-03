@@ -13,8 +13,13 @@ import { badRequest, notFound, param, tooMany, uuidParam } from "../lib/http";
 import { enforce, LIMITS } from "../lib/rate-limit";
 import { readFile, saveFile } from "../lib/storage";
 import { randomUUID } from "node:crypto";
+import { loadCatalog } from "../lib/catalog";
 
 const router = Router();
+
+router.get("/catalog", async (_req, res) => {
+  res.json(await loadCatalog());
+});
 
 router.get("/config", (_req, res) => {
   const body: PublicConfigDTO = { paymentProvider: env.payment.provider, liveConfigured, paymentConfigured, recordingConfigured, liveParticipantLimit: env.livekit.maxParticipants || null, liveRoomLimit: env.livekit.maxRooms || null, feeBps: env.feeBps, appUrl: env.appUrl };

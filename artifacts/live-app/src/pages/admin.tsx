@@ -1,7 +1,8 @@
 import { VerificationQueueLink } from '@/components/verification-notice';
 import { QueryError } from '@/components/query-error';
 import { useState } from 'react';
-import { Banknote, CheckCircle2, GraduationCap, HandCoins, Landmark, Presentation, ShieldAlert, Ticket, Users, XCircle } from 'lucide-react';
+import { useLocation } from 'wouter';
+import { Banknote, BookOpen, CheckCircle2, GraduationCap, HandCoins, Landmark, Presentation, ShieldAlert, Ticket, Users, XCircle } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FUNDS_REVIEW_LABELS, PAYMENT_METHOD_LABELS, PAYOUT_METHOD_LABELS, REPORT_REASON_LABELS, type AdminOverviewDTO, type FundReviewDTO, type PayoutDTO } from '@workspace/live-core';
 import { api, errorMessage } from '@/lib/api';
@@ -122,6 +123,7 @@ function FundReviews() {
 }
 
 export function AdminOverview() {
+  const [, navigate] = useLocation();
   const q = useQuery({ queryKey: ['admin-overview'], queryFn: () => api<AdminOverviewDTO>('/admin/overview'), refetchInterval: 60_000 });
   if (q.isPending) return <PageSpinner />;
   if (!q.data) return <><TopBar title="لوحة الإدارة" /><Page><QueryError error={q.error} retry={q.refetch} /></Page></>;
@@ -130,7 +132,7 @@ export function AdminOverview() {
     <>
       <TopBar title="لوحة الإدارة" large subtitle="الفلوس والنشاط على المنصة" />
       <Page wide>
-        <div className="mb-5"><VerificationQueueLink /></div>
+        <div className="mb-5 flex flex-wrap gap-2"><VerificationQueueLink /><Button variant="tonal" onClick={() => navigate('/admin/catalog')}><BookOpen /> الصفوف والمواد</Button></div>
         <FundReviews />
         {d.pendingReviews.length > 0 && <section className="mb-6"><SectionHeader title="معاملات تحتاج إلى مراجعة" /><Banner tone="warning">راجع هذه المعاملات في لوحة بوابة الدفع. لا يُعد الاسترداد مكتملًا حتى يؤكده المزود.</Banner><List className="mt-4">{d.pendingReviews.map(p => <ListItem key={p.id} title={p.lectureTitle} subtitle={`${p.payer.name} · ${money(p.amountCents)} · ${p.id}`} trailing={<Badge tone="warning">{p.refundPending ? 'استرداد قيد التنفيذ' : 'مراجعة المبلغ'}</Badge>} />)}</List></section>}
 

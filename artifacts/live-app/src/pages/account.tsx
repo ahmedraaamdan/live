@@ -3,7 +3,7 @@ import { ProfileLinksEditor, linkDraft, type LinkDraft } from '@/components/prof
 import { ShareTeacherCard } from '@/components/share-teacher-card';
 import { QueryError } from '@/components/query-error';
 import { useEffect, useState } from 'react';
-import { Bell, Copy, LifeBuoy, LogOut, Mail, Moon, Palette, Sun, SunMoon } from 'lucide-react';
+import { Bell, BookOpen, Copy, LifeBuoy, LogOut, Mail, Moon, Palette, Sun, SunMoon } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { GRADES, ROLE_LABELS, SUBJECTS, type MeDTO, type NotificationDTO } from '@workspace/live-core';
@@ -11,10 +11,12 @@ import { api, errorMessage } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { fmtRelative } from '@/lib/format';
 import { useMe, useSession } from '@/lib/session';
+import { useCatalog } from '@/lib/catalog';
 import { getTheme, setTheme, type ThemeChoice } from '@/lib/theme';
 import { Avatar, Badge, Banner, Button, Card, EmptyState, List, ListItem, Page, Segmented, Select, TextArea, TextField, TopBar, toast } from '@/ui';
 
 export function Account() {
+  const { subjects, grades } = useCatalog();
   const me = useMe();
   const { signOut } = useSession();
   const qc = useQueryClient();
@@ -151,14 +153,14 @@ export function Account() {
           {me.teacher && (
             <>
               <TextField label="سطر تعريفي" value={form.headline} onChange={(e) => setForm({ ...form, headline: e.target.value })} placeholder="مدرس فيزياء ثانوي · 12 سنة خبرة" hint="يظهر تحت اسمك في صفحة الحجز" />
-              <Select label="المادة" value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} options={SUBJECTS.map((s) => ({ value: s.key, label: s.label }))} placeholder="اختر" />
+              <Select label="المادة" value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} options={subjects.map((s) => ({ value: s.key, label: s.label }))} placeholder="اختر" />
               <TextArea label="نبذة عنك" value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} rows={3} maxLength={600} />
               <TextArea label="خبرتك وطريقتك في الشرح" value={experience} onChange={e => setExperience(e.target.value)} rows={5} maxLength={3000} placeholder="ماذا درست؟ وما الخبرات التي اكتسبتها؟ وكيف تساعد طلابك على الفهم؟" />
               <ProfileLinksEditor links={socialLinks} onChange={setSocialLinks} onBusyChange={mediaBusy} />
               <ProfileLinksEditor links={certificates} onChange={setCertificates} certificates onBusyChange={mediaBusy} />
             </>
           )}
-          {me.student && <Select label="الصف" value={form.grade} onChange={(e) => setForm({ ...form, grade: e.target.value })} options={GRADES.map((g) => ({ value: g.key, label: g.label }))} placeholder="اختر" />}
+          {me.student && <Select label="الصف" value={form.grade} onChange={(e) => setForm({ ...form, grade: e.target.value })} options={grades.map((g) => ({ value: g.key, label: g.label }))} placeholder="اختر" />}
           <Button className="self-start" disabled={uploading > 0} loading={save.isPending} onClick={() => save.mutate()}>
             حفظ التغييرات
           </Button>
@@ -183,6 +185,7 @@ export function Account() {
         </Card>
 
         <List className="mb-6">
+          {me.user.role === 'admin' && <ListItem href="/admin/catalog" leading={<BookOpen className="size-6 text-on-surface-variant" />} title="إدارة الصفوف والمواد" subtitle="إضافة وتعديل وترتيب المراحل الدراسية والمواد" chevron />}
           {me.teacher && <ListItem href="/t/verification" leading={<Bell className="size-6 text-on-surface-variant" />} title="توثيق الحساب وحمايته" chevron />}
           <ListItem href="/notifications" leading={<Bell className="size-6 text-on-surface-variant" />} title="التنبيهات" chevron />
           {me.user.role !== 'admin' && (

@@ -10,6 +10,7 @@ import { ShareLectureSheet } from '@/components/bits';
 import { api, errorMessage } from '@/lib/api';
 import { money, toLocalInput } from '@/lib/format';
 import { useMe } from '@/lib/session';
+import { useCatalog } from '@/lib/catalog';
 import { ActionBar, Banner, Button, Card, Chip, Page, PageSpinner, Select, Switch, TextArea, TextField, TopBar, toast } from '@/ui';
 
 const DURATIONS = [45, 60, 90, 120, 150];
@@ -22,6 +23,7 @@ function defaultStart() {
 }
 
 export function LectureForm({ id }: { id?: string }) {
+  const { subjects, grades } = useCatalog();
   const me = useMe();
   const verification = useTeacherVerification();
   const qc = useQueryClient();
@@ -126,8 +128,8 @@ export function LectureForm({ id }: { id?: string }) {
             <MediaUpload purpose="cover" value={form.coverUrl || null} onBusyChange={setUploadingCover} onChange={url => setForm(current => ({ ...current, coverUrl: url ?? '' }))} />
             <TextField label="عنوان الحصة" value={form.title} onChange={set('title')} placeholder="الكهربية التيارية: قانون أوم" maxLength={120} />
             <div className="grid gap-5 md:grid-cols-2">
-              <Select label="المادة" value={form.subject} onChange={set('subject')} placeholder="اختر المادة" options={SUBJECTS.map((s) => ({ value: s.key, label: s.label }))} />
-              <Select label="الصف" value={form.grade} onChange={set('grade')} placeholder="اختر الصف" options={GRADES.map((g) => ({ value: g.key, label: g.label }))} />
+              <Select label="المادة" value={form.subject} onChange={set('subject')} placeholder="اختر المادة" options={subjects.map((s) => ({ value: s.key, label: s.label }))} />
+              <Select label="الصف" value={form.grade} onChange={set('grade')} placeholder="اختر الصف" options={grades.map((g) => ({ value: g.key, label: g.label }))} />
             </div>
             <TextArea label="ماذا ستشرح في الحصة؟" value={form.description} onChange={set('description')} placeholder="موضوعات الحصة وما يحتاج الطالب إلى تجهيزه قبل الحضور." rows={3} hint="اختياري، يظهر في صفحة الحجز" />
           </Card>

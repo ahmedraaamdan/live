@@ -6,6 +6,7 @@ import { Redirect, Route, Switch, useLocation } from 'wouter';
 import type { Role } from '@workspace/live-core';
 import { AppShell } from '@/layouts/app-shell';
 import { homePath, useSession } from '@/lib/session';
+import { useCatalog } from '@/lib/catalog';
 import { Page, PageSpinner, TopBar } from '@/ui';
 import { ForgotPassword, JoinParent, Login, ResetPassword, Signup, Welcome } from '@/pages/auth';
 
@@ -30,6 +31,7 @@ const ParentHome = lazy(() => import('@/pages/parent').then(m => ({ default: m.P
 const AdminOverview = lazy(() => import('@/pages/admin').then(m => ({ default: m.AdminOverview })));
 const AdminPayouts = lazy(() => import('@/pages/admin').then(m => ({ default: m.AdminPayouts })));
 const AdminUsers = lazy(() => import('@/pages/admin-users').then(m => ({ default: m.AdminUsers })));
+const AdminCatalog = lazy(() => import('@/pages/admin-catalog').then(m => ({ default: m.AdminCatalog })));
 const AdminTickets = lazy(() => import('@/pages/support').then(m => ({ default: m.AdminTickets })));
 const SupportList = lazy(() => import('@/pages/support').then(m => ({ default: m.SupportList })));
 const TicketThread = lazy(() => import('@/pages/support').then(m => ({ default: m.TicketThread })));
@@ -67,6 +69,7 @@ function ScrollToTop() {
 }
 
 export function App() {
+  useCatalog();
   const { me } = useSession();
   const [loc] = useLocation();
   // Keep navigation outside Suspense: a cold page chunk must never replace
@@ -114,6 +117,7 @@ export function App() {
         <Route path="/admin/payouts">{() => <Authed roles={['admin']}><AdminPayouts /></Authed>}</Route>
         <Route path="/admin/tickets">{() => <Authed roles={['admin']}><AdminTickets /></Authed>}</Route>
         <Route path="/admin/users">{() => <Authed roles={['admin']}><AdminUsers /></Authed>}</Route>
+        <Route path="/admin/catalog">{() => <Authed roles={['admin']}><AdminCatalog /></Authed>}</Route>
 
         <Route path="/lectures/:id">{(p) => <Authed><LectureDetail id={p.id} /></Authed>}</Route>
         <Route path="/me">{() => <Authed><Account /></Authed>}</Route>

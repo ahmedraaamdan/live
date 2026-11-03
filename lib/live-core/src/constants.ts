@@ -17,7 +17,12 @@ export const ROLE_LABELS: Record<Role, string> = {
   admin: "إدارة",
 };
 
-export const SUBJECTS = [
+export interface CatalogItem {
+  key: string;
+  label: string;
+}
+
+export const DEFAULT_SUBJECTS = [
   { key: "arabic", label: "لغة عربية" },
   { key: "english", label: "لغة إنجليزية" },
   { key: "french", label: "لغة فرنسية" },
@@ -27,6 +32,7 @@ export const SUBJECTS = [
   { key: "chemistry", label: "كيمياء" },
   { key: "biology", label: "أحياء" },
   { key: "science", label: "علوم" },
+  { key: "social_studies", label: "دراسات اجتماعية" },
   { key: "history", label: "تاريخ" },
   { key: "geography", label: "جغرافيا" },
   { key: "philosophy", label: "فلسفة ومنطق" },
@@ -35,9 +41,9 @@ export const SUBJECTS = [
   { key: "computer", label: "حاسب آلي وبرمجة" },
   { key: "other", label: "مادة أخرى" },
 ] as const;
-export type SubjectKey = (typeof SUBJECTS)[number]["key"];
+export type SubjectKey = (typeof DEFAULT_SUBJECTS)[number]["key"];
 
-export const GRADES = [
+export const DEFAULT_GRADES = [
   { key: "p4", label: "رابعة ابتدائي" },
   { key: "p5", label: "خامسة ابتدائي" },
   { key: "p6", label: "سادسة ابتدائي" },
@@ -50,14 +56,26 @@ export const GRADES = [
   { key: "uni", label: "جامعة" },
   { key: "other", label: "أخرى" },
 ] as const;
-export type GradeKey = (typeof GRADES)[number]["key"];
+export type GradeKey = (typeof DEFAULT_GRADES)[number]["key"];
+
+export const SUBJECTS: CatalogItem[] = DEFAULT_SUBJECTS.map((s) => ({ ...s }));
+export const GRADES: CatalogItem[] = DEFAULT_GRADES.map((g) => ({ ...g }));
+
+export function setCatalog(catalog: { subjects?: ReadonlyArray<CatalogItem>; grades?: ReadonlyArray<CatalogItem> }): void {
+  if (catalog.subjects?.length) {
+    SUBJECTS.splice(0, SUBJECTS.length, ...catalog.subjects.map((s) => ({ key: s.key, label: s.label })));
+  }
+  if (catalog.grades?.length) {
+    GRADES.splice(0, GRADES.length, ...catalog.grades.map((g) => ({ key: g.key, label: g.label })));
+  }
+}
 
 export function subjectLabel(key: string | null | undefined): string {
-  return SUBJECTS.find((s) => s.key === key)?.label ?? key ?? "";
+  return SUBJECTS.find((s) => s.key === key)?.label ?? DEFAULT_SUBJECTS.find((s) => s.key === key)?.label ?? key ?? "";
 }
 
 export function gradeLabel(key: string | null | undefined): string {
-  return GRADES.find((g) => g.key === key)?.label ?? key ?? "";
+  return GRADES.find((g) => g.key === key)?.label ?? DEFAULT_GRADES.find((g) => g.key === key)?.label ?? key ?? "";
 }
 
 export const LECTURE_STATUSES = ["draft", "scheduled", "live", "ended", "cancelled"] as const;

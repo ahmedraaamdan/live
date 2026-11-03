@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LifeBuoy, Moon, Sun, UserRound, Settings, LogOut } from 'lucide-react';
+import { BookOpen, LifeBuoy, Moon, Sun, UserRound, Settings, LogOut } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useSession } from '@/lib/session';
 import { getTheme, setTheme } from '@/lib/theme';
@@ -51,7 +51,10 @@ export function AccountMenu() {
           },
         },
         ...(me.user.role === 'admin'
-          ? [{ label: 'التذاكر', icon: <LifeBuoy />, count: unreadSupport, onSelect: () => navigate('/admin/tickets') }]
+          ? [
+              { label: 'الصفوف والمواد', icon: <BookOpen />, onSelect: () => navigate('/admin/catalog') },
+              { label: 'التذاكر', icon: <LifeBuoy />, count: unreadSupport, onSelect: () => navigate('/admin/tickets') },
+            ]
           : [{ label: 'الدعم', icon: <LifeBuoy />, count: unreadSupport, onSelect: () => navigate('/support') }]),
         {
           label: 'تسجيل الخروج',

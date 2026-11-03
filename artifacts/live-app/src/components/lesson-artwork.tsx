@@ -5,6 +5,7 @@ const visuals: Partial<Record<string, { icon: typeof Atom; formula: string }>> =
   chemistry: { icon: FlaskConical, formula: 'H₂O' }, biology: { icon: Dna, formula: 'DNA' },
   english: { icon: Languages, formula: 'Hello!' }, arabic: { icon: BookOpen, formula: 'أ ب ت' },
   computer: { icon: Code2, formula: '</>' }, geography: { icon: Globe2, formula: '30° N' },
+  social_studies: { icon: Globe2, formula: 'التاريخ والجغرافيا' },
 };
 /** Subject artwork, never a fabricated portrait attributed to a real teacher. */
 export function LessonArtwork({ subject, label, coverUrl }: { subject: string; label: string; coverUrl?: string | null }) {

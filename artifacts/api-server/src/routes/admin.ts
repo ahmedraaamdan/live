@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { and, asc, count, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { attendanceTable, bookingsTable, db, lectureReportsTable, lecturesTable, paymentsTable, payoutsTable, usersTable, walletEntriesTable } from "@workspace/db";
-import { FUNDS_MIN_ATTENDED_SECONDS, fundsDecisionSchema, payoutDecisionSchema, reportDecisionSchema, type AdminOverviewDTO, type FundReviewDTO, type PaymentMethod } from "@workspace/live-core";
+import { FUNDS_MIN_ATTENDED_SECONDS, catalogUpdateSchema, fundsDecisionSchema, payoutDecisionSchema, reportDecisionSchema, type AdminOverviewDTO, type FundReviewDTO, type PaymentMethod } from "@workspace/live-core";
+import { loadCatalog, saveCatalog } from "../lib/catalog";
 import { recordAdminAction } from "../lib/audit";
 import { requireUser, roleGate } from "../lib/auth";
 import { toMini, toPayout } from "../lib/dto";
@@ -183,5 +184,19 @@ router.post("/admin/reports/:id", async (req, res) => {
   await resolveLectureReport(uuidParam(req.params.id), requireUser(req), decision, note);
   res.json({ ok: true });
 });
+
+router.get("/admin/catalog", async (_req, res) => {
+  res.json(await loadCatalog());
+});
+
+const handleCatalogUpdate = async (req: import("express").Request, res: import("express").Response) => {
+  const actor = requireUser(req);
+  const input = parse(catalogUpdateSchema, req.body);
+  const updated = await saveCatalog(input);
+  await recordAdminAction(db, actor.id, "catalog.update", "catalog", `${updated.subjects.length} مادة، ${updated.grades.length} صف`);
+  res.json(updated);
+};
+router.put("/admin/catalog", handleCatalogUpdate);
+router.post("/admin/catalog", handleCatalogUpdate);
 
 export default router;

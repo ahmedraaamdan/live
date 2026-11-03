@@ -21,7 +21,7 @@ export const signupSchema = z.object({
   email,
   phone,
   password,
-  grade: z.string().max(20).optional(),
+  grade: z.string().max(40).optional(),
   subject: z.string().max(40).optional(),
   parentEmail: email.optional().or(z.literal("").transform(() => undefined)),
   /** A child's link code, when a parent signs up from an invitation. */
@@ -47,7 +47,7 @@ export const profileUpdateSchema = z.object({
   bio: z.string().max(600).optional(),
   headline: z.string().max(120).optional(),
   subject: z.string().max(40).optional(),
-  grade: z.string().max(20).optional(),
+  grade: z.string().max(40).optional(),
   parentEmail: email.optional().or(z.literal("").transform(() => undefined)),
 });
 export type ProfileUpdateInput = z.input<typeof profileUpdateSchema>;
@@ -55,7 +55,7 @@ export type ProfileUpdateInput = z.input<typeof profileUpdateSchema>;
 export const lectureInputSchema = z.object({
   title: z.string().trim().min(3, { message: "اكتب عنوان الحصة" }).max(120),
   subject: z.string().min(1, { message: "اختار المادة" }).max(40),
-  grade: z.string().min(1, { message: "اختار الصف" }).max(20),
+  grade: z.string().min(1, { message: "اختار الصف" }).max(40),
   description: z.string().trim().max(2000).optional().default(""),
   coverUrl: publicUrl.nullable().optional(),
   /** ISO timestamp. */
@@ -202,3 +202,28 @@ export const ticketInputSchema = z.object({
 export const ticketReplySchema = z.object({
   body: z.string().trim().min(1, { message: "اكتب ردك" }).max(4000),
 });
+
+export const catalogItemSchema = z.object({
+  key: z
+    .string()
+    .trim()
+    .min(1, { message: "أدخل كود العنصر" })
+    .max(40)
+    .regex(/^[a-z0-9_-]+$/i, { message: "الكود يقبل حروف إنجليزي وأرقام وشرطة فقط" }),
+  label: z.string().trim().min(2, { message: "أدخل الاسم بالعربي (حرفين على الأقل)" }).max(60),
+});
+
+export const catalogUpdateSchema = z
+  .object({
+    subjects: z.array(catalogItemSchema).min(1, { message: "لازم يكون فيه مادة واحدة على الأقل" }).max(100),
+    grades: z.array(catalogItemSchema).min(1, { message: "لازم يكون فيه صف واحد على الأقل" }).max(100),
+  })
+  .superRefine((c, ctx) => {
+    if (new Set(c.subjects.map((s) => s.key)).size !== c.subjects.length) {
+      ctx.addIssue({ code: "custom", message: "أكواد المواد مكررة", path: ["subjects"] });
+    }
+    if (new Set(c.grades.map((g) => g.key)).size !== c.grades.length) {
+      ctx.addIssue({ code: "custom", message: "أكواد الصفوف مكررة", path: ["grades"] });
+    }
+  });
+export type CatalogUpdateInput = z.infer<typeof catalogUpdateSchema>;

@@ -5,6 +5,7 @@
 import type { BoardOp } from "./board";
 import type {
   BookingStatus,
+  CatalogItem,
   FundsReviewReason,
   LectureStatus,
   MessageKind,
@@ -459,4 +460,9 @@ export interface TicketDTO {
 
 export interface TicketDetailDTO extends TicketDTO {
   messages: TicketMessageDTO[];
+}
+
+export interface CatalogDTO {
+  subjects: CatalogItem[];
+  grades: CatalogItem[];
 }

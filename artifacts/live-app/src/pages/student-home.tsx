@@ -13,13 +13,15 @@ import { api } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { fmtDateTime, fmtRelative, greeting, money } from '@/lib/format';
 import { useMe } from '@/lib/session';
+import { useCatalog } from '@/lib/catalog';
 import { Avatar, Badge, Button, Card, Chip, EmptyState, LinkCard, LiveBadge, Page, SectionHeader, SectionLink, Select, TextField, TopBar } from '@/ui';
 
 const PAGE_SIZE = 30;
-const gradeOptions = [{ value: '', label: 'كل الصفوف' }, ...GRADES.map((g) => ({ value: g.key, label: g.label }))];
 const priceOptions = [{ value: '', label: 'كل الأسعار' }, { value: 'free', label: 'مجانية' }, { value: 'paid', label: 'مدفوعة' }];
 
 export function StudentHome() {
+  const { subjects, grades } = useCatalog();
+  const gradeOptions = [{ value: '', label: 'كل الصفوف' }, ...grades.map((g) => ({ value: g.key, label: g.label }))];
   const me = useMe();
   const [, navigate] = useLocation();
   const [subject, setSubject] = useState<string>('');
@@ -145,7 +147,7 @@ export function StudentHome() {
           <Chip selected={following} onClick={() => setFollowing(!following)} icon={<UserCheck />}>
             مدرسون أتابعهم
           </Chip>
-          {SUBJECTS.filter((s) => s.key !== 'other').map((s) => (
+          {subjects.filter((s) => s.key !== 'other').map((s) => (
             <Chip key={s.key} selected={subject === s.key} onClick={() => setSubject(s.key)}>
               {s.label}
             </Chip>

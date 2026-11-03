@@ -3,6 +3,7 @@ import { and, count, desc, eq, inArray, isNull, min, sql } from "drizzle-orm";
 import { attendanceTable, bookingsTable, db, lecturesTable, parentLinksTable, sessionsTable, studentProfilesTable, teacherProfilesTable, teacherVerificationsTable, usersTable, walletEntriesTable, type User } from "@workspace/db";
 import { ACTIVE_TEACHER_DAYS, ACTIVE_TEACHER_MIN_STUDENTS, ROLE_LABELS, USER_STEP_LABELS, gradeLabel, subjectLabel, type AdminUserDTO, type Role, type UserStepKey } from "@workspace/live-core";
 import { toUser } from "./dto";
+import { loadCatalog } from "./catalog";
 import type { XlsxSheet } from "./xlsx";
 
 export const ADMIN_USERS_LIMIT = 5000;
@@ -44,6 +45,7 @@ export function userTimeline(user: Pick<User, "role" | "createdAt">, facts: Fact
 }
 
 export async function loadAdminUsers(filter: { ids?: string[]; role?: Role } = {}): Promise<{ rows: AdminUserDTO[]; facts: Map<string, Facts> }> {
+  await loadCatalog().catch(() => undefined);
   const users = await db
     .select()
     .from(usersTable)

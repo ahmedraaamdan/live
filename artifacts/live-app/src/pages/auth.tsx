@@ -8,6 +8,7 @@ import { useMutation } from '@tanstack/react-query';
 import { GRADES, SUBJECTS, loginSchema, signupSchema, type AuthResult, type SignupRole } from '@workspace/live-core';
 import { api, errorMessage } from '@/lib/api';
 import { homePath, useSession } from '@/lib/session';
+import { useCatalog } from '@/lib/catalog';
 import { Banner, Button, Card, Logo, Segmented, Select, TextField } from '@/ui';
 
 function useNext() {
@@ -101,6 +102,7 @@ export function Login() {
 }
 
 export function Signup() {
+  const { subjects, grades } = useCatalog();
   const { me, signIn } = useSession();
   const [, navigate] = useLocation();
   const search = new URLSearchParams(useSearch());
@@ -171,7 +173,7 @@ export function Signup() {
         <TextField label="كلمة المرور" type="password" autoComplete="new-password" ltr value={form.password} onChange={set('password')} hint="8 أحرف على الأقل" />
         {role === 'student' && (
           <>
-            <Select label="الصف الدراسي" value={form.grade} onChange={set('grade')} placeholder="اختر صفك الدراسي" options={GRADES.map((g) => ({ value: g.key, label: g.label }))} />
+            <Select label="الصف الدراسي" value={form.grade} onChange={set('grade')} placeholder="اختر صفك الدراسي" options={grades.map((g) => ({ value: g.key, label: g.label }))} />
             <TextField
               label="البريد الإلكتروني لولي الأمر"
               type="email"
@@ -183,7 +185,7 @@ export function Signup() {
             />
           </>
         )}
-        {role === 'teacher' && <Select label="المادة" value={form.subject} onChange={set('subject')} placeholder="اختر المادة التي تدرّسها" options={SUBJECTS.map((s) => ({ value: s.key, label: s.label }))} />}
+        {role === 'teacher' && <Select label="المادة" value={form.subject} onChange={set('subject')} placeholder="اختر المادة التي تدرّسها" options={subjects.map((s) => ({ value: s.key, label: s.label }))} />}
         {role === 'parent' && <TextField label="رمز ربط حساب الابن أو الابنة" ltr value={form.childCode} onChange={set('childCode')} hint="تجده في صفحة «حسابي» لدى الابن أو الابنة، ويمكنك إضافته لاحقًا." className="font-num tracking-widest uppercase" />}
         <Button type="submit" size="lg" block loading={signup.isPending}>
           إنشاء الحساب

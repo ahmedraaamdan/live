@@ -3,6 +3,7 @@ import '@/styles/mobile-app.css';
 import type { ReactNode } from 'react';
 import {
   Bell,
+  BookOpen,
   CalendarDays,
   Home,
   LayoutDashboard,
@@ -52,6 +53,7 @@ const NAV: Record<Role, NavItem[]> = {
     { href: '/admin/payouts', label: 'السحوبات', icon: Wallet },
     { href: '/admin/tickets', label: 'التذاكر', icon: LifeBuoy },
     { href: '/admin/users', label: 'المستخدمين', icon: ShieldCheck },
+    { href: '/admin/catalog', label: 'المواد والصفوف', icon: BookOpen },
     { href: '/me', label: 'حسابي', icon: UserRound },
   ],
 };

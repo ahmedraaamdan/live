@@ -3,8 +3,10 @@ import app from "./app";
 import { env, liveConfigured, mailConfigured, recordingConfigured } from "./lib/env";
 import { logger } from "./lib/logger";
 import { startScheduler } from "./lib/scheduler";
+import { loadCatalog } from "./lib/catalog";
 
 const database = await initDb({ migrationsFolder: env.migrationsFolder, pgliteDir: env.pgliteDir });
+await loadCatalog().catch((err) => logger.warn({ err }, "Could not load catalog on startup"));
 
 app.listen(env.port, (err) => {
   if (err) {
