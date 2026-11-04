@@ -3,7 +3,7 @@
  * and rendered with the shared GAHEZ template.
  */
 import type { Lecture, User } from "@workspace/db";
-import { subjectLabel } from "@workspace/live-core";
+import { lectureMailCopy, subjectLabel, type LectureMailDraft } from "@workspace/live-core";
 import { esc, renderEmail } from "./email-template.mjs";
 import { env } from "./env";
 import { fmtDateTime, fmtDuration, fmtMoney } from "./format";
@@ -65,7 +65,7 @@ export async function sendBookingConfirmed(opts: {
     robot: "dance",
     preheader: `مكانك في "${lecture.title}" محجوز.`,
     title: "حجزك اتأكد! 🎉",
-    intro: `أهلاً ${esc(student.name)}، مكانك في الحصة محجوز. هنفكّرك قبلها بساعة، وأول ما المدرس يبدأ البث هيوصلك إشعار.`,
+    intro: `أهلاً ${esc(student.name)}، مكانك في الحصة محجوز. هنبعتلك إيميل قبل الميعاد بعشر دقايق، وأول ما المدرس يبدأ البث هيوصلك إشعار.`,
     rows,
     cta: { label: "افتح الحصة", url: link(`/lectures/${lecture.id}`) },
     note: "وصلك الإيميل ده لأنك حجزت حصة على Gahez Live.",
@@ -101,18 +101,28 @@ export async function sendParentInvite(opts: { student: User; email: string; cod
   await sendMail({ to: opts.email, subject: `${opts.student.name} ضافك كولي أمر على Gahez Live`, ...mail });
 }
 
-export async function sendLectureReminder(to: User, lecture: Lecture, teacherName: string) {
-  const mail = renderEmail({
+export function renderLectureMail(lecture: Lecture, teacherName: string, draft: Pick<LectureMailDraft, "subject" | "title" | "message">) {
+  return renderEmail({
     product: "live",
-    robot: "phone",
-    preheader: `حصة "${lecture.title}" كمان ساعة.`,
-    title: "حصتك كمان ساعة ⏰",
-    intro: `أهلاً ${esc(to.name)}، فاضل ساعة على الحصة. جهّز كشكولك وخليك قريب من الموبايل.`,
+    preheader: draft.subject,
+    title: draft.title,
+    intro: esc(draft.message).replace(/\r?\n/g, "<br>"),
     rows: lectureRows(lecture, teacherName),
     cta: { label: "افتح الحصة", url: link(`/lectures/${lecture.id}`) },
-    note: "وصلك الإيميل ده لأنك حاجز الحصة دي.",
+    note: "وصلك الإيميل ده بخصوص الحصة دي على جاهز لايف.",
   });
-  await sendMail({ to: to.email, subject: `كمان ساعة: ${lecture.title}`, ...mail });
+}
+
+export function sendLectureReminder(to: User, lecture: Lecture, teacherName: string) {
+  const draft: LectureMailDraft = {
+    ...lectureMailCopy("reminder", lecture.title),
+    template: "reminder",
+    audience: to.id === lecture.teacherId ? "teacher" : "students",
+    message: to.id === lecture.teacherId
+      ? `أهلاً ${to.name}، ميعاد حصتك خلال عشر دقايق. افتح صفحة الحصة وجهّز الكاميرا والمايك قبل البث.`
+      : `أهلاً ${to.name}، ميعاد الحصة خلال عشر دقايق. افتح صفحة الحصة وخلّيك جاهز تدخل أول ما البث يبدأ.`,
+  };
+  return sendMail({ to: to.email, subject: draft.subject, ...renderLectureMail(lecture, teacherName, draft) });
 }
 
 export async function sendLectureLive(to: User[], lecture: Lecture, teacherName: string) {

@@ -1,8 +1,8 @@
 // GAHEZ email template — the one look every GAHEZ product sends with.
 //
 // Canonical copy lives in Gahez systems (api/email-template.mjs, served as
-// gahez.space/api). This is Live's copy: don't edit it here; change the
-// canonical file and copy it over, as Agent and the hub API do. Images are
+// gahez.space/api). Live adds its own brand colors and illustration below.
+// Shared layout changes belong in the canonical file. Shared images are
 // PNGs hosted on https://gahez.space/email/ (email clients don't render WebP
 // or SVG).
 //
@@ -48,11 +48,11 @@ export const esc = (s) => String(s ?? '')
 const FONT = "'Cairo','Segoe UI',Tahoma,Arial,sans-serif";
 const INK = '#0F172A', SOFT = '#475569', MUTED = '#64748B', LINE = '#E2E8F0';
 
-function button(cta, accent) {
+function button(cta, accent, live) {
   // "bulletproof" button: a table cell carries the colour, so Outlook keeps it
   return `
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:26px auto 4px">
-    <tr><td align="center" bgcolor="${accent}" style="border-radius:12px;background:${accent};background-image:linear-gradient(135deg,${accent},#22D3EE)">
+    <tr><td align="center" bgcolor="${accent}" style="border-radius:12px;background:${accent};${live ? '' : `background-image:linear-gradient(135deg,${accent},#22D3EE)`}">
       <a href="${esc(cta.url)}" target="_blank" style="display:inline-block;padding:14px 30px;font-family:${FONT};font-size:16px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:12px">${esc(cta.label)}</a>
     </td></tr>
   </table>`;
@@ -66,6 +66,11 @@ export function renderEmail(opts) {
   const end = rtl ? 'left' : 'right';
   const p = PRODUCTS[opts.product] || PRODUCTS.gahez;
   const accent = opts.accent || p.accent;
+  const live = opts.product === 'live';
+  const liveApp = (typeof process !== 'undefined' && process.env.APP_URL || 'http://localhost:5174').replace(/\/$/, '');
+  const background = live ? '#FFF1F4' : '#EEF4FF';
+  const headerColor = live ? '#9F1239' : '#1D4ED8';
+  const headerGradient = live ? '#881337 0%,#BE123C 55%,#E11D48 100%' : '#1A3A9C 0%,#2563EB 55%,#22D3EE 100%';
   const productName = rtl ? p.nameAr : p.name;
   const robot = opts.robot === null ? null : (opts.robot || 'hero');
   const [rw, rh] = ROBOT_SIZE[robot] || ROBOT_SIZE.hero;
@@ -110,20 +115,20 @@ export function renderEmail(opts) {
 <title>${esc(opts.title)}</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
-  body{margin:0;padding:0;background:#EEF4FF}
+  body{margin:0;padding:0;background:${background}}
   a{color:${accent}}
   @media (max-width:620px){ .shell{width:100%!important} .pad{padding-left:20px!important;padding-right:20px!important} .h1{font-size:23px!important} }
 </style>
 </head>
-<body style="margin:0;padding:0;background:#EEF4FF">
+<body style="margin:0;padding:0;background:${background}">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">${esc(opts.preheader || '')}&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#EEF4FF" style="background:#EEF4FF">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${background}" style="background:${background}">
 <tr><td align="center" style="padding:28px 12px">
 
   <table role="presentation" class="shell" width="600" cellpadding="0" cellspacing="0" border="0" dir="${dir}" style="width:600px;max-width:600px;background:#ffffff;border-radius:22px;overflow:hidden;box-shadow:0 18px 40px -24px rgba(29,78,216,.45)">
 
     <!-- header -->
-    <tr><td bgcolor="#1D4ED8" style="background:#1D4ED8;background-image:linear-gradient(135deg,#1A3A9C 0%,#2563EB 55%,#22D3EE 100%);padding:22px 28px" class="pad">
+    <tr><td bgcolor="${headerColor}" style="background:${headerColor};background-image:linear-gradient(135deg,${headerGradient});padding:22px 28px" class="pad">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
           <td style="text-align:${start}"><a href="${p.url}" target="_blank"><img src="${ASSETS}/logo-white.png" width="133" height="32" alt="Gahez" style="display:inline-block;border:0;height:32px;width:auto"></a></td>
@@ -135,7 +140,7 @@ export function renderEmail(opts) {
 
     <!-- hero -->
     <tr><td class="pad" style="padding:30px 36px 8px;text-align:center">
-      ${robot ? `<img src="${ASSETS}/robot-${robot}.png" width="${rw}" height="${rh}" alt="" style="display:block;margin:0 auto 14px;border:0;width:${rw}px;height:auto">` : ''}
+      ${live ? `<img src="${esc(liveApp)}/images/email-live.png" width="172" alt="جاهز لايف" style="display:block;margin:0 auto 14px;border:0;width:172px;height:auto">` : robot ? `<img src="${ASSETS}/robot-${robot}.png" width="${rw}" height="${rh}" alt="" style="display:block;margin:0 auto 14px;border:0;width:${rw}px;height:auto">` : ''}
       <h1 class="h1" style="margin:0;font-family:${FONT};font-size:26px;line-height:1.35;font-weight:800;color:${INK}">${esc(opts.title)}</h1>
     </td></tr>
 
@@ -144,7 +149,7 @@ export function renderEmail(opts) {
       ${opts.intro ? `<p style="margin:10px 0 0">${opts.intro}</p>` : ''}
       ${rowsHtml}
       ${opts.body || ''}
-      ${opts.cta ? button(opts.cta, accent) : ''}
+      ${opts.cta ? button(opts.cta, accent, live) : ''}
       ${opts.secondary ? `<p style="margin:12px 0 0;text-align:center;font-size:14px"><a href="${esc(opts.secondary.url)}" target="_blank" style="color:${accent};font-weight:700;text-decoration:none">${esc(opts.secondary.label)}</a></p>` : ''}
     </td></tr>
 

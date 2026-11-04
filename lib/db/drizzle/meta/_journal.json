@@ -92,6 +92,20 @@
       "when": 1793778569860,
       "tag": "0012_busy_rhino",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793800542741,
+      "tag": "0013_lecture_reminder_deliveries",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793800686960,
+      "tag": "0014_lecture_mail_jobs",
+      "breakpoints": true
     }
   ]
 }

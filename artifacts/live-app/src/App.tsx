@@ -31,6 +31,7 @@ const ParentHome = lazy(() => import('@/pages/parent').then(m => ({ default: m.P
 const AdminOverview = lazy(() => import('@/pages/admin').then(m => ({ default: m.AdminOverview })));
 const AdminPayouts = lazy(() => import('@/pages/admin').then(m => ({ default: m.AdminPayouts })));
 const AdminUsers = lazy(() => import('@/pages/admin-users').then(m => ({ default: m.AdminUsers })));
+const AdminLectures = lazy(() => import('@/pages/admin-lectures').then(m => ({ default: m.AdminLectures })));
 const AdminCatalog = lazy(() => import('@/pages/admin-catalog').then(m => ({ default: m.AdminCatalog })));
 const AdminTickets = lazy(() => import('@/pages/support').then(m => ({ default: m.AdminTickets })));
 const SupportList = lazy(() => import('@/pages/support').then(m => ({ default: m.SupportList })));
@@ -117,6 +118,7 @@ export function App() {
         <Route path="/admin/payouts">{() => <Authed roles={['admin']}><AdminPayouts /></Authed>}</Route>
         <Route path="/admin/tickets">{() => <Authed roles={['admin']}><AdminTickets /></Authed>}</Route>
         <Route path="/admin/users">{() => <Authed roles={['admin']}><AdminUsers /></Authed>}</Route>
+        <Route path="/admin/lectures">{() => <Authed roles={['admin']}><AdminLectures /></Authed>}</Route>
         <Route path="/admin/catalog">{() => <Authed roles={['admin']}><AdminCatalog /></Authed>}</Route>
 
         <Route path="/lectures/:id">{(p) => <Authed><LectureDetail id={p.id} /></Authed>}</Route>

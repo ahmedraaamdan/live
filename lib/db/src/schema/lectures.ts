@@ -110,6 +110,29 @@ export const savedLecturesTable = pgTable(
 
 export const bookingStatusEnum = pgEnum("booking_status", ["pending_payment", "confirmed", "cancelled", "refunded"]);
 
+export const lectureReminderDeliveriesTable = pgTable("lecture_reminder_deliveries", {
+  lectureId: uuid("lecture_id").notNull().references(() => lecturesTable.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+  retryAfter: timestamp("retry_after", { withTimezone: true }).notNull(),
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+}, (t) => [primaryKey({ columns: [t.lectureId, t.userId, t.startsAt] })]);
+
+export const lectureMailJobsTable = pgTable("lecture_mail_jobs", {
+  id: uuid("id").primaryKey(),
+  lectureId: uuid("lecture_id").notNull().references(() => lecturesTable.id, { onDelete: "cascade" }),
+  actorId: uuid("actor_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  recipientIds: jsonb("recipient_ids").$type<string[]>().notNull(),
+  subject: text("subject").notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  processed: integer("processed").notNull().default(0),
+  sent: integer("sent").notNull().default(0),
+  leaseUntil: timestamp("lease_until", { withTimezone: true }),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("lecture_mail_jobs_pending_idx").on(t.completedAt, t.createdAt)]);
+
 export const bookingsTable = pgTable(
   "bookings",
   {

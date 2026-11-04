@@ -9,11 +9,12 @@ import { reconcileEasykashPending } from "./easykash-reconcile";
  * one (SCHEDULER=off on the others).
  */
 import { and, eq, inArray, isNull, lt, sql } from "drizzle-orm";
-import { bookingsTable, db, lecturesTable, paymentsTable, usersTable } from "@workspace/db";
+import { bookingsTable, db, lecturesTable, paymentsTable } from "@workspace/db";
 import { NO_SHOW_GRACE_MINUTES } from "@workspace/live-core";
 import { bookedStudentIds } from "./access";
 import { settleCancelledLecture } from "./bookings";
-import { sendLectureReminder } from "./emails";
+import { sendDueLectureReminders } from "./lecture-reminders";
+import { processLectureMailJobs } from "./lecture-mail-jobs";
 import { env } from "./env";
 import { settleLectureFunds } from "./funds";
 import { logger } from "./logger";
@@ -21,7 +22,7 @@ import { notify } from "./notify";
 import { endLecture } from "../routes/live";
 import { PENDING_HOLD_MIN } from "../routes/lectures";
 
-async function sendReminders() {
+async function sendInAppReminders() {
   const due = await db
     .update(lecturesTable)
     .set({ reminderSentAt: new Date() })
@@ -36,10 +37,7 @@ async function sendReminders() {
   for (const lecture of due) {
     const ids = await bookedStudentIds(lecture.id);
     if (!ids.length) continue;
-    const teacher = await db.query.usersTable.findFirst({ where: eq(usersTable.id, lecture.teacherId) });
-    const students = await db.select().from(usersTable).where(inArray(usersTable.id, ids));
     await notify(ids, { kind: "reminder", title: "حصتك كمان ساعة ⏰", body: lecture.title, link: `/lectures/${lecture.id}` });
-    for (const s of students) void sendLectureReminder(s, lecture, teacher?.name ?? "");
   }
 }
 
@@ -113,12 +111,24 @@ async function endForgottenLectures() {
 
 export function startScheduler() {
   if (process.env.SCHEDULER === "off") return;
+  let sendingReminders = false;
+  const reminderTick = async () => {
+    if (sendingReminders) return;
+    sendingReminders = true;
+    try {
+      await sendDueLectureReminders();
+    } catch (err) {
+      logger.error({ err }, "Lecture reminder job failed");
+    } finally {
+      sendingReminders = false;
+    }
+  };
   let running = false;
   const tick = async () => {
     if (running) return;
     running = true;
     try {
-    for (const job of [reconcileEasykashPending, sendReminders, cancelNoShows, releaseFunds, expireCheckouts, endForgottenLectures]) {
+    for (const job of [reconcileEasykashPending, sendInAppReminders, cancelNoShows, releaseFunds, expireCheckouts, endForgottenLectures]) {
       try {
         await job();
       } catch (err) {
@@ -129,4 +139,8 @@ export function startScheduler() {
   };
   setTimeout(tick, 5_000);
   setInterval(tick, 60_000);
+  setTimeout(reminderTick, 5_000);
+  setInterval(reminderTick, 30_000);
+  setTimeout(processLectureMailJobs, 5_000);
+  setInterval(processLectureMailJobs, 15_000);
 }
