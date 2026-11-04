@@ -103,7 +103,10 @@ export function LectureForm({ id }: { id?: string }) {
   const currencyCfg = getCurrencyConfig(form.currency);
   const priceCents = trial ? 0 : Math.round(Number(form.priceAmount || 0) * 100);
   const { teacherCents } = splitBooking(priceCents);
-  const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm({ ...form, [k]: e.target.value });
+  const set = (k: keyof typeof form) => (e: { target: { value: string } }) => {
+    const value = e.target.value;
+    setForm(current => ({ ...current, [k]: value }));
+  };
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -149,13 +152,13 @@ export function LectureForm({ id }: { id?: string }) {
             {/* المنهج والمرحلة والشعبة والمادة */}
             <CurriculumPicker
               curriculum={form.curriculum}
-              onCurriculumChange={(c) => setForm({ ...form, curriculum: c })}
+              onCurriculumChange={(curriculum) => setForm(current => ({ ...current, curriculum }))}
               grade={form.grade}
-              onGradeChange={(g) => setForm({ ...form, grade: g })}
+              onGradeChange={(grade) => setForm(current => ({ ...current, grade }))}
               track={form.track}
-              onTrackChange={(t) => setForm({ ...form, track: t })}
+              onTrackChange={(track) => setForm(current => ({ ...current, track }))}
               subject={form.subject}
-              onSubjectChange={(s) => setForm({ ...form, subject: s })}
+              onSubjectChange={(subject) => setForm(current => ({ ...current, subject }))}
               showSubject={true}
             />
 
