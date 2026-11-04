@@ -73,6 +73,18 @@ import {
 
 export function LectureDetail({ id }: { id: string }) {
   const me = useMe();
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('copy') === '1' || params.get('action') === 'copy') {
+      const shareUrl = `${window.location.origin}/lectures/${id}`;
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(shareUrl).then(() => {
+          toast('تم نسخ رابط الحصة للحافظة! جاهز للمشاركة مع طلابك 🎉');
+        }).catch(() => {});
+      }
+    }
+  }, [id]);
   const q = useQuery({ queryKey: ['lecture', id], queryFn: () => api<LectureDTO>(`/lectures/${id}`), refetchInterval: 20_000 });
   if (q.isPending) return <PageSpinner />;
   if (q.error || !q.data)

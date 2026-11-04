@@ -36,7 +36,7 @@ test("admin class summaries and branded manual and automatic mail", async () => 
   const [upcoming, ended] = await db.insert(lecturesTable).values([
     { ...common, title: "Upcoming", code: "upcoming", status: "scheduled", startsAt: new Date(Date.now() + 8 * 60_000), reminderSentAt: new Date() },
     { ...common, title: "Ended", code: "ended", status: "ended", startsAt: new Date(Date.now() - 60 * 60_000) },
-    { ...common, title: "Later", code: "later", status: "scheduled", startsAt: new Date(Date.now() + 20 * 60_000) },
+    { ...common, title: "Later", code: "later", status: "scheduled", startsAt: new Date(Date.now() + 4 * 60 * 60_000) },
   ]).returning();
   await db.insert(bookingsTable).values([
     { lectureId: upcoming!.id, studentId: confirmed!.id, status: "confirmed", pricePaidCents: 0 },

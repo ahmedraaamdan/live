@@ -1,3 +1,4 @@
+import { cn } from '@/lib/cn';
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { CalendarDays, Mail, UsersRound } from 'lucide-react';
@@ -32,10 +33,23 @@ const templates = [
 ] as const;
 
 function LectureEmailSheet({ lecture, close }: { lecture: AdminLectureRow; close: () => void }) {
-  const [draft, setDraft] = useState<LectureMailDraft>(() => {
+  const [includeStudents, setIncludeStudents] = useState(() => lecture.booked > 0);
+  const [includeTeacher, setIncludeTeacher] = useState(() => !lecture.teacher.suspended);
+
+  const audience: LectureMailDraft['audience'] =
+    includeTeacher && includeStudents ? 'both' :
+    includeStudents ? 'students' : 'teacher';
+
+  const hasAudience = includeTeacher || includeStudents;
+
+  const [draft, setDraft] = useState<Omit<LectureMailDraft, 'audience'>>(() => {
     const template = lecture.status === 'ended' ? 'followup' : 'reminder';
-    return { template, audience: lecture.teacher.suspended ? 'students' : 'teacher', ...lectureMailCopy(template, lecture.title) };
+    return { template, ...lectureMailCopy(template, lecture.title) };
   });
+
+  const fullDraft: LectureMailDraft = { ...draft, audience };
+  const valid = lectureMailDraftSchema.safeParse(fullDraft);
+
   const [requestId] = useState(() => crypto.randomUUID());
   const [previewFor, setPreviewFor] = useState<LectureMailDraft | null>(null);
   const endpoint = `/admin/lectures/${lecture.id}/email`;
@@ -52,22 +66,17 @@ function LectureEmailSheet({ lecture, close }: { lecture: AdminLectureRow; close
     enabled: Boolean(jobId),
     refetchInterval: (q) => q.state.data?.done ? false : 2000,
   });
-  const audiences = [
-    ...(!lecture.teacher.suspended ? [{ value: 'teacher', label: `المدرس — ${lecture.teacher.name}` }] : []),
-    ...(lecture.booked > 0 ? [{ value: 'students', label: `الطلاب اللي حجزهم مؤكد (${lecture.booked})` }] : []),
-    ...(!lecture.teacher.suspended && lecture.booked > 0 ? [{ value: 'both', label: 'المدرس والطلاب' }] : []),
-  ];
-  const valid = lectureMailDraftSchema.safeParse(draft);
+
   const busy = send.isPending || Boolean(jobId);
-  const error = send.error ?? (previewFor === draft ? preview.error : null);
+  const error = send.error ?? (previewFor === fullDraft ? preview.error : null);
 
   return (
     <Sheet open onOpenChange={(open) => { if (!open && !send.isPending) close(); }} title="إيميل الحصة" description={lecture.title}
       footer={jobId ? <Button onClick={close}>قفل</Button> : (
         <>
-          <Button variant="outlined" disabled={!valid.success || !audiences.length || busy} loading={preview.isPending}
-            onClick={() => { if (valid.success) { setPreviewFor(draft); preview.mutate(valid.data); } }}>معاينة</Button>
-          <Button disabled={!valid.success || !audiences.length || previewFor !== draft || !preview.isSuccess} loading={send.isPending}
+          <Button variant="outlined" disabled={!valid.success || !hasAudience || busy} loading={preview.isPending}
+            onClick={() => { if (valid.success) { setPreviewFor(fullDraft); preview.mutate(valid.data); } }}>معاينة</Button>
+          <Button disabled={!valid.success || !hasAudience || busy} loading={send.isPending}
             onClick={() => { if (valid.success) send.mutate(valid.data); }}><Mail /> إرسال الإيميل</Button>
         </>
       )}>
@@ -84,9 +93,41 @@ function LectureEmailSheet({ lecture, close }: { lecture: AdminLectureRow; close
           ) : <Banner tone="info">الإيميل في قائمة الإرسال. تقدر تقفل النافذة والإرسال هيكمل.</Banner>
         ) : (
           <>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Select label="المستلم" value={draft.audience} options={audiences} disabled={busy}
-                onChange={(e) => { const audience = e.target.value as LectureMailDraft['audience']; setDraft((d) => ({ ...d, audience })); }} />
+            <div className="rounded-xl border border-outline-variant p-3.5 bg-surface-container-low flex flex-col gap-2.5">
+              <span className="text-label-md font-bold text-on-surface">المستلمون:</span>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <label className={cn("flex items-center gap-2 cursor-pointer select-none", lecture.booked === 0 && "opacity-50 cursor-not-allowed")}>
+                  <input
+                    type="checkbox"
+                    className="size-4.5 rounded accent-primary cursor-pointer"
+                    checked={includeStudents}
+                    disabled={lecture.booked === 0 || busy}
+                    onChange={(e) => setIncludeStudents(e.target.checked)}
+                  />
+                  <span className="text-body-md text-on-surface font-medium">
+                    الطلاب اللي حجزهم مؤكد ({lecture.booked})
+                  </span>
+                </label>
+
+                <label className={cn("flex items-center gap-2 cursor-pointer select-none", lecture.teacher.suspended && "opacity-50 cursor-not-allowed")}>
+                  <input
+                    type="checkbox"
+                    className="size-4.5 rounded accent-primary cursor-pointer"
+                    checked={includeTeacher}
+                    disabled={lecture.teacher.suspended || busy}
+                    onChange={(e) => setIncludeTeacher(e.target.checked)}
+                  />
+                  <span className="text-body-md text-on-surface font-medium">
+                    المدرس ({lecture.teacher.name})
+                  </span>
+                </label>
+              </div>
+              {!hasAudience && (
+                <p className="text-body-sm text-error">لازم تختار مستلم واحد على الأقل (المدرس أو الطلاب)</p>
+              )}
+            </div>
+
+            <div>
               <Select label="القالب" value={draft.template} options={templates} disabled={busy}
                 onChange={(e) => { const template = e.target.value as LectureMailDraft['template']; setDraft((d) => ({ ...d, template, ...lectureMailCopy(template, lecture.title) })); }} />
             </div>
@@ -96,7 +137,7 @@ function LectureEmailSheet({ lecture, close }: { lecture: AdminLectureRow; close
               onChange={(e) => { const title = e.target.value; setDraft((d) => ({ ...d, title })); }} />
             <TextArea label="نص الرسالة" value={draft.message} maxLength={4000} rows={4} disabled={busy}
               onChange={(e) => { const message = e.target.value; setDraft((d) => ({ ...d, message })); }} />
-            {previewFor === draft && preview.data && (
+            {previewFor === fullDraft && preview.data && (
               <iframe title="معاينة إيميل جاهز لايف" sandbox="" srcDoc={preview.data.html} className="h-96 w-full rounded-lg border border-outline-variant bg-white" />
             )}
           </>

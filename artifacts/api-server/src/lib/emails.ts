@@ -101,28 +101,71 @@ export async function sendParentInvite(opts: { student: User; email: string; cod
   await sendMail({ to: opts.email, subject: `${opts.student.name} ضافك كولي أمر على Gahez Live`, ...mail });
 }
 
-export function renderLectureMail(lecture: Lecture, teacherName: string, draft: Pick<LectureMailDraft, "subject" | "title" | "message">) {
+export function lectureShareBlock(lecture: Lecture, teacherName: string) {
+  const shareUrl = `${env.appUrl}/lectures/${lecture.id}`;
+  const copyUrl = `${env.appUrl}/lectures/${lecture.id}?copy=1`;
+  const shareText = `احجز مكانك في حصة "${lecture.title}" مع أستاذ ${teacherName} على جاهز لايف:\n${shareUrl}`;
+  const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+
+  return `
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:22px 0 10px;background:#FFF1F4;border:1px dashed #FDA4AF;border-radius:14px">
+    <tr>
+      <td class="pad" style="padding:18px 20px;text-align:center">
+        <div style="font-family:'Cairo',Tahoma,sans-serif;font-weight:700;font-size:15px;color:#9F1239;margin-bottom:6px">📢 شارك رابط الحصة مع طلابك وزملائك</div>
+        <p style="margin:0 0 10px;font-family:'Cairo',Tahoma,sans-serif;font-size:13px;color:#475569;line-height:1.6">
+          كل ما تشارك رابط الحصة بدري، الطلاب بيقدروا يحجزوا مكانهم ويستعدوا للحضور قبل اكتمال العدد.
+        </p>
+        <div style="margin:8px auto 14px;padding:9px 12px;background:#ffffff;border:1px solid #FECDD3;border-radius:8px;font-family:monospace;font-size:12px;color:#BE123C;word-break:break-all;direction:ltr">
+          ${esc(shareUrl)}
+        </div>
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto">
+          <tr>
+            <td align="center" style="padding:4px 6px">
+              <a href="${esc(copyUrl)}" target="_blank" style="display:inline-block;padding:10px 18px;background:#E11D48;color:#ffffff;font-family:'Cairo',Tahoma,sans-serif;font-size:13px;font-weight:700;text-decoration:none;border-radius:8px">📋 نسخ رابط الحصة تلقائياً</a>
+            </td>
+            <td align="center" style="padding:4px 6px">
+              <a href="${esc(whatsappUrl)}" target="_blank" style="display:inline-block;padding:10px 18px;background:#16A34A;color:#ffffff;font-family:'Cairo',Tahoma,sans-serif;font-size:13px;font-weight:700;text-decoration:none;border-radius:8px">💬 مشاركة عبر واتساب</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>`;
+}
+
+export function renderLectureMail(
+  lecture: Lecture,
+  teacherName: string,
+  draft: Pick<LectureMailDraft, "subject" | "title" | "message">,
+  opts?: { includeShare?: boolean },
+) {
+  const includeShare = opts?.includeShare ?? true;
   return renderEmail({
     product: "live",
     preheader: draft.subject,
     title: draft.title,
     intro: esc(draft.message).replace(/\r?\n/g, "<br>"),
     rows: lectureRows(lecture, teacherName),
+    body: includeShare ? lectureShareBlock(lecture, teacherName) : undefined,
     cta: { label: "افتح الحصة", url: link(`/lectures/${lecture.id}`) },
     note: "وصلك الإيميل ده بخصوص الحصة دي على جاهز لايف.",
   });
 }
 
-export function sendLectureReminder(to: User, lecture: Lecture, teacherName: string) {
+export function sendLectureReminder(to: User, lecture: Lecture, teacherName: string, stage: "3h" | "15m" = "15m") {
+  const is3h = stage === "3h";
+  const timeDesc = is3h ? "خلال 3 ساعات" : "خلال ربع ساعة";
   const draft: LectureMailDraft = {
     ...lectureMailCopy("reminder", lecture.title),
     template: "reminder",
     audience: to.id === lecture.teacherId ? "teacher" : "students",
+    subject: is3h ? `تذكير: حصتك كمان 3 ساعات — ${lecture.title}` : `تذكير: حصتك كمان ربع ساعة — ${lecture.title}`,
+    title: is3h ? "حصتك كمان 3 ساعات ⏰" : "حصتك كمان ربع ساعة ⏰",
     message: to.id === lecture.teacherId
-      ? `أهلاً ${to.name}، ميعاد حصتك خلال عشر دقايق. افتح صفحة الحصة وجهّز الكاميرا والمايك قبل البث.`
-      : `أهلاً ${to.name}، ميعاد الحصة خلال عشر دقايق. افتح صفحة الحصة وخلّيك جاهز تدخل أول ما البث يبدأ.`,
+      ? `أهلاً ${to.name}، ميعاد حصتك ${timeDesc}. جهّز الكاميرا والمايك والمواد قبل البث، وشجّع طلابك ينضموا.`
+      : `أهلاً ${to.name}، ميعاد الحصة ${timeDesc}. افتح صفحة الحصة وخلّيك جاهز تدخل أول ما البث يبدأ.`,
   };
-  return sendMail({ to: to.email, subject: draft.subject, ...renderLectureMail(lecture, teacherName, draft) });
+  return sendMail({ to: to.email, subject: draft.subject, ...renderLectureMail(lecture, teacherName, draft, { includeShare: true }) });
 }
 
 export async function sendLectureLive(to: User[], lecture: Lecture, teacherName: string) {

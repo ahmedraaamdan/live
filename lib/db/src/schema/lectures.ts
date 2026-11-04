@@ -114,9 +114,10 @@ export const lectureReminderDeliveriesTable = pgTable("lecture_reminder_deliveri
   lectureId: uuid("lecture_id").notNull().references(() => lecturesTable.id, { onDelete: "cascade" }),
   userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
   startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+  stage: text("stage").notNull().default("15m"),
   retryAfter: timestamp("retry_after", { withTimezone: true }).notNull(),
   sentAt: timestamp("sent_at", { withTimezone: true }),
-}, (t) => [primaryKey({ columns: [t.lectureId, t.userId, t.startsAt] })]);
+}, (t) => [primaryKey({ columns: [t.lectureId, t.userId, t.startsAt, t.stage] })]);
 
 export const lectureMailJobsTable = pgTable("lecture_mail_jobs", {
   id: uuid("id").primaryKey(),
