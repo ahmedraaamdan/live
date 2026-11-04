@@ -22,6 +22,9 @@ export const signupSchema = z.object({
   phone,
   password,
   grade: z.string().max(40).optional(),
+  country: z.string().optional(),
+  curriculum: z.string().optional(),
+  track: z.string().optional(),
   subject: z.string().max(40).optional(),
   parentEmail: email.optional().or(z.literal("").transform(() => undefined)),
   /** A child's link code, when a parent signs up from an invitation. */
@@ -40,6 +43,9 @@ export const profileLinkSchema = z.object({ label: z.string().trim().min(2, { me
 export const profileUpdateSchema = z.object({
   name: name.optional(),
   phone,
+  country: z.string().optional(),
+  curriculum: z.string().optional(),
+  track: z.string().optional(),
   avatarUrl: publicUrl.or(z.literal("")).optional(),
   experience: z.string().trim().max(3000).optional(),
   socialLinks: z.array(profileLinkSchema).max(8).optional(),
@@ -56,6 +62,9 @@ export const lectureInputSchema = z.object({
   title: z.string().trim().min(3, { message: "اكتب عنوان الحصة" }).max(120),
   subject: z.string().min(1, { message: "اختار المادة" }).max(40),
   grade: z.string().min(1, { message: "اختار الصف" }).max(40),
+  curriculum: z.string().max(60).optional().default("egypt_general"),
+  track: z.string().max(60).nullable().optional(),
+  currency: z.string().max(10).optional().default("EGP"),
   description: z.string().trim().max(2000).optional().default(""),
   coverUrl: publicUrl.nullable().optional(),
   /** ISO timestamp. */

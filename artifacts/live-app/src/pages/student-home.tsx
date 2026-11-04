@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Bookmark, Eye, NotebookPen, Radio, Search, Sparkles, ThumbsUp, Ticket, UserCheck, X } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { GRADES, SUBJECTS, subjectLabel, type FeedDTO, type FeedItem, type LectureDTO, type StudentHomeDTO } from '@workspace/live-core';
+import { CURRICULUMS, getCurriculum, getAllGradesForCurriculum, getSubjectsFor, subjectLabel, gradeLabel, type FeedDTO, type FeedItem, type LectureDTO, type StudentHomeDTO } from '@workspace/live-core';
 import { Countdown } from '@/components/bits';
 import { FollowTeacherButton, SaveLectureButton } from '@/components/lecture-actions';
 import { approvalPct } from '@/components/vote';
@@ -21,9 +21,11 @@ const priceOptions = [{ value: '', label: 'كل الأسعار' }, { value: 'fre
 
 export function StudentHome() {
   const { subjects, grades } = useCatalog();
-  const gradeOptions = [{ value: '', label: 'كل الصفوف' }, ...grades.map((g) => ({ value: g.key, label: g.label }))];
   const me = useMe();
   const [, navigate] = useLocation();
+  const [curriculum, setCurriculum] = useState<string>(me?.student?.curriculum ?? '');
+  const activeGrades = curriculum ? getAllGradesForCurriculum(curriculum) : grades;
+  const gradeOptions = [{ value: '', label: 'كل الصفوف' }, ...activeGrades.map((g: { key: string; label: string }) => ({ value: g.key, label: g.label }))];
   const [subject, setSubject] = useState<string>('');
   const [following, setFollowing] = useState(false);
   const [grade, setGrade] = useState('');
@@ -38,6 +40,7 @@ export function StudentHome() {
   }, [typed]);
   useEffect(() => setLimit(PAGE_SIZE), [subject, following, grade, price, search]);
   const params = new URLSearchParams();
+  if (curriculum) params.set('curriculum', curriculum);
   if (subject) params.set('subject', subject);
   if (following) params.set('following', '1');
   if (grade) params.set('grade', grade);
@@ -45,8 +48,9 @@ export function StudentHome() {
   if (search) params.set('q', search);
   if (limit !== PAGE_SIZE) params.set('limit', String(limit));
   const query = params.toString();
-  const filtered = Boolean(subject || following || grade || price || search);
+  const filtered = Boolean(curriculum || subject || following || grade || price || search);
   const clearFilters = () => {
+    setCurriculum('');
     setSubject('');
     setFollowing(false);
     setGrade('');
@@ -132,6 +136,29 @@ export function StudentHome() {
           </section>
         )}
 
+        {/* Curriculum switcher chips */}
+        <div className="mb-4">
+          <p className="mb-2 text-label-md text-on-surface-variant font-medium">المنهج الدراسي / المسار التعليمي:</p>
+          <div className="scrollbar-none -mx-4 flex items-center gap-2 overflow-x-auto px-4 py-1 md:mx-0 md:px-0">
+            <Chip selected={!curriculum} onClick={() => { setCurriculum(''); setGrade(''); setSubject(''); }}>
+              كل المناهج 🌐
+            </Chip>
+            {CURRICULUMS.map((c) => (
+              <Chip
+                key={c.id}
+                selected={curriculum === c.id}
+                onClick={() => {
+                  setCurriculum(curriculum === c.id ? '' : c.id);
+                  setGrade('');
+                  setSubject('');
+                }}
+              >
+                {c.name}
+              </Chip>
+            ))}
+          </div>
+        </div>
+
         {/* Discovery: every teacher's classes, ranked (docs/app/RANKING.md). */}
         <div className="mb-4 space-y-2.5 md:space-y-0 md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)] md:gap-3">
           <TextField type="search" aria-label="ابحث عن مدرس أو حصة" placeholder="ابحث عن مدرس أو حصة" value={typed} onChange={(e) => setTyped(e.target.value)} trailing={<Search className="me-3 size-5 text-on-surface-variant" />} />
@@ -147,7 +174,7 @@ export function StudentHome() {
           <Chip selected={following} onClick={() => setFollowing(!following)} icon={<UserCheck />}>
             مدرسون أتابعهم
           </Chip>
-          {subjects.filter((s) => s.key !== 'other').map((s) => (
+          {(curriculum ? getSubjectsFor(curriculum, grade) : subjects).filter((s: { key: string; label: string }) => s.key !== 'other').map((s: { key: string; label: string }) => (
             <Chip key={s.key} selected={subject === s.key} onClick={() => setSubject(s.key)}>
               {s.label}
             </Chip>

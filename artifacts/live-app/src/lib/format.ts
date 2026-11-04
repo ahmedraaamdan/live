@@ -1,4 +1,4 @@
-import { formatEGP } from '@workspace/live-core';
+import { formatEGP, formatMoney } from '@workspace/live-core';
 
 const TZ = 'Africa/Cairo';
 // Arabic words, Latin digits: what Egyptian apps and receipts use.
@@ -10,7 +10,7 @@ const shortDate = fmt({ day: 'numeric', month: 'short' });
 const time = fmt({ hour: 'numeric', minute: '2-digit' });
 const dateTime = fmt({ weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 
-export const money = formatEGP;
+export const money = (cents: number, currency = 'EGP') => formatMoney(cents, currency);
 export const fmtDay = (d: string | Date) => dayMonth.format(new Date(d));
 export const fmtShortDate = (d: string | Date) => shortDate.format(new Date(d));
 export const fmtTime = (d: string | Date) => time.format(new Date(d));

@@ -3,6 +3,8 @@
  * copy the app shows; keys are what the API stores.
  */
 
+import { CURRICULUMS } from "./curriculums";
+
 export const ROLES = ["student", "teacher", "parent", "admin"] as const;
 export type Role = (typeof ROLES)[number];
 
@@ -71,11 +73,27 @@ export function setCatalog(catalog: { subjects?: ReadonlyArray<CatalogItem>; gra
 }
 
 export function subjectLabel(key: string | null | undefined): string {
-  return SUBJECTS.find((s) => s.key === key)?.label ?? DEFAULT_SUBJECTS.find((s) => s.key === key)?.label ?? key ?? "";
+  if (!key) return "";
+  const found = SUBJECTS.find((s) => s.key === key)?.label ?? DEFAULT_SUBJECTS.find((s) => s.key === key)?.label;
+  if (found) return found;
+  for (const cur of CURRICULUMS) {
+    const s = cur.subjects.find((sub) => sub.key === key);
+    if (s) return s.label;
+  }
+  return key;
 }
 
 export function gradeLabel(key: string | null | undefined): string {
-  return GRADES.find((g) => g.key === key)?.label ?? DEFAULT_GRADES.find((g) => g.key === key)?.label ?? key ?? "";
+  if (!key) return "";
+  const found = GRADES.find((g) => g.key === key)?.label ?? DEFAULT_GRADES.find((g) => g.key === key)?.label;
+  if (found) return found;
+  for (const cur of CURRICULUMS) {
+    for (const stage of cur.stages) {
+      const g = stage.grades.find((gr) => gr.key === key);
+      if (g) return g.label;
+    }
+  }
+  return key;
 }
 
 export const LECTURE_STATUSES = ["draft", "scheduled", "live", "ended", "cancelled"] as const;

@@ -34,6 +34,8 @@ router.get("/feed", async (req, res) => {
   const text = (key: string) => (typeof req.query[key] === "string" ? (req.query[key] as string).trim() : "");
   const subject = text("subject") || undefined;
   const gradeFilter = text("grade") || undefined;
+  const curriculumFilter = text("curriculum") || undefined;
+  const currencyFilter = text("currency") || undefined;
   const price = text("price");
   const search = text("q").slice(0, 80);
   const onlyFollowing = text("following") === "1" && viewer?.role === "student";
@@ -57,6 +59,8 @@ router.get("/feed", async (req, res) => {
           eq(usersTable.suspended, false),
           subject ? eq(lecturesTable.subject, subject) : undefined,
           gradeFilter ? eq(lecturesTable.grade, gradeFilter) : undefined,
+          curriculumFilter ? eq(lecturesTable.curriculum, curriculumFilter) : undefined,
+          currencyFilter ? eq(lecturesTable.currency, currencyFilter) : undefined,
           price === "free" ? eq(lecturesTable.priceCents, 0) : price === "paid" ? sql`${lecturesTable.priceCents} > 0` : undefined,
           search ? or(ilike(lecturesTable.title, pattern), ilike(usersTable.name, pattern)) : undefined,
           onlyFollowing ? inArray(lecturesTable.teacherId, [...following]) : undefined,

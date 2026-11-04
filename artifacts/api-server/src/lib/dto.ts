@@ -43,7 +43,7 @@ import { viewerCount } from "./events";
 const iso = (d: Date | null | undefined) => (d ? d.toISOString() : null);
 
 export function toUser(u: User): UserDTO {
-  return { id: u.id, role: u.role, name: u.name, email: u.email, phone: u.phone, avatarUrl: u.avatarUrl, createdAt: u.createdAt.toISOString() };
+  return { id: u.id, role: u.role, name: u.name, email: u.email, phone: u.phone, avatarUrl: u.avatarUrl, country: u.country, createdAt: u.createdAt.toISOString() };
 }
 
 export const toMini = (u: Pick<User, "id" | "name" | "avatarUrl">): PersonMini => ({ id: u.id, name: u.name, avatarUrl: u.avatarUrl });
@@ -81,8 +81,8 @@ export async function loadMe(user: User, impersonation?: { actor: User }): Promi
     mfaSetupRequired: user.role === "admin" && !(security?.totpEnabledAt && security.totpSecretEnc),
     impersonation: impersonation ? { actorId: impersonation.actor.id, actorName: impersonation.actor.name } : null,
     user: toUser(user),
-    teacher: teacher ? { bio: teacher.bio, headline: teacher.headline, subject: teacher.subject, experience: teacher.experience, socialLinks: teacher.socialLinks, certificates: teacher.certificates } : null,
-    student: student ? { grade: student.grade, parentEmail: student.parentEmail, linkCode: student.linkCode, parents } : null,
+    teacher: teacher ? { bio: teacher.bio, headline: teacher.headline, subject: teacher.subject, country: teacher.country, curriculum: teacher.curriculum, track: teacher.track, experience: teacher.experience, socialLinks: teacher.socialLinks, certificates: teacher.certificates } : null,
+    student: student ? { grade: student.grade, country: student.country, curriculum: student.curriculum, track: student.track, parentEmail: student.parentEmail, linkCode: student.linkCode, parents } : null,
     unreadNotifications: Number(unread[0]?.n ?? 0),
     unreadSupport: Number(unreadTickets[0]?.n ?? 0),
   };

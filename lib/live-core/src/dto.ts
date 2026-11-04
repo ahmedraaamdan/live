@@ -28,6 +28,7 @@ export interface UserDTO {
   email: string;
   phone: string | null;
   avatarUrl: string | null;
+  country?: string | null;
   createdAt: string;
 }
 
@@ -52,8 +53,8 @@ export interface MeDTO {
   mfaSetupRequired?: boolean;
   impersonation?: { actorId: string; actorName: string } | null;
   user: UserDTO;
-  teacher: { bio: string; headline: string; subject: string | null; experience?: string; socialLinks?: ProfileLink[]; certificates?: ProfileLink[] } | null;
-  student: { grade: string | null; parentEmail: string | null; linkCode: string; parents: PersonMini[] } | null;
+  teacher: { bio: string; headline: string; subject: string | null; country?: string | null; curriculum?: string | null; track?: string | null; experience?: string; socialLinks?: ProfileLink[]; certificates?: ProfileLink[] } | null;
+  student: { grade: string | null; country?: string | null; curriculum?: string | null; track?: string | null; parentEmail: string | null; linkCode: string; parents: PersonMini[] } | null;
   unreadNotifications: number;
   unreadSupport?: number;
 }
@@ -82,6 +83,9 @@ export interface LectureDTO {
   startsAt: string;
   durationMin: number;
   priceCents: number;
+  currency?: string;
+  curriculum?: string;
+  track?: string | null;
   capacity: number | null;
   status: LectureStatus;
   listed: boolean;

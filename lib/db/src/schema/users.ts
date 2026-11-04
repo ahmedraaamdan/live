@@ -9,6 +9,7 @@ export const usersTable = pgTable("users", {
   /** Always stored lower-cased. */
   email: text("email").notNull().unique(),
   phone: text("phone"),
+  country: text("country"),
   passwordHash: text("password_hash").notNull(),
   avatarUrl: text("avatar_url"),
   suspended: boolean("suspended").notNull().default(false),
@@ -75,6 +76,9 @@ export const teacherProfilesTable = pgTable("teacher_profiles", {
   headline: text("headline").notNull().default(""),
   bio: text("bio").notNull().default(""),
   subject: text("subject"),
+  country: text("country"),
+  curriculum: text("curriculum"),
+  track: text("track"),
   experience: text("experience").notNull().default(""),
   socialLinks: jsonb("social_links").$type<Array<{ label: string; url: string; kind?: "image" | "document" | "link" }>>().notNull().default([]),
   certificates: jsonb("certificates").$type<Array<{ label: string; url: string; kind?: "image" | "document" | "link" }>>().notNull().default([]),
@@ -85,6 +89,9 @@ export const studentProfilesTable = pgTable("student_profiles", {
     .primaryKey()
     .references(() => usersTable.id, { onDelete: "cascade" }),
   grade: text("grade"),
+  country: text("country"),
+  curriculum: text("curriculum"),
+  track: text("track"),
   /** Where booking emails go even before the parent has an account. */
   parentEmail: text("parent_email"),
   /** Short code a parent types to link to this student. */

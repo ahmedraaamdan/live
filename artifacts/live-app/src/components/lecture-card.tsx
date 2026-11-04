@@ -1,5 +1,5 @@
 import { CalendarClock, Clock, PlayCircle, Users } from 'lucide-react';
-import { LECTURE_STATUS_LABELS, gradeLabel, subjectLabel, type LectureDTO } from '@workspace/live-core';
+import { LECTURE_STATUS_LABELS, gradeLabel, subjectLabel, getCurriculum, type LectureDTO } from '@workspace/live-core';
 import { Link } from 'wouter';
 import { cn } from '@/lib/cn';
 import { fmtDateTime, fmtDuration, fmtRelative, money } from '@/lib/format';
@@ -33,6 +33,9 @@ export function LectureCard({ lecture, showTeacher, className, href }: { lecture
       {lecture.coverUrl && <img src={lecture.coverUrl} className="lecture-card-cover" alt="" loading="lazy" />}
       <div className="flex items-center gap-2">
         <Badge tone="primary">{subjectLabel(lecture.subject)}</Badge>
+        {lecture.curriculum && lecture.curriculum !== 'egypt_general' && (
+          <Badge tone="outline" className="text-caption">{getCurriculum(lecture.curriculum).name.split(' ')[0]}</Badge>
+        )}
         <span className="text-body-sm text-on-surface-variant">{gradeLabel(lecture.grade)}</span>
         <span className="ms-auto">
           <StatusBadge lecture={lecture} />
@@ -65,12 +68,12 @@ export function LectureCard({ lecture, showTeacher, className, href }: { lecture
           <span className="flex-1 text-body-md text-on-surface-variant">
             {lecture.stats ? (
               <>
-                دخلك <span className="font-num text-title-sm text-on-surface">{money(lecture.stats.teacherCents)}</span>
+                دخلك <span className="font-num text-title-sm text-on-surface">{money(lecture.stats.teacherCents, lecture.currency)}</span>
               </>
             ) : null}
           </span>
         )}
-        <span className="font-num text-title-md">{lecture.priceCents ? money(lecture.priceCents) : 'مجانية'}</span>
+        <span className="font-num text-title-md">{lecture.priceCents ? money(lecture.priceCents, lecture.currency) : 'مجانية'}</span>
       </div>
     </Card>
   );

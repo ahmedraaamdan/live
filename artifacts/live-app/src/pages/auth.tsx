@@ -5,7 +5,17 @@ import { useState, type FormEvent, type ReactNode } from 'react';
 import { ArrowLeft, BookOpenCheck, GraduationCap, Presentation, ShieldCheck, Users, Video } from 'lucide-react';
 import { Link, Redirect, useLocation, useSearch } from 'wouter';
 import { useMutation } from '@tanstack/react-query';
-import { GRADES, SUBJECTS, loginSchema, signupSchema, type AuthResult, type SignupRole } from '@workspace/live-core';
+import {
+  COUNTRIES,
+  getCountry,
+  detectCountryFromTimezone,
+  loginSchema,
+  signupSchema,
+  type AuthResult,
+  type SignupRole,
+} from '@workspace/live-core';
+import { PhoneInput } from '@/components/phone-input';
+import { CurriculumPicker } from '@/components/curriculum-picker';
 import { api, errorMessage } from '@/lib/api';
 import { homePath, useSession } from '@/lib/session';
 import { useCatalog } from '@/lib/catalog';
@@ -102,7 +112,6 @@ export function Login() {
 }
 
 export function Signup() {
-  const { subjects, grades } = useCatalog();
   const { me, signIn } = useSession();
   const [, navigate] = useLocation();
   const search = new URLSearchParams(useSearch());
@@ -110,9 +119,25 @@ export function Signup() {
   const childCode = search.get('code') ?? '';
   const initialRole = (['student', 'teacher', 'parent'] as const).find((r) => r === search.get('role')) ?? (childCode ? 'parent' : 'student');
   const [role, setRole] = useState<SignupRole>(initialRole);
-  const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', grade: '', subject: '', parentEmail: '', childCode });
+
+  const detected = detectCountryFromTimezone();
+  const [country, setCountry] = useState<string>(detected.code);
+  const [curriculum, setCurriculum] = useState<string>(detected.defaultCurriculum);
+  const [grade, setGrade] = useState<string>('');
+  const [track, setTrack] = useState<string>('');
+  const [subject, setSubject] = useState<string>('');
+  const [phoneRaw, setPhoneRaw] = useState<string>('');
+  const [fullPhone, setFullPhone] = useState<string>('');
+
+  const [form, setForm] = useState({ name: '', email: '', password: '', parentEmail: '', childCode });
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm({ ...form, [k]: e.target.value });
+
+  const handleCountryChange = (nextCountry: string) => {
+    setCountry(nextCountry);
+    const cfg = getCountry(nextCountry);
+    setCurriculum(cfg.defaultCurriculum);
+  };
 
   const signup = useMutation({
     mutationFn: (body: unknown) => api<AuthResult>('/auth/signup', { body }),
@@ -130,10 +155,13 @@ export function Signup() {
       role,
       name: form.name,
       email: form.email,
-      phone: form.phone,
+      phone: fullPhone || undefined,
+      country,
+      curriculum,
+      track: track || undefined,
       password: form.password,
-      ...(role === 'student' && { grade: form.grade || undefined, parentEmail: form.parentEmail }),
-      ...(role === 'teacher' && { subject: form.subject || undefined }),
+      ...(role === 'student' && { grade: grade || undefined, parentEmail: form.parentEmail }),
+      ...(role === 'teacher' && { subject: subject || undefined }),
       ...(role === 'parent' && form.childCode && { childCode: form.childCode }),
     };
     const v = signupSchema.safeParse(body);
@@ -167,13 +195,71 @@ export function Signup() {
           ]}
         />
         {error && <Banner tone="error">{error}</Banner>}
-        <TextField label={role === 'teacher' ? 'الاسم الذي يعرفك به طلابك' : 'الاسم'} autoComplete="name" value={form.name} onChange={set('name')} placeholder={role === 'teacher' ? 'أ. محمد سامي' : ''} />
-        <TextField label="البريد الإلكتروني" type="email" autoComplete="email" inputMode="email" ltr value={form.email} onChange={set('email')} />
-        <TextField label="رقم الهاتف" type="tel" autoComplete="tel" inputMode="tel" ltr value={form.phone} onChange={set('phone')} placeholder="01xxxxxxxxx" hint="مطلوب عند حجز حصة مدفوعة" />
-        <TextField label="كلمة المرور" type="password" autoComplete="new-password" ltr value={form.password} onChange={set('password')} hint="8 أحرف على الأقل" />
+
+        {/* الدولة */}
+        <Select
+          label="الدولة / البلد"
+          value={country}
+          onChange={(e) => handleCountryChange(e.target.value)}
+          options={COUNTRIES.map((c) => ({
+            value: c.code,
+            label: `${c.flag} ${c.name}`,
+          }))}
+        />
+
+        <TextField
+          label={role === 'teacher' ? 'الاسم الذي يعرفك به طلابك' : 'الاسم'}
+          autoComplete="name"
+          value={form.name}
+          onChange={set('name')}
+          placeholder={role === 'teacher' ? 'أ. محمد سامي' : ''}
+        />
+
+        <TextField
+          label="البريد الإلكتروني"
+          type="email"
+          autoComplete="email"
+          inputMode="email"
+          ltr
+          value={form.email}
+          onChange={set('email')}
+        />
+
+        {/* رقم الهاتف الذكي مع كود الدولة */}
+        <PhoneInput
+          label="رقم الهاتف / الموبايل"
+          country={country}
+          onCountryChange={handleCountryChange}
+          value={phoneRaw}
+          onChange={(raw, full) => {
+            setPhoneRaw(raw);
+            setFullPhone(full);
+          }}
+          hint="مطلوب لإشعارات الحصص والتحقق"
+        />
+
+        <TextField
+          label="كلمة المرور"
+          type="password"
+          autoComplete="new-password"
+          ltr
+          value={form.password}
+          onChange={set('password')}
+          hint="8 أحرف على الأقل"
+        />
+
+        {/* الطالب: اختيار المنهج والصف والمسار */}
         {role === 'student' && (
           <>
-            <Select label="الصف الدراسي" value={form.grade} onChange={set('grade')} placeholder="اختر صفك الدراسي" options={grades.map((g) => ({ value: g.key, label: g.label }))} />
+            <CurriculumPicker
+              curriculum={curriculum}
+              onCurriculumChange={setCurriculum}
+              grade={grade}
+              onGradeChange={setGrade}
+              track={track}
+              onTrackChange={setTrack}
+              showSubject={false}
+            />
             <TextField
               label="البريد الإلكتروني لولي الأمر"
               type="email"
@@ -185,12 +271,47 @@ export function Signup() {
             />
           </>
         )}
-        {role === 'teacher' && <Select label="المادة" value={form.subject} onChange={set('subject')} placeholder="اختر المادة التي تدرّسها" options={subjects.map((s) => ({ value: s.key, label: s.label }))} />}
-        {role === 'parent' && <TextField label="رمز ربط حساب الابن أو الابنة" ltr value={form.childCode} onChange={set('childCode')} hint="تجده في صفحة «حسابي» لدى الابن أو الابنة، ويمكنك إضافته لاحقًا." className="font-num tracking-widest uppercase" />}
+
+        {/* المدرس: اختيار المنهج والصف والمادة */}
+        {role === 'teacher' && (
+          <CurriculumPicker
+            curriculum={curriculum}
+            onCurriculumChange={setCurriculum}
+            grade={grade}
+            onGradeChange={setGrade}
+            track={track}
+            onTrackChange={setTrack}
+            subject={subject}
+            onSubjectChange={setSubject}
+            showSubject={true}
+          />
+        )}
+
+        {role === 'parent' && (
+          <TextField
+            label="رمز ربط حساب الابن أو الابنة"
+            ltr
+            value={form.childCode}
+            onChange={set('childCode')}
+            hint="تجده في صفحة «حسابي» لدى الابن أو الابنة، ويمكنك إضافته لاحقًا."
+            className="font-num tracking-widest uppercase"
+          />
+        )}
+
         <Button type="submit" size="lg" block loading={signup.isPending}>
           إنشاء الحساب
         </Button>
-        <p className="text-center text-body-sm text-on-surface-variant">بالتسجيل، فإنك توافق على <a href="https://live.gahez.space/terms" target="_blank" rel="noreferrer">الشروط</a> و<a href="https://live.gahez.space/privacy" target="_blank" rel="noreferrer">سياسة الخصوصية</a>.</p>
+        <p className="text-center text-body-sm text-on-surface-variant">
+          بالتسجيل، فإنك توافق على{' '}
+          <a href="https://live.gahez.space/terms" target="_blank" rel="noreferrer">
+            الشروط
+          </a>{' '}
+          و
+          <a href="https://live.gahez.space/privacy" target="_blank" rel="noreferrer">
+            سياسة الخصوصية
+          </a>
+          .
+        </p>
       </form>
     </AuthLayout>
   );

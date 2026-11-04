@@ -106,7 +106,7 @@ function LectureHeader({ l, showTeacher }: { l: LectureDTO; showTeacher?: boolea
         <span className="inline-flex items-center gap-1.5">
           <Clock className="size-4" /> {fmtDuration(l.durationMin)}
         </span>
-        <span className="font-num text-title-sm text-on-surface">{l.priceCents ? money(l.priceCents) : 'مجانية'}</span>
+        <span className="font-num text-title-sm text-on-surface">{l.priceCents ? money(l.priceCents, l.currency) : 'مجانية'}</span>
       </div>
       {showTeacher && (
         <Link href={`/teachers/${l.teacher.id}`} className="teacher-link mt-4 flex items-center gap-3" aria-label={`ملف المدرس ${l.teacher.name}`}>
@@ -181,7 +181,7 @@ function TeacherLecture({ l }: { l: LectureDTO }) {
         {l.stats && (
           <StatGrid className="mb-6 lg:grid-cols-3">
             <Stat icon={<Users />} tone="secondary" label="حاجزين" value={l.capacity ? `${l.stats.bookings}/${l.capacity}` : l.stats.bookings} />
-            <Stat icon={<Wallet />} tone="success" label="دخلك من الحصة" value={money(l.stats.teacherCents)} />
+            <Stat icon={<Wallet />} tone="success" label="دخلك من الحصة" value={money(l.stats.teacherCents, l.currency)} />
             <Stat icon={<Radio />} tone="primary" label="حضروا" value={l.stats.attendees} className="col-span-2 lg:col-span-1" />
           </StatGrid>
         )}

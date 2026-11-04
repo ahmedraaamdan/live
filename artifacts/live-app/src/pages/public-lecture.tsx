@@ -100,13 +100,13 @@ export function PublicLecture({ params }: { params: { code: string } }) {
   } else if (!me) {
     cta = (
       <Button size="lg" block onClick={() => navigate(`/signup?role=student&next=${encodeURIComponent(`/l/${code}`)}`)}>
-        احجز مكانك {l.priceCents ? `· ${money(l.priceCents)}` : 'مجانًا'}
+        احجز مكانك {l.priceCents ? `· ${money(l.priceCents, l.currency)}` : 'مجانًا'}
       </Button>
     );
   } else if (student) {
     cta = (
       <Button size="lg" block loading={book.isPending} onClick={() => book.mutate({ id: l.id })}>
-        {l.priceCents ? `احجز مقعدك · ${money(l.priceCents)}` : 'احجز مجانًا'}
+        {l.priceCents ? `احجز مقعدك · ${money(l.priceCents, l.currency)}` : 'احجز مجانًا'}
       </Button>
     );
   } else {
@@ -139,7 +139,7 @@ export function PublicLecture({ params }: { params: { code: string } }) {
           </main>
           <aside className="lesson-booking" aria-label="تفاصيل الحجز">
             <div className="lesson-booking-top"><span><Radio size={16} /> حصة مباشرة أونلاين</span><span className="lesson-ticket-mark" aria-hidden="true">G</span></div>
-            <div className="lesson-price"><strong>{l.priceCents ? money(l.priceCents) : 'مجانية'}</strong><span>للحصة الواحدة</span></div>
+            <div className="lesson-price"><strong>{l.priceCents ? money(l.priceCents, l.currency) : 'مجانية'}</strong><span>للحصة الواحدة</span></div>
             <div className="lesson-facts">
               <Fact icon={<CalendarClock />} label="موعدنا" value={fmtDay(l.startsAt)} detail={fmtTime(l.startsAt)} />
               <Fact icon={<Clock />} label="مدة الحصة" value={fmtDuration(l.durationMin)} />
@@ -155,7 +155,7 @@ export function PublicLecture({ params }: { params: { code: string } }) {
         </div>
         <footer className="lesson-footer"><Logo /><span>مساحة للتعلّم. ووقت للفهم.</span><Link href="/">اكتشف جاهز <ArrowLeft size={16} /></Link></footer>
       </div>
-      <div className="lesson-mobile-booking"><div><strong>{l.priceCents ? money(l.priceCents) : 'مجانية'}</strong><span>{fmtTime(l.startsAt)} · {fmtDay(l.startsAt)}</span></div><div>{cta}</div></div>
+      <div className="lesson-mobile-booking"><div><strong>{l.priceCents ? money(l.priceCents, l.currency) : 'مجانية'}</strong><span>{fmtTime(l.startsAt)} · {fmtDay(l.startsAt)}</span></div><div>{cta}</div></div>
       <PhoneSheet open={phoneSheet !== 'closed'} onOpenChange={(open) => !open && setPhoneSheet('closed')} invalid={phoneSheet === 'rejected'} pending={book.isPending} onSubmit={(phone) => book.mutate({ id: l.id, phone })} />
     </div>
   );

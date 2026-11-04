@@ -54,10 +54,10 @@ router.post("/auth/signup", async (req, res) => {
   const linkCode = role === "student" ? await uniqueLinkCode() : "";
 
   const user = await db.transaction(async (tx) => {
-    const [u] = await tx.insert(usersTable).values({ role, name: input.name, email: input.email, phone: input.phone, passwordHash }).returning();
-    if (role === "teacher") await tx.insert(teacherProfilesTable).values({ userId: u!.id, subject: input.subject });
+    const [u] = await tx.insert(usersTable).values({ role, name: input.name, email: input.email, phone: input.phone, country: input.country, passwordHash }).returning();
+    if (role === "teacher") await tx.insert(teacherProfilesTable).values({ userId: u!.id, subject: input.subject, country: input.country, curriculum: input.curriculum, track: input.track });
     if (role === "student")
-      await tx.insert(studentProfilesTable).values({ userId: u!.id, grade: input.grade, parentEmail: input.parentEmail, linkCode });
+      await tx.insert(studentProfilesTable).values({ userId: u!.id, grade: input.grade, country: input.country, curriculum: input.curriculum, track: input.track, parentEmail: input.parentEmail, linkCode });
     if (role === "parent" && childCode) {
       const child = await tx.query.studentProfilesTable.findFirst({ where: eq(studentProfilesTable.linkCode, childCode) });
       if (!child) throw badRequest("رمز ربط الطالب غير صحيح. تحقّق منه ثم حاول مجددًا.");
@@ -146,6 +146,7 @@ router.patch("/me", async (req, res) => {
   const userSet = {
     ...(input.name !== undefined && { name: input.name }),
     ...(input.phone !== undefined && { phone: input.phone ?? null }),
+    ...(input.country !== undefined && { country: input.country ?? null }),
     ...(input.avatarUrl !== undefined && { avatarUrl: input.avatarUrl || null }),
   };
   const teacherSet = {
@@ -155,9 +156,15 @@ router.patch("/me", async (req, res) => {
     ...(input.bio !== undefined && { bio: input.bio }),
     ...(input.headline !== undefined && { headline: input.headline }),
     ...(input.subject !== undefined && { subject: input.subject }),
+    ...(input.country !== undefined && { country: input.country }),
+    ...(input.curriculum !== undefined && { curriculum: input.curriculum }),
+    ...(input.track !== undefined && { track: input.track }),
   };
   const studentSet = {
     ...(input.grade !== undefined && { grade: input.grade }),
+    ...(input.country !== undefined && { country: input.country }),
+    ...(input.curriculum !== undefined && { curriculum: input.curriculum }),
+    ...(input.track !== undefined && { track: input.track }),
     ...(input.parentEmail !== undefined && { parentEmail: input.parentEmail ?? null }),
   };
   const updated = await db.transaction(async tx => {

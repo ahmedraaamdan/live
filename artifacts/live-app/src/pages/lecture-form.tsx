@@ -5,16 +5,22 @@ import { QueryError } from '@/components/query-error';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useLocation } from 'wouter';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { GRADES, SUBJECTS, TRIAL_MAX_STUDENTS, lectureInputSchema, splitBooking, type LectureDTO } from '@workspace/live-core';
+import {
+  CURRENCIES,
+  TRIAL_MAX_STUDENTS,
+  getCurrencyConfig,
+  lectureInputSchema,
+  splitBooking,
+  type LectureDTO,
+} from '@workspace/live-core';
 import { ShareLectureSheet } from '@/components/bits';
 import { api, errorMessage } from '@/lib/api';
-import { money, toLocalInput } from '@/lib/format';
+import { money } from '@/lib/format';
 import { useMe } from '@/lib/session';
-import { useCatalog } from '@/lib/catalog';
+import { CurriculumPicker } from '@/components/curriculum-picker';
 import { ActionBar, Banner, Button, Card, Chip, Page, PageSpinner, Select, Switch, TextArea, TextField, TopBar, toast } from '@/ui';
 
 const DURATIONS = [45, 60, 90, 120, 150];
-const PRICES = [0, 50, 100, 150, 200, 300];
 
 function defaultStart() {
   const chosen = new Date(new URLSearchParams(window.location.search).get('startsAt') ?? '');
@@ -23,25 +29,29 @@ function defaultStart() {
 }
 
 export function LectureForm({ id }: { id?: string }) {
-  const { subjects, grades } = useCatalog();
   const me = useMe();
   const verification = useTeacherVerification();
   const qc = useQueryClient();
   const [, navigate] = useLocation();
   const existing = useQuery({ queryKey: ['lecture', id], queryFn: () => api<LectureDTO>(`/lectures/${id}`), enabled: Boolean(id) });
+
   const [form, setForm] = useState({
     title: '',
+    curriculum: me.teacher?.curriculum ?? 'egypt_general',
+    track: me.teacher?.track ?? '',
     subject: me.teacher?.subject ?? '',
     grade: '',
+    currency: 'EGP',
     description: '',
     coverUrl: '',
     startsAt: toCairoInput(defaultStart()),
     durationMin: 90,
-    priceEGP: '150',
+    priceAmount: '150',
     capacity: '',
     publish: true,
     listed: true,
   });
+
   const [uploadingCover, setUploadingCover] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<LectureDTO | null>(null);
@@ -51,13 +61,16 @@ export function LectureForm({ id }: { id?: string }) {
     if (!l) return;
     setForm({
       title: l.title,
+      curriculum: l.curriculum ?? 'egypt_general',
+      track: l.track ?? '',
       subject: l.subject,
       grade: l.grade,
+      currency: l.currency ?? 'EGP',
       description: l.description,
       coverUrl: l.coverUrl ?? '',
       startsAt: toCairoInput(new Date(l.startsAt)),
       durationMin: l.durationMin,
-      priceEGP: String(l.priceCents / 100),
+      priceAmount: String(l.priceCents / 100),
       capacity: l.capacity ? String(l.capacity) : '',
       publish: l.status !== 'draft',
       listed: l.listed,
@@ -86,7 +99,9 @@ export function LectureForm({ id }: { id?: string }) {
   if (id && existing.isPending) return <PageSpinner />;
 
   if (id && existing.isError && !existing.data) return <><TopBar title="تعديل الحصة" back /><Page><QueryError error={existing.error} retry={existing.refetch} /></Page></>;
-  const priceCents = trial ? 0 : Math.round(Number(form.priceEGP || 0) * 100);
+
+  const currencyCfg = getCurrencyConfig(form.currency);
+  const priceCents = trial ? 0 : Math.round(Number(form.priceAmount || 0) * 100);
   const { teacherCents } = splitBooking(priceCents);
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm({ ...form, [k]: e.target.value });
 
@@ -96,8 +111,11 @@ export function LectureForm({ id }: { id?: string }) {
     if (!start) return setError('أدخل موعدًا صحيحًا للحصة');
     const body = {
       title: form.title,
+      curriculum: form.curriculum,
+      track: form.track || undefined,
       subject: form.subject,
       grade: form.grade,
+      currency: form.currency,
       description: form.description,
       coverUrl: form.coverUrl || null,
       startsAt: start.toISOString(),
@@ -127,10 +145,20 @@ export function LectureForm({ id }: { id?: string }) {
           <Card className="flex flex-col gap-5">
             <MediaUpload purpose="cover" value={form.coverUrl || null} onBusyChange={setUploadingCover} onChange={url => setForm(current => ({ ...current, coverUrl: url ?? '' }))} />
             <TextField label="عنوان الحصة" value={form.title} onChange={set('title')} placeholder="الكهربية التيارية: قانون أوم" maxLength={120} />
-            <div className="grid gap-5 md:grid-cols-2">
-              <Select label="المادة" value={form.subject} onChange={set('subject')} placeholder="اختر المادة" options={subjects.map((s) => ({ value: s.key, label: s.label }))} />
-              <Select label="الصف" value={form.grade} onChange={set('grade')} placeholder="اختر الصف" options={grades.map((g) => ({ value: g.key, label: g.label }))} />
-            </div>
+
+            {/* المنهج والمرحلة والشعبة والمادة */}
+            <CurriculumPicker
+              curriculum={form.curriculum}
+              onCurriculumChange={(c) => setForm({ ...form, curriculum: c })}
+              grade={form.grade}
+              onGradeChange={(g) => setForm({ ...form, grade: g })}
+              track={form.track}
+              onTrackChange={(t) => setForm({ ...form, track: t })}
+              subject={form.subject}
+              onSubjectChange={(s) => setForm({ ...form, subject: s })}
+              showSubject={true}
+            />
+
             <TextArea label="ماذا ستشرح في الحصة؟" value={form.description} onChange={set('description')} placeholder="موضوعات الحصة وما يحتاج الطالب إلى تجهيزه قبل الحضور." rows={3} hint="اختياري، يظهر في صفحة الحجز" />
           </Card>
 
@@ -149,31 +177,38 @@ export function LectureForm({ id }: { id?: string }) {
           </Card>
 
           <Card className="flex flex-col gap-5">
-            {!trial && <div>
-              <p className="mb-2 text-label-lg">سعر الحصة</p>
-              <div className="mb-3 flex flex-wrap gap-2">
-                {PRICES.map((p) => (
-                  <Chip key={p} selected={Number(form.priceEGP) === p} onClick={() => setForm({ ...form, priceEGP: String(p) })}>
-                    {p === 0 ? 'مجانية' : <span className="font-num">{p} ج.م</span>}
-                  </Chip>
-                ))}
+            {!trial && (
+              <div>
+                <p className="mb-2 text-label-lg">العملة والتسعير</p>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Select
+                    label="عملة الحصة"
+                    value={form.currency}
+                    onChange={(e) => setForm({ ...form, currency: e.target.value })}
+                    options={CURRENCIES.map((c) => ({
+                      value: c.code,
+                      label: `${c.name} (${c.symbol})`,
+                    }))}
+                  />
+                  <TextField
+                    label={`سعر الحصة (${currencyCfg.symbol})`}
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    value={form.priceAmount}
+                    onChange={set('priceAmount')}
+                    ltr
+                    trailing={<span className="px-3 text-body-md text-on-surface-variant">{currencyCfg.symbol}</span>}
+                    hint={`أقل سعر: ${currencyCfg.minPaidPriceCents / 100} ${currencyCfg.symbol}`}
+                  />
+                </div>
+                {priceCents > 0 && (
+                  <p className="mt-2 text-body-md text-on-surface-variant">
+                    هيوصلك <span className="font-num text-title-sm text-success">{money(teacherCents, form.currency)}</span> عن كل طالب، بعد عمولة المنصة 10%.
+                  </p>
+                )}
               </div>
-              <TextField
-                type="number"
-                inputMode="decimal"
-                min={0}
-                value={form.priceEGP}
-                onChange={set('priceEGP')}
-                ltr
-                trailing={<span className="px-3 text-body-md text-on-surface-variant">ج.م</span>}
-                aria-label="السعر بالجنيه"
-              />
-              {priceCents > 0 && (
-                <p className="mt-2 text-body-md text-on-surface-variant">
-                  هيوصلك <span className="font-num text-title-sm text-success">{money(teacherCents)}</span> عن كل طالب، بعد عمولة المنصة 10%.
-                </p>
-              )}
-            </div>}
+            )}
             <TextField label="أقصى عدد طلاب" type="number" inputMode="numeric" min={1} value={form.capacity} onChange={set('capacity')} ltr placeholder={trial ? String(TRIAL_MAX_STUDENTS) : 'دون حد أقصى'} hint={trial ? `حتى ${TRIAL_MAX_STUDENTS} طالب قبل التوثيق` : 'اتركه فارغًا إذا لم تحدد عددًا أقصى'} />
             <Switch checked={form.publish} onChange={(v) => setForm({ ...form, publish: v })} label="افتح الحجز" description={form.publish ? 'الرابط متاح ويمكن للطلاب الحجز' : 'مسودة: لا تظهر إلا لك'} />
             <Switch
