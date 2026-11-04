@@ -1,3 +1,4 @@
+import type { CurriculumConfig, CurrencyConfig } from "./curriculums";
 /**
  * Response shapes the API returns and the app renders. Timestamps are ISO
  * strings; money is integer piasters.
@@ -469,4 +470,6 @@ export interface TicketDetailDTO extends TicketDTO {
 export interface CatalogDTO {
   subjects: CatalogItem[];
   grades: CatalogItem[];
+  curriculums?: CurriculumConfig[];
+  currencies?: CurrencyConfig[];
 }

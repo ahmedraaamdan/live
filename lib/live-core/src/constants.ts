@@ -3,7 +3,7 @@
  * copy the app shows; keys are what the API stores.
  */
 
-import { CURRICULUMS } from "./curriculums";
+import { CURRICULUMS, setCatalogCurriculums, setCatalogCurrencies, type CurriculumConfig, type CurrencyConfig } from "./curriculums";
 
 export const ROLES = ["student", "teacher", "parent", "admin"] as const;
 export type Role = (typeof ROLES)[number];
@@ -63,12 +63,23 @@ export type GradeKey = (typeof DEFAULT_GRADES)[number]["key"];
 export const SUBJECTS: CatalogItem[] = DEFAULT_SUBJECTS.map((s) => ({ ...s }));
 export const GRADES: CatalogItem[] = DEFAULT_GRADES.map((g) => ({ ...g }));
 
-export function setCatalog(catalog: { subjects?: ReadonlyArray<CatalogItem>; grades?: ReadonlyArray<CatalogItem> }): void {
+export function setCatalog(catalog: {
+  subjects?: ReadonlyArray<CatalogItem>;
+  grades?: ReadonlyArray<CatalogItem>;
+  curriculums?: ReadonlyArray<CurriculumConfig>;
+  currencies?: ReadonlyArray<CurrencyConfig>;
+}): void {
   if (catalog.subjects?.length) {
     SUBJECTS.splice(0, SUBJECTS.length, ...catalog.subjects.map((s) => ({ key: s.key, label: s.label })));
   }
   if (catalog.grades?.length) {
     GRADES.splice(0, GRADES.length, ...catalog.grades.map((g) => ({ key: g.key, label: g.label })));
+  }
+  if (catalog.curriculums?.length) {
+    setCatalogCurriculums(catalog.curriculums);
+  }
+  if (catalog.currencies?.length) {
+    setCatalogCurrencies(catalog.currencies);
   }
 }
 

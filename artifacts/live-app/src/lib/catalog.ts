@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { GRADES, SUBJECTS, setCatalog, type CatalogDTO } from '@workspace/live-core';
+import { CURRENCIES, CURRICULUMS, GRADES, SUBJECTS, setCatalog, type CatalogDTO } from '@workspace/live-core';
 import { api } from './api';
 
 export function useCatalog() {
@@ -15,6 +15,8 @@ export function useCatalog() {
   return {
     subjects: q.data?.subjects ?? SUBJECTS,
     grades: q.data?.grades ?? GRADES,
+    curriculums: q.data?.curriculums ?? CURRICULUMS,
+    currencies: q.data?.currencies ?? CURRENCIES,
     isLoading: q.isPending,
     isError: q.isError,
     error: q.error,

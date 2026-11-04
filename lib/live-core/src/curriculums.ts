@@ -114,7 +114,7 @@ export interface CurrencyConfig {
   minPayoutCents: number;
 }
 
-export const CURRENCIES: CurrencyConfig[] = [
+export const DEFAULT_CURRENCIES: CurrencyConfig[] = [
   { code: "EGP", name: "جنيه مصري", symbol: "ج.م", minPaidPriceCents: 50_00, minPayoutCents: 100_00 },
   { code: "QAR", name: "ريال قطري", symbol: "ر.ق", minPaidPriceCents: 20_00, minPayoutCents: 50_00 },
   { code: "SAR", name: "ريال سعودي", symbol: "ر.س", minPaidPriceCents: 20_00, minPayoutCents: 50_00 },
@@ -155,7 +155,15 @@ export interface CurriculumConfig {
   subjects: SubjectItem[];
 }
 
-export const CURRICULUMS: CurriculumConfig[] = [
+export const CURRENCIES: CurrencyConfig[] = DEFAULT_CURRENCIES.map((c) => ({ ...c }));
+
+export function setCatalogCurrencies(list: ReadonlyArray<CurrencyConfig>): void {
+  if (list && list.length > 0) {
+    CURRENCIES.splice(0, CURRENCIES.length, ...list.map((c) => ({ ...c })));
+  }
+}
+
+export const DEFAULT_CURRICULUMS: CurriculumConfig[] = [
   // 1. مصر - التعليم العام
   {
     id: "egypt_general",
@@ -760,6 +768,24 @@ export const CURRICULUMS: CurriculumConfig[] = [
     ],
   },
 ];
+
+export const CURRICULUMS: CurriculumConfig[] = DEFAULT_CURRICULUMS.map((c) => ({
+  ...c,
+  stages: c.stages.map((s) => ({ ...s, grades: s.grades.map((g) => ({ ...g })) })),
+  tracks: c.tracks ? c.tracks.map((t) => ({ ...t })) : undefined,
+  subjects: c.subjects.map((s) => ({ ...s })),
+}));
+
+export function setCatalogCurriculums(list: ReadonlyArray<CurriculumConfig>): void {
+  if (list && list.length > 0) {
+    CURRICULUMS.splice(0, CURRICULUMS.length, ...list.map((c) => ({
+      ...c,
+      stages: c.stages.map((s) => ({ ...s, grades: s.grades.map((g) => ({ ...g })) })),
+      tracks: c.tracks ? c.tracks.map((t) => ({ ...t })) : undefined,
+      subjects: c.subjects.map((s) => ({ ...s })),
+    })));
+  }
+}
 
 /* -------------------------------------------------------------------------- */
 /*                              Helper Functions                              */

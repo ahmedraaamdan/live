@@ -226,6 +226,8 @@ export const catalogUpdateSchema = z
   .object({
     subjects: z.array(catalogItemSchema).min(1, { message: "لازم يكون فيه مادة واحدة على الأقل" }).max(100),
     grades: z.array(catalogItemSchema).min(1, { message: "لازم يكون فيه صف واحد على الأقل" }).max(100),
+    curriculums: z.array(z.any()).optional(),
+    currencies: z.array(z.any()).optional(),
   })
   .superRefine((c, ctx) => {
     if (new Set(c.subjects.map((s) => s.key)).size !== c.subjects.length) {
