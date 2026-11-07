@@ -141,9 +141,22 @@ export async function sendTeacherDayOneFollowups() {
 
       if (!claimed) continue;
       const sent = await sendTeacherGrowthEmail(teacher);
-      if (sent) logger.info({ teacherId: teacher.id, email: teacher.email }, "Teacher day-one marketing email sent");
+      if (sent) {
+        logger.info({ teacherId: teacher.id, email: teacher.email }, "Teacher day-one marketing email sent");
+      } else {
+        await db
+          .update(teacherProfilesTable)
+          .set({ marketingEmailSentAt: null })
+          .where(eq(teacherProfilesTable.userId, teacher.id));
+        break;
+      }
     } catch (err) {
+      await db
+        .update(teacherProfilesTable)
+        .set({ marketingEmailSentAt: null })
+        .where(eq(teacherProfilesTable.userId, teacher.id));
       logger.error({ err, teacherId: teacher.id }, "Failed to send teacher day-one marketing email");
+      break;
     }
   }
 }
