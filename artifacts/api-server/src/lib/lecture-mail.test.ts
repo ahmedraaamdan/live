@@ -77,7 +77,9 @@ test("admin class summaries and branded manual and automatic mail", async () => 
     const previewResponse = await call(`${endpoint}/preview`, draft);
     assert.equal(previewResponse.status, 200);
     const { html } = await previewResponse.json() as { html: string };
-    assert.match(html, /email-live\.png/);
+    assert.match(html, /font-family:'Lalezar','Readex Pro'/);
+    assert.match(html, /https:\/\/api\.whatsapp\.com\/send\?text=/);
+    assert.match(html, /\?copy=1/);
     assert.match(html, /&lt;script&gt;malicious&lt;\/script&gt;<br>second line/);
     assert.equal((await readdir(outbox)).length, 4);
     assert.equal((await call(endpoint, { ...draft, subject: "Bad\nheader" })).status, 400);

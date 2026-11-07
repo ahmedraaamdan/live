@@ -42,6 +42,7 @@ test("teacher identity review, private documents and enforced two-factor login",
   const ownerView=await privateGet(ownerToken);check("super owner can inspect decrypted image with no-store caching",ownerView.status===200&&ownerView.headers.get("cache-control")==="private, no-store"&&Buffer.from(await ownerView.arrayBuffer()).equals(png));
   const input={fullName:"أحمد محمد رمضان",phone:"01012345678",subject:"الفيزياء",governorate:"القاهرة",qualification:"بكالوريوس العلوم والتربية",experienceYears:7,membershipNumber:"fixture-123",frontDocumentId:front.data.id,backDocumentId:back.data.id};
   let submitted=await call("/teacher/verification/submit",teacherToken,input);check("complete verification enters review without self-approval",submitted.status===200&&submitted.data.status==="pending");
+  assert.deepEqual((await call("/public/verified-teachers")).data, []);
   check("pending review still cannot schedule a paid class",(await call("/lectures",teacherToken,lecture)).status===403);
   check("pending application cannot be silently replaced",(await call("/teacher/verification/submit",teacherToken,input)).status===409);
   check("review queue is super-owner only",(await call("/admin/teacher-verifications",adminToken)).status===403&&(await call("/admin/teacher-verifications",studentToken)).status===403);
@@ -54,6 +55,12 @@ test("teacher identity review, private documents and enforced two-factor login",
   submitted=await call("/teacher/verification/submit",teacherToken,input);check("teacher can correct and resubmit",submitted.status===200&&submitted.data.status==="pending");
   check("stale review cannot approve unseen replacement",(await call(`/admin/teacher-verifications/${teacher!.id}/review`,ownerToken,{action:"approve",submittedAt:firstSubmitted})).status===409);
   const approved=await call(`/admin/teacher-verifications/${teacher!.id}/review`,ownerToken,{action:"approve",submittedAt:submitted.data.submittedAt});check("owner approval is required before scheduling",approved.status===200&&approved.data.status==="approved");
+  const directory = await fetch(base + "/public/verified-teachers", { headers: { Origin: "https://live.gahez.space" } });
+  assert.equal(directory.headers.get("access-control-allow-origin"), "*");
+  assert.deepEqual(await directory.json(), [{ id: teacher!.id, name: teacher!.name, avatarUrl: null }]);
+  await db.update(usersTable).set({ suspended: true }).where(eq(usersTable.id, teacher!.id));
+  assert.deepEqual((await call("/public/verified-teachers")).data, []);
+  await db.update(usersTable).set({ suspended: false }).where(eq(usersTable.id, teacher!.id));
   const created=await call("/lectures",teacherToken,lecture);check("approved teacher can schedule",created.status===201);
   const publicProfile=await call(`/teachers/${teacher!.id}`);check("public profile shows verification without leaking legal identity",publicProfile.data.teacher.verified===true&&!JSON.stringify(publicProfile.data).includes(input.membershipNumber)&&!JSON.stringify(publicProfile.data).includes(front.data.id));
   const disabled=await call("/me/security/mfa/disable",teacherToken,{password,code:enabled.data.recoveryCodes[1]});check("turning off two-factor keeps the review, and only blocks withdrawing",disabled.status===200&&(await call("/teacher/verification",teacherToken)).data.status==="approved"&&(await call("/lectures",teacherToken,lecture)).status===201&&(await call("/wallet/payouts",teacherToken,{amountCents:10000,method:"instapay",account:"01000000000"})).status===403);

@@ -82,6 +82,7 @@ export const teacherProfilesTable = pgTable("teacher_profiles", {
   experience: text("experience").notNull().default(""),
   socialLinks: jsonb("social_links").$type<Array<{ label: string; url: string; kind?: "image" | "document" | "link" }>>().notNull().default([]),
   certificates: jsonb("certificates").$type<Array<{ label: string; url: string; kind?: "image" | "document" | "link" }>>().notNull().default([]),
+  marketingEmailSentAt: timestamp("marketing_email_sent_at", { withTimezone: true }),
 });
 
 export const studentProfilesTable = pgTable("student_profiles", {

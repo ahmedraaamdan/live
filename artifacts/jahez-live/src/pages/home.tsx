@@ -32,6 +32,7 @@ import {
 } from "@/components/marketing/studio-motion";
 import { HeroArtwork } from "@/components/marketing/hero-artwork";
 import { TeacherPhoto } from "@/components/marketing/teacher-photo";
+import { VerifiedTeachersSection } from "@/components/marketing/verified-teachers-section";
 import { InquirySection } from "@/components/marketing/inquiry-section";
 import { useSeo } from "@/hooks/use-seo";
 import { routes } from "@/lib/routes";
@@ -328,6 +329,7 @@ export default function Home() {
           </div>
         </section>
 
+        <VerifiedTeachersSection />
         <section className="studio-section studio-teachers">
           <div className="container-wide">
             <Reveal className="studio-section-head">

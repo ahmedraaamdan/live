@@ -195,3 +195,7 @@
 
 @keyframes studio-route-enter { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: no-preference) { .studio-route { animation: studio-route-enter .4s var(--ease-signal); } }
+/* Keeps the checkmark still while the verification seal's ring rotates. */
+@keyframes verified-seal-spin {
+  to { transform: rotate(360deg); }
+}

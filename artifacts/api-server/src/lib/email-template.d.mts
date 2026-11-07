@@ -21,3 +21,4 @@ export interface EmailOptions {
 
 export function renderEmail(opts: EmailOptions): { html: string; text: string };
 export function esc(s: unknown): string;
+export const LIVE_EMAIL_FONT: string;

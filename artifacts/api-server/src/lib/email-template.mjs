@@ -46,6 +46,7 @@ export const esc = (s) => String(s ?? '')
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 const FONT = "'Cairo','Segoe UI',Tahoma,Arial,sans-serif";
+export const LIVE_EMAIL_FONT = "'Readex Pro','Segoe UI',Tahoma,Arial,sans-serif";
 const INK = '#0F172A', SOFT = '#475569', MUTED = '#64748B', LINE = '#E2E8F0';
 
 function button(cta, accent, live) {
@@ -53,7 +54,7 @@ function button(cta, accent, live) {
   return `
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:26px auto 4px">
     <tr><td align="center" bgcolor="${accent}" style="border-radius:12px;background:${accent};${live ? '' : `background-image:linear-gradient(135deg,${accent},#22D3EE)`}">
-      <a href="${esc(cta.url)}" target="_blank" style="display:inline-block;padding:14px 30px;font-family:${FONT};font-size:16px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:12px">${esc(cta.label)}</a>
+      <a href="${esc(cta.url)}" target="_blank" style="display:inline-block;padding:14px 30px;font-family:${live ? LIVE_EMAIL_FONT : FONT};font-size:16px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:12px">${esc(cta.label)}</a>
     </td></tr>
   </table>`;
 }
@@ -67,10 +68,11 @@ export function renderEmail(opts) {
   const p = PRODUCTS[opts.product] || PRODUCTS.gahez;
   const accent = opts.accent || p.accent;
   const live = opts.product === 'live';
-  const liveApp = (typeof process !== 'undefined' && process.env.APP_URL || 'http://localhost:5174').replace(/\/$/, '');
-  const background = live ? '#FFF1F4' : '#EEF4FF';
-  const headerColor = live ? '#9F1239' : '#1D4ED8';
-  const headerGradient = live ? '#881337 0%,#BE123C 55%,#E11D48 100%' : '#1A3A9C 0%,#2563EB 55%,#22D3EE 100%';
+  const font = live ? LIVE_EMAIL_FONT : FONT;
+  const headingFont = live && rtl ? "'Lalezar'," + font : font;
+  const background = live ? '#F5F3F0' : '#EEF4FF';
+  const headerColor = live ? INK : '#1D4ED8';
+  const headerGradient = live ? '' : 'background-image:linear-gradient(135deg,#1A3A9C 0%,#2563EB 55%,#22D3EE 100%);';
   const productName = rtl ? p.nameAr : p.name;
   const robot = opts.robot === null ? null : (opts.robot || 'hero');
   const [rw, rh] = ROBOT_SIZE[robot] || ROBOT_SIZE.hero;
@@ -80,14 +82,14 @@ export function renderEmail(opts) {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:22px;border:1px solid ${LINE};border-radius:14px;border-collapse:separate;overflow:hidden">
       ${rows.map(([k, v], i) => `
       <tr>
-        <td style="padding:12px 16px;width:34%;font-family:${FONT};font-size:13px;color:${MUTED};vertical-align:top;text-align:${start};${i ? `border-top:1px solid ${LINE};` : ''}background:#F8FAFC">${esc(k)}</td>
-        <td style="padding:12px 16px;font-family:${FONT};font-size:15px;font-weight:600;color:${INK};vertical-align:top;text-align:${start};${i ? `border-top:1px solid ${LINE};` : ''}word-break:break-word">${v}</td>
+        <td style="padding:12px 16px;width:34%;font-family:${font};font-size:13px;color:${MUTED};vertical-align:top;text-align:${start};${i ? `border-top:1px solid ${LINE};` : ''}background:#F8FAFC">${esc(k)}</td>
+        <td style="padding:12px 16px;font-family:${font};font-size:15px;font-weight:600;color:${INK};vertical-align:top;text-align:${start};${i ? `border-top:1px solid ${LINE};` : ''}word-break:break-word">${v}</td>
       </tr>`).join('')}
     </table>` : '';
 
   const productLinks = ['agent', 'tools', 'live', 'academy', 'sticky'].map((k) => {
     const q = PRODUCTS[k];
-    return `<a href="${q.url}" target="_blank" style="display:inline-block;margin:4px 3px;padding:6px 12px;border-radius:999px;border:1px solid ${LINE};background:#ffffff;font-family:${FONT};font-size:12px;font-weight:700;color:${q.accent};text-decoration:none">${q.name}</a>`;
+    return `<a href="${q.url}" target="_blank" style="display:inline-block;margin:4px 3px;padding:6px 12px;border-radius:999px;border:1px solid ${LINE};background:#ffffff;font-family:${font};font-size:12px;font-weight:700;color:${q.accent};text-decoration:none">${q.name}</a>`;
   }).join('');
 
   const socials = SOCIAL.map(([k, url, label]) =>
@@ -113,11 +115,11 @@ export function renderEmail(opts) {
 <meta name="color-scheme" content="light">
 <meta name="supported-color-schemes" content="light">
 <title>${esc(opts.title)}</title>
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=${live ? 'Lalezar&amp;family=Readex+Pro:wght@400;500;600;700' : 'Cairo:wght@400;600;700;800'}&amp;display=swap" rel="stylesheet">
 <style>
   body{margin:0;padding:0;background:${background}}
   a{color:${accent}}
-  @media (max-width:620px){ .shell{width:100%!important} .pad{padding-left:20px!important;padding-right:20px!important} .h1{font-size:23px!important} }
+  @media (max-width:620px){ .shell{width:100%!important} .pad{padding-left:20px!important;padding-right:20px!important} .h1{font-size:${live ? '30px' : '23px'}!important} }
 </style>
 </head>
 <body style="margin:0;padding:0;background:${background}">
@@ -125,27 +127,27 @@ export function renderEmail(opts) {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${background}" style="background:${background}">
 <tr><td align="center" style="padding:28px 12px">
 
-  <table role="presentation" class="shell" width="600" cellpadding="0" cellspacing="0" border="0" dir="${dir}" style="width:600px;max-width:600px;background:#ffffff;border-radius:22px;overflow:hidden;box-shadow:0 18px 40px -24px rgba(29,78,216,.45)">
+  <table role="presentation" class="shell" width="600" cellpadding="0" cellspacing="0" border="0" dir="${dir}" style="width:${live ? '100%' : '600px'};max-width:600px;background:#ffffff;overflow:hidden;${live ? `border-radius:20px;border:1px solid ${LINE}` : 'border-radius:22px;box-shadow:0 18px 40px -24px rgba(29,78,216,.45)'}">
 
     <!-- header -->
-    <tr><td bgcolor="${headerColor}" style="background:${headerColor};background-image:linear-gradient(135deg,${headerGradient});padding:22px 28px" class="pad">
+    <tr><td bgcolor="${headerColor}" style="background:${headerColor};${headerGradient}padding:${live ? '16px 28px' : '22px 28px'}" class="pad">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
           <td style="text-align:${start}"><a href="${p.url}" target="_blank"><img src="${ASSETS}/logo-white.png" width="133" height="32" alt="Gahez" style="display:inline-block;border:0;height:32px;width:auto"></a></td>
-          <td style="text-align:${end}"><span style="display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.35);font-family:${FONT};font-size:13px;font-weight:700;color:#ffffff;white-space:nowrap">${esc(productName)}</span></td>
+          <td style="text-align:${end}"><span style="display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.35);font-family:${font};font-size:13px;font-weight:700;color:#ffffff;white-space:nowrap">${esc(productName)}</span></td>
         </tr>
       </table>
     </td></tr>
     <tr><td style="height:4px;line-height:4px;font-size:0;background:${accent}">&nbsp;</td></tr>
 
     <!-- hero -->
-    <tr><td class="pad" style="padding:30px 36px 8px;text-align:center">
-      ${live ? `<img src="${esc(liveApp)}/images/email-live.png" width="172" alt="جاهز لايف" style="display:block;margin:0 auto 14px;border:0;width:172px;height:auto">` : robot ? `<img src="${ASSETS}/robot-${robot}.png" width="${rw}" height="${rh}" alt="" style="display:block;margin:0 auto 14px;border:0;width:${rw}px;height:auto">` : ''}
-      <h1 class="h1" style="margin:0;font-family:${FONT};font-size:26px;line-height:1.35;font-weight:800;color:${INK}">${esc(opts.title)}</h1>
+    <tr><td class="pad" style="padding:30px 36px 8px;text-align:${live ? start : 'center'}">
+      ${!live && robot ? `<img src="${ASSETS}/robot-${robot}.png" width="${rw}" height="${rh}" alt="" style="display:block;margin:0 auto 14px;border:0;width:${rw}px;height:auto">` : ''}
+      <h1 class="h1" style="margin:0;font-family:${headingFont};font-size:${live ? '36px' : '26px'};line-height:1.3;font-weight:${live && rtl ? 400 : 800};color:${INK}">${esc(opts.title)}</h1>
     </td></tr>
 
     <!-- content -->
-    <tr><td class="pad" dir="${dir}" style="padding:10px 36px 30px;font-family:${FONT};font-size:16px;line-height:1.85;color:${SOFT};text-align:${start}">
+    <tr><td class="pad" dir="${dir}" style="padding:10px 36px 30px;font-family:${font};font-size:16px;line-height:1.85;color:${SOFT};text-align:${start}">
       ${opts.intro ? `<p style="margin:10px 0 0">${opts.intro}</p>` : ''}
       ${rowsHtml}
       ${opts.body || ''}
@@ -154,23 +156,30 @@ export function renderEmail(opts) {
     </td></tr>
 
     <!-- help strip -->
-    <tr><td class="pad" style="padding:16px 36px;background:#F1F6FF;border-top:1px solid ${LINE};font-family:${FONT};font-size:14px;color:${SOFT};text-align:center">
+    <tr><td class="pad" style="padding:16px 36px;background:${live ? '#F8FAFC' : '#F1F6FF'};border-top:1px solid ${LINE};font-family:${font};font-size:14px;color:${SOFT};text-align:center">
       ${t.help} <a href="https://wa.me/201557947788" target="_blank" style="color:#16A34A;font-weight:700;text-decoration:none">WhatsApp</a>
     </td></tr>
 
     <!-- footer -->
+    ${live ? `
+    <tr><td class="pad" style="padding:20px 28px;background:${INK};text-align:center;font-family:${font};font-size:12px;line-height:1.85;color:#CBD5E1">
+      <a href="${p.url}" style="color:#FFFFFF;text-decoration:none;font-weight:700">Gahez Live</a>
+      <span aria-hidden="true"> · </span>
+      <a href="mailto:support@gahez.space" style="color:#CBD5E1;text-decoration:none">support@gahez.space</a>
+      ${opts.note ? `<br>${opts.note}` : ''}
+    </td></tr>` : `
     <tr><td class="pad" style="padding:24px 28px 26px;background:#0F172A;text-align:center">
       <a href="https://gahez.space/" target="_blank"><img src="${ASSETS}/logo-white.png" width="108" height="26" alt="Gahez" style="display:inline-block;border:0;height:26px;width:auto"></a>
-      <p style="margin:6px 0 14px;font-family:${FONT};font-size:13px;color:#94A3B8">${t.tagline}</p>
+      <p style="margin:6px 0 14px;font-family:${font};font-size:13px;color:#94A3B8">${t.tagline}</p>
       <div style="margin:0 0 16px">${socials}</div>
-      <p style="margin:0 0 6px;font-family:${FONT};font-size:11px;font-weight:700;letter-spacing:.3px;color:#64748B">${t.products}</p>
+      <p style="margin:0 0 6px;font-family:${font};font-size:11px;font-weight:700;letter-spacing:.3px;color:#64748B">${t.products}</p>
       <div style="margin:0 0 16px">${productLinks}</div>
-      <p style="margin:0;font-family:${FONT};font-size:12px;line-height:1.8;color:#94A3B8">
+      <p style="margin:0;font-family:${font};font-size:12px;line-height:1.8;color:#94A3B8">
         <a href="mailto:support@gahez.space" style="color:#CBD5E1;text-decoration:none">support@gahez.space</a> ·
         <a href="https://gahez.space/" style="color:#CBD5E1;text-decoration:none">gahez.space</a><br>
         ${opts.note ? `${opts.note}<br>` : ''}${t.rights}
       </p>
-    </td></tr>
+    </td></tr>`}
 
   </table>
 </td></tr>

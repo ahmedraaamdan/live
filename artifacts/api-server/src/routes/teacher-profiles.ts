@@ -12,6 +12,23 @@ async function publicTeacher(id: string) {
   if (!row) throw notFound("ملف المدرس غير متاح");
   return row;
 }
+router.get("/public/verified-teachers", async (_req, res) => {
+  const teachers = await db.select({
+    id: usersTable.id,
+    name: usersTable.name,
+    avatarUrl: usersTable.avatarUrl,
+  }).from(teacherVerificationsTable)
+    .innerJoin(usersTable, eq(usersTable.id, teacherVerificationsTable.teacherId))
+    .where(and(
+      eq(teacherVerificationsTable.status, "approved"),
+      eq(usersTable.role, "teacher"),
+      eq(usersTable.suspended, false),
+    ))
+    .orderBy(desc(teacherVerificationsTable.reviewedAt), asc(usersTable.id));
+
+  res.set("Access-Control-Allow-Origin", "*").json(teachers);
+});
+
 router.get("/teachers/:id", async (req, res) => {
   const id = uuidParam(req.params.id);
   const teacher = await publicTeacher(id);

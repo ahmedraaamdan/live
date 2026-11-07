@@ -2055,3 +2055,100 @@ img { -webkit-user-drag: none; }
     margin-top: 32px;
   }
 }
+.verified-track {
+  display: flex;
+  gap: .875rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: auto;
+  padding: .4rem .25rem .8rem;
+  margin: 0;
+  list-style: none;
+  scrollbar-width: none;
+  overscroll-behavior-inline: contain;
+}
+
+.verified-track::-webkit-scrollbar {
+  display: none;
+}
+
+.verified-track > li {
+  flex: 0 0 auto;
+}
+
+.verified-card {
+  display: flex;
+  align-items: center;
+  gap: .85rem;
+  width: min(14rem, 70vw);
+  min-height: 4.5rem;
+  padding: .55rem .75rem;
+  color: var(--studio-ink);
+  background: var(--studio-white);
+  border: 1px solid var(--studio-line);
+  border-radius: var(--radius-signal-card);
+}
+
+.verified-card:hover {
+  border-color: hsl(var(--primary));
+}
+
+.verified-card bdi {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.verified-avatar {
+  position: relative;
+  display: grid;
+  flex: 0 0 3rem;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  background: hsl(var(--muted));
+  border-radius: 50%;
+  font-size: .875rem;
+  font-weight: 700;
+}
+
+.verified-avatar img {
+  position: absolute;
+  inset: 0;
+  width: 3rem;
+  height: 3rem;
+  border-radius: inherit;
+  object-fit: cover;
+  object-position: center 30%;
+}
+
+.verified-seal {
+  position: absolute;
+  inset-inline-end: -.25rem;
+  bottom: -.1rem;
+  display: grid;
+  width: 1.25rem;
+  height: 1.25rem;
+  place-items: center;
+  border-radius: 50%;
+  color: hsl(var(--primary-foreground));
+  background: hsl(var(--primary));
+  box-shadow: 0 0 0 2px var(--studio-white);
+}
+
+.verified-seal::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border: 1px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: verified-seal-spin 3s linear infinite;
+}
+
+.verified-track:is(:hover, :focus-within) .verified-seal::after {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .verified-seal::after { animation: none; }
+}

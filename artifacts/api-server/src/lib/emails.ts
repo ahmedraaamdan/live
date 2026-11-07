@@ -4,7 +4,7 @@
  */
 import type { Lecture, User } from "@workspace/db";
 import { lectureMailCopy, subjectLabel, type LectureMailDraft } from "@workspace/live-core";
-import { esc, renderEmail } from "./email-template.mjs";
+import { esc, LIVE_EMAIL_FONT, renderEmail } from "./email-template.mjs";
 import { env } from "./env";
 import { fmtDateTime, fmtDuration, fmtMoney } from "./format";
 import { sendMail } from "./mailer";
@@ -108,23 +108,22 @@ export function lectureShareBlock(lecture: Lecture, teacherName: string) {
   const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
 
   return `
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:22px 0 10px;background:#FFF1F4;border:1px dashed #FDA4AF;border-radius:14px">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0 6px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:14px">
     <tr>
-      <td class="pad" style="padding:18px 20px;text-align:center">
-        <div style="font-family:'Cairo',Tahoma,sans-serif;font-weight:700;font-size:15px;color:#9F1239;margin-bottom:6px">📢 شارك رابط الحصة مع طلابك وزملائك</div>
-        <p style="margin:0 0 10px;font-family:'Cairo',Tahoma,sans-serif;font-size:13px;color:#475569;line-height:1.6">
-          كل ما تشارك رابط الحصة بدري، الطلاب بيقدروا يحجزوا مكانهم ويستعدوا للحضور قبل اكتمال العدد.
+      <td style="padding:16px;font-family:${LIVE_EMAIL_FONT};text-align:start">
+        <h2 style="margin:0;font-weight:700;font-size:16px;color:#0F172A">شارك رابط الحجز</h2>
+        <p style="margin:4px 0 10px;font-size:13px;color:#475569;line-height:1.75">الطلاب يقدروا يفتحوا تفاصيل الحصة ويحجزوا من الرابط ده.</p>
+        <p dir="ltr" style="margin:0 0 12px;text-align:left;font-size:12px;line-height:1.6;overflow-wrap:anywhere;word-break:break-all">
+          <a href="${esc(shareUrl)}" style="color:#475569">${esc(shareUrl)}</a>
         </p>
-        <div style="margin:8px auto 14px;padding:9px 12px;background:#ffffff;border:1px solid #FECDD3;border-radius:8px;font-family:monospace;font-size:12px;color:#BE123C;word-break:break-all;direction:ltr">
-          ${esc(shareUrl)}
-        </div>
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
           <tr>
-            <td align="center" style="padding:4px 6px">
-              <a href="${esc(copyUrl)}" target="_blank" style="display:inline-block;padding:10px 18px;background:#E11D48;color:#ffffff;font-family:'Cairo',Tahoma,sans-serif;font-size:13px;font-weight:700;text-decoration:none;border-radius:8px">📋 نسخ رابط الحصة تلقائياً</a>
+            <td width="49%" align="center" bgcolor="#0F172A" style="border-radius:8px">
+              <a href="${esc(whatsappUrl)}" target="_blank" style="display:block;padding:11px 6px;color:#ffffff;font-family:${LIVE_EMAIL_FONT};font-size:13px;font-weight:700;text-decoration:none">شارك على واتساب</a>
             </td>
-            <td align="center" style="padding:4px 6px">
-              <a href="${esc(whatsappUrl)}" target="_blank" style="display:inline-block;padding:10px 18px;background:#16A34A;color:#ffffff;font-family:'Cairo',Tahoma,sans-serif;font-size:13px;font-weight:700;text-decoration:none;border-radius:8px">💬 مشاركة عبر واتساب</a>
+            <td width="8" style="font-size:0">&nbsp;</td>
+            <td width="49%" align="center" bgcolor="#FFFFFF" style="border:1px solid #CBD5E1;border-radius:8px">
+              <a href="${esc(copyUrl)}" target="_blank" style="display:block;padding:11px 6px;color:#0F172A;font-family:${LIVE_EMAIL_FONT};font-size:13px;font-weight:700;text-decoration:none">انسخ الرابط</a>
             </td>
           </tr>
         </table>
@@ -362,4 +361,70 @@ export async function sendTicketAnswered(user: User, subject: string, ticketId: 
     note: "وصلك الإيميل ده لأنك بعت تذكرة دعم.",
   });
   await sendMail({ to: user.email, subject: `رد على: ${subject}`, ...mail });
+}
+
+export function renderTeacherGrowthEmail(teacherName: string) {
+  const intro = `أهلاً يا <strong>${esc(teacherName)}</strong> 👋،<br><br>حابين نشاركك خبر مهم ومميز جداً: منصة <strong>Gahez Live</strong> بتطلق حالياً <strong>حملة تسويقية وإعلانية ضخمة</strong> في كل مكان، وده هيجلب آلاف الطلبة وأولياء الأمور اللي بيدوروا على أفضل المدرسين لحجز حصص ومراجعات مباشرة.<br><br>خلال الأيام والأسابيع الجاية هيكون فيه إقبال وزيارات كبيرة جداً للمنصة لحجز الحصص.`;
+
+  const body = `
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0 16px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:14px">
+    <tr>
+      <td style="padding:18px 20px;font-family:${LIVE_EMAIL_FONT};text-align:right" dir="rtl">
+        <h3 style="margin:0 0 14px;font-size:16px;font-weight:700;color:#0F172A">عشان تضمن أعلى استفادة ويجيلك أكبر عدد من الطلاب:</h3>
+        
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:12px">
+          <tr>
+            <td style="vertical-align:top;width:28px;font-size:18px">📅</td>
+            <td style="font-family:${LIVE_EMAIL_FONT};padding-right:8px;text-align:right">
+              <strong style="font-size:15px;color:#E11D48;display:block;margin-bottom:2px">1. واظب على إنشاء حصصك بانتظام</strong>
+              <span style="font-size:13px;color:#475569;line-height:1.7">الطالب لما يدخل المنصة بيختار الحصص القريبة والمتاحة فوراً. جدول مواعيدك للأسبوعين الجايين علشان تكون دايماً في مقدمة نتائج البحث.</span>
+            </td>
+          </tr>
+        </table>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:12px">
+          <tr>
+            <td style="vertical-align:top;width:28px;font-size:18px">🔗</td>
+            <td style="font-family:${LIVE_EMAIL_FONT};padding-right:8px;text-align:right">
+              <strong style="font-size:15px;color:#E11D48;display:block;margin-bottom:2px">2. شارك رابط الحصة مع طلابك</strong>
+              <span style="font-size:13px;color:#475569;line-height:1.7">كل حصة بتعملها ليها رابط مباشر مخصص.. انشره على جروباتك (واتساب، فيسبوك، تليجرام). الحجز والدفع على المنصة بيتم للطلاب في أقل من دقيقة.</span>
+            </td>
+          </tr>
+        </table>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td style="vertical-align:top;width:28px;font-size:18px">🎯</td>
+            <td style="font-family:${LIVE_EMAIL_FONT};padding-right:8px;text-align:right">
+              <strong style="font-size:15px;color:#E11D48;display:block;margin-bottom:2px">3. كمّل ملفك التعريفي (البروفايل)</strong>
+              <span style="font-size:13px;color:#475569;line-height:1.7">تأكد من وضوح صورتك الشخصية والمادة والمراحل الدراسية؛ ده بيبني ثقة فورية عند أولياء الأمور والطلبة الجدد لحجز حصصك.</span>
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+  </table>
+  `;
+
+  return renderEmail({
+    product: "live",
+    robot: "hero",
+    preheader: "إقبال كبير من الطلاب قادم للمنصة.. جهّز حصصك وشارك الرابط الآن.",
+    title: "فرصة ذهبية لمضاعفة طلابك! 🚀",
+    intro,
+    body,
+    cta: { label: "انشئ حصتك القادمة الآن", url: link("/t/lectures/new") },
+    secondary: { label: "أو افتح لوحة تحكم المدرس", url: link("/t") },
+    note: "وصلك الإيميل ده لأنك مدرس مسجل على منصة Gahez Live.",
+  });
+}
+
+export async function sendTeacherGrowthEmail(teacher: Pick<User, "name" | "email">) {
+  const mail = renderTeacherGrowthEmail(teacher.name);
+  return sendMail({
+    to: teacher.email,
+    subject: "فرصة ذهبية لمضاعفة طلابك على Gahez Live 🚀",
+    ...mail,
+  });
 }

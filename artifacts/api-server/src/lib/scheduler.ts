@@ -9,12 +9,13 @@ import { reconcileEasykashPending } from "./easykash-reconcile";
  * one (SCHEDULER=off on the others).
  */
 import { and, eq, inArray, isNull, lt, sql } from "drizzle-orm";
-import { bookingsTable, db, lecturesTable, paymentsTable } from "@workspace/db";
+import { bookingsTable, db, lecturesTable, paymentsTable, teacherProfilesTable, usersTable } from "@workspace/db";
 import { NO_SHOW_GRACE_MINUTES } from "@workspace/live-core";
 import { bookedStudentIds } from "./access";
 import { settleCancelledLecture } from "./bookings";
 import { sendDueLectureReminders } from "./lecture-reminders";
 import { processLectureMailJobs } from "./lecture-mail-jobs";
+import { sendTeacherGrowthEmail } from "./emails";
 import { env } from "./env";
 import { settleLectureFunds } from "./funds";
 import { logger } from "./logger";
@@ -109,6 +110,44 @@ async function endForgottenLectures() {
   for (const l of stuck) await endLecture(l.id);
 }
 
+
+export async function sendTeacherDayOneFollowups() {
+  const candidates = await db
+    .select({
+      id: usersTable.id,
+      name: usersTable.name,
+      email: usersTable.email,
+    })
+    .from(teacherProfilesTable)
+    .innerJoin(usersTable, eq(usersTable.id, teacherProfilesTable.userId))
+    .where(
+      and(
+        eq(usersTable.role, "teacher"),
+        eq(usersTable.suspended, false),
+        isNull(usersTable.deletedAt),
+        isNull(teacherProfilesTable.marketingEmailSentAt),
+        sql`${usersTable.createdAt} <= now() - interval '24 hours'`,
+      ),
+    )
+    .limit(10);
+
+  for (const teacher of candidates) {
+    try {
+      const [claimed] = await db
+        .update(teacherProfilesTable)
+        .set({ marketingEmailSentAt: new Date() })
+        .where(and(eq(teacherProfilesTable.userId, teacher.id), isNull(teacherProfilesTable.marketingEmailSentAt)))
+        .returning();
+
+      if (!claimed) continue;
+      const sent = await sendTeacherGrowthEmail(teacher);
+      if (sent) logger.info({ teacherId: teacher.id, email: teacher.email }, "Teacher day-one marketing email sent");
+    } catch (err) {
+      logger.error({ err, teacherId: teacher.id }, "Failed to send teacher day-one marketing email");
+    }
+  }
+}
+
 export function startScheduler() {
   if (process.env.SCHEDULER === "off") return;
   let sendingReminders = false;
@@ -128,7 +167,7 @@ export function startScheduler() {
     if (running) return;
     running = true;
     try {
-    for (const job of [reconcileEasykashPending, sendInAppReminders, cancelNoShows, releaseFunds, expireCheckouts, endForgottenLectures]) {
+    for (const job of [reconcileEasykashPending, sendInAppReminders, cancelNoShows, releaseFunds, expireCheckouts, endForgottenLectures, sendTeacherDayOneFollowups]) {
       try {
         await job();
       } catch (err) {
