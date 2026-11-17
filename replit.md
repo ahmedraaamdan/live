@@ -8,7 +8,8 @@ _Replace the heading above with the project's name, and this line with one sente
 - `pnpm --filter @workspace/live-app run dev` — run the Gahez Live app (port 5174, proxies `/api`)
 - `pnpm --filter @workspace/api-server run seed:demo` / `run smoke` — demo data / end-to-end check against a running dev API
 - `pnpm --filter @workspace/db run generate` — write a SQL migration after changing `lib/db/src/schema` (applied on API start)
-- `pnpm run typecheck` — full typecheck across all packages
+- `pnpm run lint:hooks` — fail on a React hook after an early return or inside a condition in `live-app` and `jahez-live`; each of their `build` scripts checks its own `src` first
+- `pnpm run typecheck` — hooks check + full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
