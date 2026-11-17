@@ -1,16 +1,17 @@
-import { StudyBanner, StudyIllustration } from '@/components/study-illustration';
+import { HomeFeature } from '@/components/home-feature';
 import { QueryError } from '@/components/query-error';
 import { useEffect, useState } from 'react';
 import { Bookmark, Eye, NotebookPen, Radio, Search, Sparkles, ThumbsUp, Ticket, UserCheck, X } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { CURRICULUMS, getCurriculum, getAllGradesForCurriculum, getSubjectsFor, subjectLabel, gradeLabel, type FeedDTO, type FeedItem, type LectureDTO, type StudentHomeDTO } from '@workspace/live-core';
+import { CURRICULUMS, getAllGradesForCurriculum, getSubjectsFor, subjectLabel, type FeedDTO, type FeedItem, type LectureDTO, type StudentHomeDTO } from '@workspace/live-core';
 import { Countdown } from '@/components/bits';
 import { FollowTeacherButton, SaveLectureButton } from '@/components/lecture-actions';
 import { approvalPct } from '@/components/vote';
 import { NotificationsButton } from '@/layouts/app-shell';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/cn';
+import { lectureCover } from '@/lib/lecture-cover';
 import { fmtDateTime, fmtRelative, greeting, money } from '@/lib/format';
 import { useMe } from '@/lib/session';
 import { useCatalog } from '@/lib/catalog';
@@ -71,34 +72,31 @@ export function StudentHome() {
       <Page wide>
         {home.isError && <QueryError error={home.error} retry={home.refetch} />}
         {feed.isError && <QueryError error={feed.error} retry={feed.refetch} />}
-        {!myLive && !next && home.isSuccess && <StudyBanner title="خطوة جديدة في تعلّمك" body="اختر حصتك، واسأل مدرسك، وتابع مهامك من هنا." />}
-        {/* Mine first: my class on air, or my next one. */}
-        {myLive ? (
-          <Card variant="ink" pad="lg" className="relative mb-6 overflow-hidden rounded-xl">
-            <div className="pointer-events-none absolute -top-16 -left-16 size-56 rounded-full bg-gradient-live opacity-40 blur-3xl" aria-hidden="true" />
-            <div className="relative">
-              <LiveBadge label="حصتك مباشرة الآن" />
-              <h2 className="mt-3 text-headline-md">{myLive.title}</h2>
-              <p className="mt-1 text-body-md text-white/70">{myLive.teacher.name}</p>
-              <Button variant="live" size="lg" className="mt-5" onClick={() => navigate(`/live/${myLive.id}`)}>
-                <Radio /> انضم إلى البث
-              </Button>
-            </div>
-          </Card>
-        ) : next ? (
-          <LinkCard href={`/lectures/${next.id}`} variant="filled" className="app-upcoming-ticket mb-6 flex items-center gap-4 rounded-xl">
-            <StudyIllustration />
-            <div className="grid size-14 shrink-0 place-items-center rounded-lg bg-primary-container text-on-primary-container">
-              <Ticket className="size-7" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-label-lg text-on-surface-variant">حصتك القادمة · {subjectLabel(next.subject)}</p>
-              <p className="truncate text-title-lg">{next.title}</p>
-              <p className="text-body-md text-on-surface-variant">{fmtDateTime(next.startsAt)}</p>
-            </div>
-            <Countdown to={next.startsAt} className="hidden text-headline-sm md:block" />
-          </LinkCard>
-        ) : null}
+        <div className="mb-7">
+          <HomeFeature
+            role="student"
+            label={myLive ? <LiveBadge label="حصتك مباشرة الآن" /> : next ? <><Ticket size={17} /> حصتك القادمة</> : <><Sparkles size={17} /> مساحة التعلّم</>}
+            title={myLive?.title ?? next?.title ?? 'تعلّم من مكانك'}
+          >
+            {myLive ? (
+              <>
+                <p>{myLive.teacher.name}</p>
+                <Button variant="live" onClick={() => navigate(`/live/${myLive.id}`)}><Radio /> انضم إلى البث</Button>
+              </>
+            ) : next ? (
+              <>
+                <p>{subjectLabel(next.subject)} · {fmtDateTime(next.startsAt)}</p>
+                <Countdown to={next.startsAt} className="text-title-md" />
+                <Button onClick={() => navigate(`/lectures/${next.id}`)}><Ticket /> افتح الحصة</Button>
+              </>
+            ) : (
+              <>
+                <p>اختار المادة اللي محتاجها، واتعلّم مع مدرسك واسأله مباشرة.</p>
+                <a href="#discover-classes" className="home-feature-link"><Search size={18} /> اكتشف الحصص</a>
+              </>
+            )}
+          </HomeFeature>
+        </div>
 
         {h && h.pendingAssignments.length > 0 && (
           <section className="mb-8">
@@ -136,7 +134,7 @@ export function StudentHome() {
           </section>
         )}
 
-        {/* Curriculum switcher chips */}
+        <div id="discover-classes" className="scroll-mt-28"><SectionHeader title="اكتشف الحصص" /></div>
         <div className="mb-4">
           <p className="mb-2 text-label-md text-on-surface-variant font-medium">المنهج الدراسي / المسار التعليمي:</p>
           <div className="scrollbar-none -mx-4 flex items-center gap-2 overflow-x-auto px-4 py-1 md:mx-0 md:px-0">
@@ -253,8 +251,9 @@ function FeedCard({ item, rank }: { item: FeedItem; rank?: number }) {
     <article className={cn('lecture-card gl-feed-card state-layer press group block overflow-hidden rounded-lg bg-surface-container-lowest shadow-e1 transition-shadow hover:shadow-e3', rank === 0 && 'md:col-span-2 xl:col-span-1')}>
       <Link href={href} className="lecture-card-hitbox" aria-label={`تفاصيل حصة ${l.title}`} />
       {/* Cover: subject colour field with the teacher, like a stream thumbnail. */}
-      <div className={cn('gl-feed-cover relative flex h-28 items-end p-4', l.status === 'live' ? 'bg-gradient-live' : 'bg-gradient-brand')}>
-        {l.coverUrl && <><img src={l.coverUrl} className="feed-cover-photo" alt="" loading="lazy" /><div className="feed-cover-shade" /></>}
+      <div className="gl-feed-cover relative flex h-32 items-end p-4">
+        <img src={lectureCover(l.subject, l.coverUrl)} className="feed-cover-photo" alt="" loading="lazy" />
+        <div className="feed-cover-shade" />
         <div className="absolute top-3 start-3 flex items-center gap-2">
           {l.status === 'live' ? <LiveBadge /> : <Badge className="bg-black/30 text-white backdrop-blur">{fmtRelative(l.startsAt)}</Badge>}
           {l.status === 'live' && l.viewersNow > 0 && (

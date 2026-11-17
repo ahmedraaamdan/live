@@ -1,6 +1,6 @@
 import { VerificationNotice } from '@/components/verification-notice';
 import { WeeklyCalendar } from '@/components/weekly-calendar';
-import { StudyIllustration } from '@/components/study-illustration';
+import { HomeFeature } from '@/components/home-feature';
 import { useCapabilities } from '@/lib/capabilities';
 import { QueryError } from '@/components/query-error';
 import { useState } from 'react';
@@ -14,7 +14,7 @@ import { NotificationsButton } from '@/layouts/app-shell';
 import { api } from '@/lib/api';
 import { fmtDateTime, greeting, money } from '@/lib/format';
 import { useMe } from '@/lib/session';
-import { Banner, Button, Card, EmptyState, Fab, LiveBadge, Page, SectionHeader, SectionLink, Stat, StatGrid, TopBar } from '@/ui';
+import { Banner, Button, Fab, LiveBadge, Page, SectionHeader, SectionLink, Stat, StatGrid, TopBar } from '@/ui';
 
 export function TeacherHome() {
   const me = useMe();
@@ -33,52 +33,32 @@ export function TeacherHome() {
         <VerificationNotice />
 
         {capabilities.data && (!capabilities.data.liveConfigured || !capabilities.data.paymentConfigured) && <div className="mb-5"><Banner tone="warning">{!capabilities.data.liveConfigured && 'خدمة البث لم تُفعّل بعد. '}{!capabilities.data.paymentConfigured && 'الحجز المدفوع غير متاح حاليًا. '}يمكنك تجهيز الحصص والواجبات، وسيتيح مسؤول المنصة الخدمات بعد ربطها.</Banner></div>}
-        {/* Hero: the next lecture, with the one action that matters right now. */}
-        {q.isError ? <QueryError error={q.error} retry={q.refetch} /> : q.isPending ? (
-          <div className="skeleton h-48 rounded-xl" />
-        ) : next ? (
-          <Card variant="ink" pad="lg" className="app-teacher-feature relative overflow-hidden rounded-xl">
-            <StudyIllustration />
-            <div className="pointer-events-none absolute -top-20 -left-20 size-64 rounded-full bg-gradient-live opacity-30 blur-3xl" aria-hidden="true" />
-            <div className="relative flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-              <div className="min-w-0">
-                {next.status === 'live' ? <LiveBadge label="أنت على الهواء" /> : <span className="text-label-lg text-white/70">الحصة القادمة</span>}
-                <h2 className="mt-2 line-clamp-2 text-headline-md">{next.title}</h2>
-                <p className="mt-1 text-body-md text-white/70">
-                  {fmtDateTime(next.startsAt)} · <span className="font-num">{next.seatsTaken}</span> طالب حاجز
-                </p>
-                {next.status !== 'live' && (
-                  <p className="mt-3 text-title-md">
-                    تبدأ بعد <Countdown to={next.startsAt} className="text-headline-sm" />
-                  </p>
-                )}
-              </div>
-              <div className="flex shrink-0 flex-wrap gap-3">
-                <Button variant="neutral" className="bg-white/12 text-white" onClick={() => setShare(true)}>
-                  <Share2 /> مشاركة الرابط
-                </Button>
+        {q.isError && <QueryError error={q.error} retry={q.refetch} />}
+        <HomeFeature
+          role="teacher"
+          label={next?.status === 'live' ? <LiveBadge label="أنت على الهواء" /> : <><CalendarPlus size={17} /> {next ? 'الحصة القادمة' : 'مساحة التدريس'}</>}
+          title={next?.title ?? 'فصلك جاهز ليك'}
+        >
+          {next ? (
+            <>
+              <p>{fmtDateTime(next.startsAt)} · <span className="font-num">{next.seatsTaken}</span> طالب حاجز</p>
+              {next.status !== 'live' && <p>تبدأ بعد <Countdown to={next.startsAt} className="text-title-md" /></p>}
+              <div className="flex flex-wrap gap-2">
+                <Button className="home-feature-link" onClick={() => setShare(true)}><Share2 /> مشاركة الرابط</Button>
                 <Button variant="live" disabled={!canGoLive} onClick={() => navigate(`/live/${next.id}`)}>
                   <Radio /> {next.status === 'live' ? 'العودة للبث' : 'ابدأ البث'}
                 </Button>
               </div>
-            </div>
-            {!canGoLive && <p className="relative mt-3 text-body-sm text-white/60">يتاح زر البث قبل الموعد بـ{LIVE_OPEN_MINUTES_BEFORE} دقيقة.</p>}
-            <ShareLectureSheet open={share} onOpenChange={setShare} code={next.code} title={next.title} />
-          </Card>
-        ) : (
-          <Card pad="lg" className="rounded-xl">
-            <EmptyState
-              icon={<CalendarPlus />}
-              title="جدولك بانتظار أول حصة"
-              body="ابدأ بحصة مجانية: أضف الموضوع والموعد، وابعت اللينك لطلابك."
-              action={
-                <Button size="lg" onClick={() => navigate('/t/lectures/new')}>
-                  <CalendarPlus /> إنشاء حصة
-                </Button>
-              }
-            />
-          </Card>
-        )}
+              {!canGoLive && <p className="text-body-sm">يتاح زر البث قبل الموعد بـ{LIVE_OPEN_MINUTES_BEFORE} دقيقة.</p>}
+              <ShareLectureSheet open={share} onOpenChange={setShare} code={next.code} title={next.title} />
+            </>
+          ) : (
+            <>
+              <p>اختار الموضوع والميعاد، وابعت لينك الحصة لطلابك.</p>
+              <Button onClick={() => navigate('/t/lectures/new')}><CalendarPlus /> إنشاء حصة</Button>
+            </>
+          )}
+        </HomeFeature>
 
         <StatGrid className="mt-6">
           <Stat icon={<Wallet />} tone="success" label="دخلك هذا الشهر" value={d ? money(d.stats.monthEarningsCents) : '—'} hint={d ? `متاح للسحب ${money(d.stats.availableCents)}` : undefined} />

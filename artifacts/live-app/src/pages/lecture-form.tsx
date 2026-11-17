@@ -1,5 +1,6 @@
 import { useTeacherVerification } from '@/components/verification-notice';
 import { MediaUpload } from '@/components/media-upload';
+import { lectureCover } from '@/lib/lecture-cover';
 import { addCalendarDays, cairoDay, cairoSlot, fromCairoInput, toCairoInput } from '@/lib/calendar';
 import { QueryError } from '@/components/query-error';
 import { useEffect, useState, type FormEvent } from 'react';
@@ -147,6 +148,12 @@ export function LectureForm({ id }: { id?: string }) {
           )}
           <Card className="flex flex-col gap-5">
             <MediaUpload purpose="cover" value={form.coverUrl || null} onBusyChange={setUploadingCover} onChange={url => setForm(current => ({ ...current, coverUrl: url ?? '' }))} />
+            {!form.coverUrl && (
+              <figure className="flex items-center gap-3">
+                <img src={lectureCover(form.subject)} width={112} height={56} alt="" className="rounded-lg" />
+                <figcaption className="text-body-sm text-on-surface-variant">الغلاف التلقائي للحصة لو ما رفعتش صورة.</figcaption>
+              </figure>
+            )}
             <TextField label="عنوان الحصة" value={form.title} onChange={set('title')} placeholder="الكهربية التيارية: قانون أوم" maxLength={120} />
 
             {/* المنهج والمرحلة والشعبة والمادة */}

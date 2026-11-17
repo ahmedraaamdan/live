@@ -2,6 +2,7 @@ import { CalendarClock, Clock, PlayCircle, Users } from 'lucide-react';
 import { LECTURE_STATUS_LABELS, gradeLabel, subjectLabel, getCurriculum, type LectureDTO } from '@workspace/live-core';
 import { Link } from 'wouter';
 import { cn } from '@/lib/cn';
+import { lectureCover } from '@/lib/lecture-cover';
 import { fmtDateTime, fmtDuration, fmtRelative, money } from '@/lib/format';
 import { Avatar, Badge, Card, LiveBadge } from '@/ui';
 
@@ -30,7 +31,7 @@ export function LectureCard({ lecture, showTeacher, className, href }: { lecture
   return (
     <Card className={cn('lecture-card flex flex-col gap-3', lecture.status === 'live' && 'ring-2 ring-live', className)}>
       <Link href={href ?? `/lectures/${lecture.id}`} className="lecture-card-hitbox" aria-label={`تفاصيل حصة ${lecture.title}`} />
-      {lecture.coverUrl && <img src={lecture.coverUrl} className="lecture-card-cover" alt="" loading="lazy" />}
+      <img src={lectureCover(lecture.subject, lecture.coverUrl)} className="lecture-card-cover" alt="" loading="lazy" />
       <div className="flex items-center gap-2">
         <Badge tone="primary">{subjectLabel(lecture.subject)}</Badge>
         {lecture.curriculum && lecture.curriculum !== 'egypt_general' && (
